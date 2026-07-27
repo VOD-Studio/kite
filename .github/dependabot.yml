@@ -1,0 +1,37 @@
+version: 2
+
+updates:
+  # Go modules
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      # 安全更新单独成组,优先合入
+      go-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      # minor/patch 版本更新合并成一个 PR,减少 review 噪音
+      go-minor:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+        patterns: ["*"]
+    cooldown:
+      default-days: 3       # 通用冷却,等社区验证
+      semver-minor-days: 7  # minor 至少晾 7 天,避开刚发布的不稳定版本
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+
+  # GitHub Actions(actions 自身有供应链风险,需监控)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore(deps)"
