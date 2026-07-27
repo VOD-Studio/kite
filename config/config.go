@@ -108,7 +108,7 @@ func Default() Config {
 		Redis: RedisConfig{
 			Host:     "localhost",
 			Port:     6379,
-			DB:       1, // 用 DB 1 避免和 mimo-blog（DB 0）冲突
+			DB:       1, // 使用 DB 1
 			PoolSize: 10,
 		},
 		Worker: WorkerConfig{

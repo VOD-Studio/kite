@@ -65,8 +65,6 @@ TUI 视图与 CLI 子命令一一对应,视图即命令的可视化包装。
 
 shimmer 算法移植自 oh-my-pi `shimmer.ts` classic 模式:亮带从左向右扫过(30 cells/s 固定速度),带外 dim 可读,带内按余弦强度分 3 档(low/mid/high),high 加粗,同档 run 合并 ANSI。调色板用紫粉主题(low=#5a3a8a / mid=#9d6ff5 / high=#ee6ff8)。
 
-参考实现已落地:mimo-blog 的 `mimo-music/internal/cli/auth/qrtui/shimmer.go`(扫码登录加载态,同款算法 + 测试)。
-
 ### 行为对齐(不变项)
 
 - 裸跑 `kite` → 工具型 onboarding(CONTEXT.md「工具型定位」不受影响)。

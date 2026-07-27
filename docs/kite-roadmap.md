@@ -1,7 +1,6 @@
 # kite 功能路线图(2026-07)
 
 承接 `kite-cli-design.md` 的架构决策,本文档规划 cobra 迁移后的剩余功能。
-任务编排(本轨道与 API 蓝图如何穿插、CLI 任务分 A 类/B 类)见 [双轨道编排 ADR](../../docs/adr/mimo-music-dual-track-orchestration.md)。
 决策已于 2026-07-17 与仓库 owner 确认:
 
 - **第一阶段做 A 输出层**,后续新命令直接长在新输出层上,不返工
@@ -63,7 +62,7 @@
 
 ## Phase E — 工程化与可发现性 📋 待实现(PRD-0014)
 
-> 可发现性(补全/onboarding/别名/召回池)属[双轨道 ADR](../../docs/adr/mimo-music-dual-track-orchestration.md)第三类——纯 CLI 工程化,不消费 rpc,与 goreleaser/测试/文档同类。不单列 Phase F,并入此节。
+> 可发现性(补全/onboarding/别名/召回池)属纯 CLI 工程化范畴——不消费 rpc,与 goreleaser/测试/文档同类。不单列 Phase F,并入此节。
 
 ### 工程化(原有)
 

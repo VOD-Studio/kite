@@ -22,7 +22,7 @@ redis:
   port: 6379
   # Redis 密码，无密码时为空
   password: ""
-  # Redis 数据库编号（用 DB 1 避免和 mimo-blog DB 0 冲突）
+  # Redis 数据库编号
   db: 1
 
 worker:

@@ -162,8 +162,6 @@ shimmer 算法(移植自 oh-my-pi `packages/coding-agent/src/modes/theme/shimmer
 
 调色板用紫粉主题:`low=#5a3a8a`(暗紫)/ `mid=#9d6ff5`(中紫)/ `high=#ee6ff8`(亮粉)+ bold。spinner 染 `#ee6ff8`。
 
-> 参考实现:mimo-blog 的 `mimo-music/internal/cli/auth/qrtui/shimmer.go`(扫码登录已落地,同款算法)。
-
 ## 待定细节(按推荐默认,实现时再调)
 
 以下 grill 时未最终拍板,先按推荐默认值写进 PRD,标注可调:
@@ -236,8 +234,6 @@ mini-player 键:
 - **lipgloss v2**(`charm.land/lipgloss/v2`,样式/布局)
 - **bubbles v2**(`charm.land/bubbles/v2`,textinput/list/spinner 等组件)
 - 图像解码用标准库 `image/jpeg`/`image/png`,不引第三方缩放库
-
-> mimo-blog 的 `mimo-music` 已引入同款依赖栈(`charm.land/bubbletea/v2 v2.0.8` + `lipgloss/v2 v2.0.5`),可参考其 go.mod 锁定版本。
 
 ## 包结构
 
