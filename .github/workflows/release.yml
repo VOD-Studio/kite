@@ -38,7 +38,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # cosign keyless 签名需要 CI 里装 cosign
-      - uses: sigstore/cosign-installer@v4
+      - uses: sigstore/cosign-installer@v4.1.0
 
       - uses: goreleaser/goreleaser-action@v7
         with:
