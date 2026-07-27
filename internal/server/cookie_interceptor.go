@@ -11,7 +11,7 @@ package server
 import (
 	"context"
 
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )

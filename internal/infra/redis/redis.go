@@ -11,7 +11,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/VOD-Studio/mimo-music/config"
+	"github.com/VOD-Studio/kite/config"
 )
 
 // New 创建共享 Redis 客户端。

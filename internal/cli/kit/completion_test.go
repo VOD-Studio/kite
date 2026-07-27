@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/recall"
+	"github.com/VOD-Studio/kite/internal/cli/recall"
 )
 
 // newRootWithCompletion 构造一个挂了补全的 root(含一个带 --id/--level/--area 的子命令),

@@ -13,9 +13,9 @@ import (
 	"fmt"
 	"time"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
-	"github.com/VOD-Studio/mimo-music/internal/netease/session"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 // anonymousEapiMeta 构造 eapi POST + Anonymous 的 Meta（歌曲 eapi 查询统一参数）。

@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
-	"github.com/VOD-Studio/mimo-music/internal/netease/session"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 // Subscribe 是收藏专辑的接口声明（cookie override）。

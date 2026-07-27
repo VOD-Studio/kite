@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
 	"github.com/stretchr/testify/require"
 )
 

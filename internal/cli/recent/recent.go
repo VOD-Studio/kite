@@ -12,8 +12,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
-	"github.com/VOD-Studio/mimo-music/internal/cli/recall"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/recall"
 )
 
 // defaultLimit 是无 --limit 时的默认条目数。

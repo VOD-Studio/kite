@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/doctor"
+	"github.com/VOD-Studio/kite/internal/cli/doctor"
 )
 
 // newInstallCompletionCommand 创建 install-completion 命令:生成当前 shell 的

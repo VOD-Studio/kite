@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
 // rawUserDetail 是网易云用户详情接口的响应。

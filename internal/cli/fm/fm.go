@@ -4,9 +4,9 @@ package fm
 import (
 	"github.com/spf13/cobra"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
-	fmendpoint "github.com/VOD-Studio/mimo-music/internal/netease/endpoint/fm"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
+	fmendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/fm"
 )
 
 // NewCommand 创建 fm 命令(私人 FM 只有一个接口,直接作为可执行命令)。

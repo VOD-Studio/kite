@@ -3,7 +3,7 @@ package kit
 import (
 	"time"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/recall"
+	"github.com/VOD-Studio/kite/internal/cli/recall"
 )
 
 // Record 把一个成功消费的歌曲事件记入召回池(隐式埋点)。

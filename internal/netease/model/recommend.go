@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
 // rawRecommendDaily 是网易云每日推荐接口的响应。

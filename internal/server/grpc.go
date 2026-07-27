@@ -20,10 +20,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
-	"github.com/VOD-Studio/mimo-music/internal/netease/session"
-	"github.com/VOD-Studio/mimo-music/internal/service"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/netease/session"
+	"github.com/VOD-Studio/kite/internal/service"
 
 	runtime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/version"
+	"github.com/VOD-Studio/kite/internal/cli/version"
 )
 
 // VersionChecker 检查版本(build info)。直接调 version.LoadVersion,无依赖。

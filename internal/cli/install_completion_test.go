@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/doctor"
+	"github.com/VOD-Studio/kite/internal/cli/doctor"
 )
 
 // withTestHome 设临时 HOME,返回路径(隔离,不碰真实 ~/.zshrc 等)。

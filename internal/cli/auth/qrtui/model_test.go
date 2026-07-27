@@ -17,7 +17,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
 // ansiRe 匹配 ANSI 转义序列(颜色/光标控制)。waveText 给每个字符裹颜色码,

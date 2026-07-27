@@ -4,9 +4,9 @@ package search
 import (
 	"github.com/spf13/cobra"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
-	searchendpoint "github.com/VOD-Studio/mimo-music/internal/netease/endpoint/search"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
+	searchendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/search"
 )
 
 // NewCommand 创建 search 命令(带 keyword 时直接搜索,同时作为分组挂载子命令)。

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/VOD-Studio/mimo-music/internal/cache"
-	musicredis "github.com/VOD-Studio/mimo-music/internal/cache/redis"
+	"github.com/VOD-Studio/kite/internal/cache"
+	musicredis "github.com/VOD-Studio/kite/internal/cache/redis"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 )

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
-	"github.com/VOD-Studio/mimo-music/internal/netease/session"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 // SimilarUsers 基于歌曲获取听歌的人（weapi，匿名，24h 缓存）。

@@ -15,9 +15,9 @@ import (
 	"golang.org/x/term"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/VOD-Studio/mimo-music/internal/cache"
-	"github.com/VOD-Studio/mimo-music/internal/cli/recall"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/cache"
+	"github.com/VOD-Studio/kite/internal/cli/recall"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // ErrNotLogin 未登录哨兵错误,Execute 据此映射退出码 3。

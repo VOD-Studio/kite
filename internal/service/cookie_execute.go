@@ -7,7 +7,7 @@ package service
 import (
 	"context"
 
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // executeOverride 走 cookie override 路径执行 endpoint（cookie 从 context 取，不经 session 池）。

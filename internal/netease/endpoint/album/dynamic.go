@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // AlbumDynamic 获取专辑动态信息（是否收藏、收藏数、评论数、分享数）。

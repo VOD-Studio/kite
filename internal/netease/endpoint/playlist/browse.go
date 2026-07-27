@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"time"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
-	"github.com/VOD-Studio/mimo-music/internal/netease/model"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/netease/model"
 )
 
 // HighQuality 获取精品歌单列表。

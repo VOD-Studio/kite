@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
 // DefaultFilenameTemplate 默认文件名模板:{首艺人} - {歌名}。

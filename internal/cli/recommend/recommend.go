@@ -4,9 +4,9 @@ package recommend
 import (
 	"github.com/spf13/cobra"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
-	recommendendpoint "github.com/VOD-Studio/mimo-music/internal/netease/endpoint/recommend"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
+	recommendendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/recommend"
 )
 
 // NewCommand 创建 recommend 命令组。

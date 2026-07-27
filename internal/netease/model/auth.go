@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
 // rawLoginResponse 是网易云登录/登录态接口的响应。

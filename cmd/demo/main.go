@@ -26,7 +26,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
 )
 
 func main() {

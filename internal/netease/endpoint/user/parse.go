@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
 // rawFollowItem 是网易云关注/粉丝列表的单个用户结构。

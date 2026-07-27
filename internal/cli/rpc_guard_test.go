@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
 )
 
 // 本文件实现 PRD-0014 #B「命令树守护测试」核心:proto ServiceDesc 全量 rpc ↔

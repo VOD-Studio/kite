@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/recall"
+	"github.com/VOD-Studio/kite/internal/cli/recall"
 )
 
 // newKitWithTestPool 构造一个 Kit,召回池指向临时目录,返回池路径供断言。

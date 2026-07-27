@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
 )
 
 // newDownloadTestKit 构造 Kit 用于 DownloadToFile 测试:Out/Err 到 buffer。

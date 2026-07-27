@@ -15,8 +15,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/VOD-Studio/mimo-music/errors"
-	"github.com/VOD-Studio/mimo-music/internal/netease/session"
+	"github.com/VOD-Studio/kite/errors"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 const (

@@ -8,7 +8,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
-	"github.com/VOD-Studio/mimo-music/config"
+	"github.com/VOD-Studio/kite/config"
 )
 
 // TestNewExporter_Noop 验证 none 类型返回不导出的 noop exporter。

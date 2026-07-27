@@ -11,18 +11,18 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/album"
-	"github.com/VOD-Studio/mimo-music/internal/cli/artist"
-	"github.com/VOD-Studio/mimo-music/internal/cli/auth"
-	"github.com/VOD-Studio/mimo-music/internal/cli/fm"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
-	"github.com/VOD-Studio/mimo-music/internal/cli/playlist"
-	"github.com/VOD-Studio/mimo-music/internal/cli/recent"
-	"github.com/VOD-Studio/mimo-music/internal/cli/recommend"
-	"github.com/VOD-Studio/mimo-music/internal/cli/search"
-	"github.com/VOD-Studio/mimo-music/internal/cli/song"
-	"github.com/VOD-Studio/mimo-music/internal/cli/user"
-	"github.com/VOD-Studio/mimo-music/internal/cli/version"
+	"github.com/VOD-Studio/kite/internal/cli/album"
+	"github.com/VOD-Studio/kite/internal/cli/artist"
+	"github.com/VOD-Studio/kite/internal/cli/auth"
+	"github.com/VOD-Studio/kite/internal/cli/fm"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/playlist"
+	"github.com/VOD-Studio/kite/internal/cli/recent"
+	"github.com/VOD-Studio/kite/internal/cli/recommend"
+	"github.com/VOD-Studio/kite/internal/cli/search"
+	"github.com/VOD-Studio/kite/internal/cli/song"
+	"github.com/VOD-Studio/kite/internal/cli/user"
+	"github.com/VOD-Studio/kite/internal/cli/version"
 )
 
 // NewRootCommand 创建根命令并装配所有命令组。

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
 )
 
 // runDownload 错误路径测试(社区共识:抽 deps mock 网络,文件系统用 t.TempDir)。

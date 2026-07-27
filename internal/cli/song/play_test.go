@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
-	"github.com/VOD-Studio/mimo-music/internal/cli/player"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/player"
 )
 
 // ==================== fakePlayer(Player seam) ====================

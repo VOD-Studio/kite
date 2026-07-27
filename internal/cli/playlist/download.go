@@ -23,11 +23,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
-	"github.com/VOD-Studio/mimo-music/internal/cli/songdl"
-	playlistendpoint "github.com/VOD-Studio/mimo-music/internal/netease/endpoint/playlist"
-	songendpoint "github.com/VOD-Studio/mimo-music/internal/netease/endpoint/song"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/songdl"
+	playlistendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/playlist"
+	songendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/song"
 )
 
 // 风控参数。

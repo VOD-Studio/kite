@@ -15,7 +15,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/VOD-Studio/mimo-music/config"
+	"github.com/VOD-Studio/kite/config"
 )
 
 // InitTracer 初始化 OTel tracer，按 config 选择 exporter。

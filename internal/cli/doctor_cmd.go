@@ -10,10 +10,10 @@ import (
 	"github.com/gopxl/beep/v2/speaker"
 	"github.com/spf13/cobra"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/doctor"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
-	mmauth "github.com/VOD-Studio/mimo-music/internal/netease/endpoint/auth"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/cli/doctor"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
+	mmauth "github.com/VOD-Studio/kite/internal/netease/endpoint/auth"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // newDoctorCommand 创建 doctor 环境自检命令(PRD-0014 #J)。

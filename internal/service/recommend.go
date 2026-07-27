@@ -4,9 +4,9 @@ package service
 import (
 	"context"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	recommendendpoint "github.com/VOD-Studio/mimo-music/internal/netease/endpoint/recommend"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	recommendendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/recommend"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // RecommendServer 实现 RecommendServiceServer。

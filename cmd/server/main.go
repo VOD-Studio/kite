@@ -15,10 +15,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/VOD-Studio/mimo-music/internal/cache"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
-	"github.com/VOD-Studio/mimo-music/internal/netease/session"
-	"github.com/VOD-Studio/mimo-music/internal/server"
+	"github.com/VOD-Studio/kite/internal/cache"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/netease/session"
+	"github.com/VOD-Studio/kite/internal/server"
 )
 
 // startupCtx 是启动阶段没有请求 ctx 时用的兜底 context。

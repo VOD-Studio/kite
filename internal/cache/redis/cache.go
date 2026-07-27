@@ -8,7 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/VOD-Studio/mimo-music/internal/cache"
+	"github.com/VOD-Studio/kite/internal/cache"
 )
 
 // Cache 是基于 Redis 的 Cache 实现。

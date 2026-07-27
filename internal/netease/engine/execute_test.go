@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	merrors "github.com/VOD-Studio/mimo-music/errors"
+	merrors "github.com/VOD-Studio/kite/errors"
 )
 
 // fakeCache 是测试用的内存 Cache，记录 hits/sets 计数。

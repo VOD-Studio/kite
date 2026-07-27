@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	merrors "github.com/VOD-Studio/mimo-music/errors"
+	merrors "github.com/VOD-Studio/kite/errors"
 )
 
 const (

@@ -5,7 +5,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
-	"github.com/VOD-Studio/mimo-music/observability"
+	"github.com/VOD-Studio/kite/observability"
 )
 
 // TestMetrics_CacheHitMiss 验证缓存命中/未命中计数器递增。

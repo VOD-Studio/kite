@@ -9,7 +9,7 @@ import (
 	"errors"
 	"time"
 
-	merrors "github.com/VOD-Studio/mimo-music/errors"
+	merrors "github.com/VOD-Studio/kite/errors"
 )
 
 // retryPolicy 是重试策略配置。

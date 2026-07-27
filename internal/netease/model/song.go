@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
 // --- raw struct 镜像（网易云原始 JSON，字段名保留缩写） ---

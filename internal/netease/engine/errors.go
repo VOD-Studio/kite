@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	merrors "github.com/VOD-Studio/mimo-music/errors"
+	merrors "github.com/VOD-Studio/kite/errors"
 )
 
 // neteaseCodeResponse 是网易云响应中包含 code 字段的通用结构。

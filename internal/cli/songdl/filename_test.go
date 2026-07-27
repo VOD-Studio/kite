@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
 // SongFilename 测试(从 internal/cli/song/metadata_test.go 迁入,行为不变)。

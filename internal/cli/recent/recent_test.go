@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
-	"github.com/VOD-Studio/mimo-music/internal/cli/recall"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/recall"
 )
 
 // newKitWithPool 构造一个 Kit,召回池指向临时目录,时钟固定,Out/Err 捕获。

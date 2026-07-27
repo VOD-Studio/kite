@@ -11,12 +11,12 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/cli/auth/qrtui"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
-	authendpoint "github.com/VOD-Studio/mimo-music/internal/netease/endpoint/auth"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
-	"github.com/VOD-Studio/mimo-music/internal/netease/model"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/cli/auth/qrtui"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
+	authendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/auth"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/netease/model"
 )
 
 // NewLoginCommand 扫码登录:取二维码 → 轮询 → cookie 持久化到本地会话文件。

@@ -23,12 +23,12 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
-	"github.com/VOD-Studio/mimo-music/internal/cli/player"
-	"github.com/VOD-Studio/mimo-music/internal/cli/recall"
-	songendpoint "github.com/VOD-Studio/mimo-music/internal/netease/endpoint/song"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/player"
+	"github.com/VOD-Studio/kite/internal/cli/recall"
+	songendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/song"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // newPlay 构造 song play 命令。

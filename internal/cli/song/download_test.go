@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
 )
 
 // song download 命令构造测试。

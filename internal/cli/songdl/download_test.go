@@ -12,8 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
 )
 
 // ==================== proxyReader(从 song/download_test.go 迁入)====================

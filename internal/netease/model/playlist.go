@@ -4,7 +4,7 @@ package model
 import (
 	"encoding/json"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
 // rawPlaylistDetail 是网易云歌单详情接口的响应。

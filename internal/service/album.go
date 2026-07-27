@@ -4,9 +4,9 @@ package service
 import (
 	"context"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
-	albumendpoint "github.com/VOD-Studio/mimo-music/internal/netease/endpoint/album"
-	"github.com/VOD-Studio/mimo-music/internal/netease/engine"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	albumendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/album"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // AlbumServer 实现 AlbumServiceServer。

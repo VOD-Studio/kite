@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
 )
 
 // newTestKit 沿 download_deps_test.go 惯例:仅 Out/Err 注入 buffer,engine 留空

@@ -18,7 +18,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
 // 轮询参数(沿旧 runLogin:2s 间隔、3min 超时)。

@@ -1,4 +1,4 @@
-module github.com/VOD-Studio/mimo-music
+module github.com/VOD-Studio/kite
 
 go 1.25.6
 

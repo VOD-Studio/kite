@@ -15,8 +15,8 @@ import (
 	"net/url"
 	"time"
 
-	merrors "github.com/VOD-Studio/mimo-music/errors"
-	"github.com/VOD-Studio/mimo-music/internal/netease/session"
+	merrors "github.com/VOD-Studio/kite/errors"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 // CryptoMethod 标识网易云请求的加密方式。

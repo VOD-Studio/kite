@@ -15,7 +15,7 @@ import (
 
 	"github.com/spf13/cobra/doc"
 
-	"github.com/VOD-Studio/mimo-music/internal/cli"
+	"github.com/VOD-Studio/kite/internal/cli"
 )
 
 func main() {

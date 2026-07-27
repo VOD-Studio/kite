@@ -14,7 +14,7 @@
 //	go run cmd/musicctl/main.go logout
 package main
 
-import "github.com/VOD-Studio/mimo-music/internal/cli"
+import "github.com/VOD-Studio/kite/internal/cli"
 
 func main() {
 	cli.Execute()

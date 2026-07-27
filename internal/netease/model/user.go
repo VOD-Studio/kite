@@ -1,7 +1,7 @@
 // Package model 的用户实体映射。
 package model
 
-import mmpb "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1"
+import mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 
 // rawUser 是网易云用户的原始 JSON 结构。
 //

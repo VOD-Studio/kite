@@ -3,7 +3,7 @@ managed:
   enabled: true
   override:
     - file_option: go_package_prefix
-      value: github.com/VOD-Studio/mimo-music/gen/go
+      value: github.com/VOD-Studio/kite/gen/go
   # googleapis 的 go_package 不被 prefix 覆盖，指向 genproto 标准包。
   disable:
     - file_option: go_package
