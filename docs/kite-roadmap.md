@@ -6,7 +6,7 @@
 
 - **第一阶段做 A 输出层**,后续新命令直接长在新输出层上,不返工
 - **播放走内嵌 beep 方案**(零依赖单二进制),不做外部 mpv 调用
-- **TUI 远期再做**,届时先用 bubbletea 列表选择器做小验证,再谈全屏播放器
+- **TUI 远期再做**,届时直接做完整 TUI 客户端(侧边栏 + 列表 + mini-player),不分小验证阶段(见 Phase D)
 
 总体顺序:**A 输出层 → C 实用功能 → B 配置 → E 工程化 → D TUI**。
 (B/E 独立可穿插;C 依赖 A 的输出约定;D 依赖 C 的播放能力。)
@@ -82,13 +82,20 @@
 - **`kite doctor`**:环境自检(版本/会话/网络/补全/音频后端),bug report 第一手信息
 - **`kite recent`**:列召回池内容(最近搜索/播放/下载),既是查看命令也是补全离线源
 
-## Phase D — TUI(第一步已由 PRD-0016 接管)
+## Phase D — TUI 客户端(由 PRD-0016 接管)
 
-- ~~第一步(小验证):`kite tui`(或 `search --tui`)bubbletea 列表选择器~~
-  **已由 PRD-0016 取代**:直接重写 `song play` 播放屏为 bubbletea 全屏形态,
-  技术栈验证在重写中完成(ADR: mimo-music-play-screen-bubbletea)
-- 第二步(全屏播放器):队列、歌词面板、快捷键体系,单独立项,参考 go-musicfox
-  的 menu/player 接口划分,不照搬其代码。复用 PRD-0016 建立的 `internal/tui` 包
+原定两步(第一步小验证 + 第二步全屏播放器)合并为一步:用 bubbletea v2 + lipgloss 重做**完整 TUI 客户端**,不再分阶段。
+
+- **范围扩大**:从「单曲播放屏重写」升级为完整 TUI 客户端——侧边栏导航 + 列表主区 + 常驻 mini-player + 全屏播放页 + 详情页多 tab。播放屏降级为其中的一个视图。
+- **新增 `kite tui` 入口**:完整 TUI 客户端,不抢占裸跑 onboarding(工具型定位不变)。CLI 子命令全部保留,与 TUI 平行。
+- **架构**:插件式 view 注册(容纳 78 RPC + proto 未建域占位),三层运行时(service 层 / CLI / TUI 各走各路)。「先 CLI 后 TUI」是开发顺序,非运行时耦合。
+- **视觉**:封面驱动动态色 + 真实图片(oh-my-pi 式协议矩阵)+ shimmer 加载态(oh-my-pi classic 算法,亮带扫过)。
+- 详见 [PRD-0016](../prd/0016-kite-播放屏tui重写.md) 与 [ADR: tui-client-architecture](../adr/tui-client-architecture.md)。
+
+**已废弃决策**:
+- ~~第一步小验证(bubbletea 列表选择器)~~ —— 范围太小,直接做完整客户端
+- ~~ANSI 旧 UI 与新 TUI flag 并存~~ —— 工具未发布不做兼容形态
+- ~~单曲播放屏独立产物~~ —— 升级为 TUI 客户端的 playscreen 子包
 
 ---
 

@@ -1,139 +1,301 @@
-# PRD: kite 播放屏 TUI 重写(Phase D 第一步)
+# PRD: kite TUI 客户端(Phase D)
 
 > 状态:📋 待实现
-> 关联:[roadmap Phase D](../kite-roadmap.md)、[ADR: play-screen-bubbletea](../adr/play-screen-bubbletea.md)(supersede Phase D 小验证步骤)
-> 范围:`song play` 的播放界面从手写 ANSI 状态栏重写为 bubbletea v2 全屏 TUI(封面取色/歌词舞台/弹簧动画),新建 `internal/tui` 包。**单曲播放范围不变**;浏览/队列/菜单仍属 Phase D 第二步,单独立项。
+> 关联:[roadmap Phase D](../kite-roadmap.md)、[ADR: tui-client-architecture](../adr/tui-client-architecture.md)
+> supersede:本 PRD 取代原「单曲播放屏重写」范围——播放屏升级为完整 TUI 客户端的一个视图。
+> 范围:新增 `kite tui` 入口,用 bubbletea v2 + lipgloss 重做完整 TUI 客户端(侧边栏 + 列表 + mini-player + 全屏播放页)。CLI 子命令全部保留,与 TUI 平行;裸跑 onboarding 行为不变。
 
 ## Problem Statement
 
-1. **手写 ANSI 维护成本高**:`play.go`(~24KB)内 playUI/statusRenderer/keyloop/csiComplete/readKey 手动维护光标序列、行重写 diff、CSI 键位解析,渲染与状态耦合——改样式=改终端字节序列,文件中大量篇幅是终端字节管理而非播放语义。
-2. **视觉形态到顶**:状态栏 + 3 行静态歌词面板,无颜色/边框/布局抽象,信息密度低。owner 明确「不需要现在的这种界面」,期望 charm.land 设计语言的全屏形态。
-3. **roadmap 原路径失效**:Phase D 第一步「bubbletea 列表选择器小验证」不解决播放屏本身是手写 ANSI 的核心痛点;直接重写播放屏可一并完成技术栈验证(ADR 已记录 supersede)。
+1. **播放屏是孤立的单曲视图**:`song play` 进去是单曲全屏播放,无浏览/队列/导航——用户想「看歌单挑歌播放」必须退出 TUI 跑 CLI 子命令,体验割裂。
+2. **手写 ANSI 维护成本高**:`play.go` 内 playUI/statusRenderer/keyloop/csiComplete/readKey 手动维护光标序列,渲染与状态耦合,改样式=改终端字节序列。
+3. **架构无法容纳 proto 未建域**:网易云 78 RPC 已全接入 CLI,但评论/MV/排行榜/电台等域 proto 还没建。TUI 架构必须能渐进接入新域,而不是写死今天的快照。
 
 ## Solution
 
-用 bubbletea v2 + lipgloss + harmonica + bubbles 重写播放屏,alt-screen 全屏形态:
+用 bubbletea v2 + lipgloss 重做完整 TUI 客户端,**不参考现有任何界面设计**,采用 Charm 设计语言。核心架构决策见 [ADR: tui-client-architecture](../adr/tui-client-architecture.md)。
+
+### 信息架构(三栏布局)
 
 ```
-┌────────────────────────────────────────────────────┐
-│ ♪ 艺人 - 歌名 · 专辑(年份)              flac 24bit │  顶栏:标题 + 音质徽章
-│                                                    │
-│ ┌────────────┐    上一行歌词(向上渐暗)             │
-│ │            │  ▶ 当前行歌词(高亮·弹簧滑入)        │  中央:封面 + 歌词舞台
-│ │  封面       │    下一行歌词(向下渐暗)            │
-│ │(kitty/iterm2)│                                   │
-│ └────────────┘                                    │
-│                                                    │
-│ ━━━━━━━━━━━●━━━━━━━━━━━━━━  01:23 / 03:45         │  渐变进度条(封面取色)
-│ 🔊 ▓▓▓▓░ 62%   空格 ⏯ · ←→ 10s · m 静音 · q 退出   │  底部:音量 + 键位栏
+┌─────────────┬──────────────────────────────────────┐
+│ 🔍 搜索     │                                      │
+│ ── 发现 ──  │                                      │
+│  每日推荐   │           主内容区                   │
+│  私人 FM    │      (列表 / 网格 / 详情页)         │
+│  新碟上架   │                                      │
+│  精品歌单   │                                      │
+│  新歌速递   │                                      │
+│ ── 我的 ──  │                                      │
+│  红心歌曲   │                                      │
+│  我的歌单   │                                      │
+│  收藏歌单   │                                      │
+│  收藏专辑   │                                      │
+│  最近播放   │                                      │
+│ ── 设置 ──  │                                      │
+│  账号       │                                      │
+│  登录/登出  │                                      │
+├─────────────┴──────────────────────────────────────┤
+│ ▒▒ 封面  艺人 - 歌名  ━━━━●━━━━  01:23/03:45  ⏯ │  mini-player(常驻)
 └────────────────────────────────────────────────────┘
 ```
 
-四个亮点(按性价比排序,均已在访谈中确认进本次范围):
+- **左侧边栏**:分类导航树(发现/我的/设置 + 搜索置顶),选中切换主区视图。
+- **中主区**:列表/网格,随侧边栏选中切换。列表项 Enter 进详情页(多 tab)或全屏播放页(歌曲)。
+- **底 mini-player**:常驻,显示当前播放的封面缩略图 + 标题 + 进度 + 控制。Enter 进全屏播放页,q/Backspace 返回。
 
-1. **封面取色主题**:专辑封面提取主色对,进度条渐变/歌词高亮/边框色随每首歌变化;无封面用默认调色板(Charm 紫粉渐变)。
-2. **歌词舞台弹簧滚动**:当前行固定视觉中心、上下行渐暗,换行用 harmonica 弹簧滑入;歌词**默认展示**,`--no-lyric` 关闭(原 `--lyric` flag 删除)。
-3. **封面可见**:渐进增强协议矩阵(参考 oh-my-pi 实现):Kitty 图形协议(ghostty/kitty 高清)→ iTerm2 inline → 半块字符画降级(▀,任意 truecolor 终端)。
-4. **浮层弹簧弹出**:音量/notice 浮层弹簧入场、自动淡出;help/info 改居中 styled popup。
+### 全屏播放页
 
-## User Stories
+mini-player Enter 进入,封面大图 + 歌词舞台,q/Backspace 返回列表。与 mini-player 是同一播放状态的两种视图(类 Spotify)。
 
-1. 作为用户,播放屏是全屏应用形态(alt-screen),退出后原终端内容完好恢复,不留残影。
-2. 作为用户,每首歌的界面主色随专辑封面变化,视觉上「这首歌有这首歌的样子」。
-3. 作为 ghostty/kitty 用户,能在界面中看到高清专辑封面。
-4. 作为 tmux/ssh/其他终端用户,封面自动降级为半块字符画,无需任何配置。
-5. 作为用户,歌词默认展示,当前行居中高亮,换行时平滑弹簧滚动,而非静态 3 行面板。
-6. 作为用户,歌曲无歌词时界面不留空白面板,封面居中放大填充视觉区。
-7. 作为用户,可用 `--no-lyric` 关闭歌词拉取与舞台。
-8. 作为老用户,全部键位与旧状态栏一致(空格/←→/↑↓/m/0-9/?/i/q),无需重学。
-9. 作为用户,按音量/静音键时浮层从底部弹簧弹出,1.5s 无操作自动淡出。
-10. 作为用户,缓冲阶段仍能看到水位填充进度(StateBuffering 语义不变)。
-11. 作为脚本作者,非 TTY 与 `--json` 依旧被拒绝,管道消费行为不变。
-12. 作为维护者,播放屏代码位于 `internal/tui`,与命令层解耦,Phase D 第二步全屏播放器可复用该包。
+### 详情页多 tab
 
-## Implementation Decisions
+列表项(歌单/专辑/歌手)Enter 进详情页,内含多个 tab:
+- 歌单详情页:[曲目 / 简介 / 评论(占位)]
+- 专辑详情页:[曲目 / 简介 / 评论(占位)]
+- 歌手详情页:[热门歌曲 / 全部专辑 / 简介 / 相似]
+- 歌曲详情:嵌入全屏播放页的 [歌词 / 创作者 / 相似歌曲 / 评论(占位)]
 
-### 包结构与装配
+评论/MV 等 proto 未建域作为 tab 占位,proto 补上后加 tab,不动侧边栏。
 
-- 新建 `internal/tui`:播放屏 model(Init/Update/View 纯化)+ 子组件(封面渲染器、取色器、歌词舞台、进度条、浮层)。该包是 Phase D 第二步全屏播放器的生长点。
-- `internal/cli/song/play.go` **保留**:flag 解析、TTY/`--json` 守卫、音源解析、缓冲 goroutine、beep 装配、歌词拉取。**删除**:playUI、statusRenderer、keyloop、csiComplete、readKey、statusLines/lyricPanel/helpLines/infoLines(手写 ANSI 全部,语义迁入 tui 包改写)。
-- play.go 末端把 `(player.Player, song, songURL, lyric, level, vol)` 打包交给 `tui.Run(...)`,由 tea.Program 接管终端,返回 error 向上传播。
-- `player.Player` 接口不变(Play/Pause/Seek/Volume/Progress/State)——TUI 只消费接口,与 beep 实现解耦(沿 CLI 设计文档第 3 条既定方向)。
+## 架构决策(详见 ADR)
 
-### 依赖选型
+### 运行时架构(三层)
 
-- **bubbletea v2**(charmbracelet 自家 crush 生产环境同款;v2 渲染管线对外部图像转义序列共存更友好)、**lipgloss**(样式/布局)、**harmonica**(弹簧动画)、**bubbles/progress**(渐变进度条)。
-- 图像解码用标准库 `image/jpeg`/`image/png`(封面仅 jpg/png,与 songdl MIME 嗅探同款);**不引第三方缩放库**——半块路径最近邻采样即可,Kitty 路径原图传输由协议端缩放。
-- `go get` 锁定当时最新 minor;go.mod/go.sum 单独一次提交。
+- **底层** = kite service 层(endpoint 声明 + engine,78 RPC 落点)
+- **CLI** = 单点工具型操作,输出导向(表格/JSON),沿现状
+- **TUI** = 连续体验,直接调 service 层拿结构化数据,不受 CLI 命令粒度束缚
 
-### 封面渲染(协议矩阵,参考 oh-my-pi 实现)
+「先 CLI 后 TUI」是**开发顺序**(每域先验证 CLI 可用、接口稳了再补 TUI 视图),不是运行时依赖。TUI 不调 CLI 命令,CLI 也不依赖 TUI。
 
-架构对齐 oh-my-pi 的图片子系统(`packages/tui/src/kitty-graphics.ts` / `terminal-capabilities.ts` / `crates/pi-natives/src/sixel.rs`),核心规则照搬:**transmit-once, place-many**。
+### 扩展模型(插件式 view 注册)
 
-- **数据**:`Album.PicUrl`(song detail 已返回,零新增 API 请求)→ http.Get 带 Referer/UA(沿 song url 下载同款 header)→ 解码一次,同时喂渲染与取色。
-- **协议矩阵**(优先级从高到低):
-  1. **Kitty**(ghostty/kitty):加载时经 tea.Cmd **一次性传输** base64(`a=t`,分配 image id);View 行只含 placement(`a=p` + id)或 Unicode placeholder(ghostty/kitty 默认,oh-my-pi 同款)——**View 输出永远不含 base64**,帧循环零图像开销。退出/换歌时 `a=d,d=i` 按 id 删除。
-  2. **iTerm2 inline**(OSC 1337):图像转义作为静态行内容嵌入 View;bubbletea 行 diff 对未变化行不重发,天然实现 transmit-once。
-  3. **半块字符画**:U+2580 `▀`(fg=上像素,bg=下像素,2 像素/单元格),封面区约 20×10 单元格,最近邻采样。
-- **检测**:纯环境变量(快路径,**不做 query-response 探测**——避免启动阻塞;漏检的代价只是降级,cosmetic 而非 corrupting):`TERM=xterm-kitty`/`xterm-ghostty`/`KITTY_WINDOW_ID` → kitty;`TERM_PROGRAM=iTerm.app`/`WEZTERM_EXECUTABLE` → iterm2;其余 → 半块。**env 覆盖**:`KITE_IMAGE_PROTOCOL=kitty|iterm2|halfblock|off`(对齐 oh-my-pi `PI_FORCE_IMAGE_PROTOCOL` 的逃生门)。
-- **高度保持 fallback**:三种渲染占用同一封面 rect,协议降级/切换不改变布局行数,不回溯重排(oh-my-pi 的 height-preserving 规则)。
-- **ImageBudget**:单曲播放屏同时只需 1 张 live 图;换歌(Phase D 后续)先按 id 删旧图再传新图,不累积像素内存。
-- **失败兜底**:拉取失败/无 PicUrl → 封面区显示占位(♪ 居中 + 默认调色板边框),取色同步用默认调色板。
-- tmux/ssh 下 Kitty 探测自然失败 → 自动落半块,零用户配置。
+```go
+type View struct {
+    ID       string         // 唯一标识,如 "daily-recommend"
+    Title    string         // 侧边栏显示名
+    Category Category       // Discover/My/Settings
+    New      func(deps) bubbletea.Model  // 工厂,nil = 未实现
+}
 
-### 封面取色主题
+var registry = []View{
+    {ID: "daily-recommend", Category: Discover, New: NewDailyRecommendView},
+    {ID: "toplist", Category: Discover, New: nil /* TODO: proto 未建 */},
+    // ...
+}
+// 侧边栏渲染时跳过 New==nil,但注册表保留条目作为架构占位
+```
 
-- 算法:解码图缩至 8×8 → 逐像素转 HSL → 过滤 L<0.15 / L>0.92 / S<0.2 像素 → 剩余中按 S×(1-|L-0.5|×2) 取最高分为主色;第二色要求色相距离 ≥60°,不满足则单色渐变。
-- 应用面:进度条渐变(主→强调)、当前行歌词高亮、边框色、音量条填充。
-- 默认调色板(常量):Charm 紫粉渐变 `#7D56F4 → #EE6FF8`。
-- 取色是纯函数 `image.Image → Palette`,启动时算一次,**不进帧循环**。
+新域(proto 未来补的评论/MV/排行榜/电台)落 CLI → 验证 → 落 TUI view + 注册一行,零框架改动。未建域在注册表里有 ID + Category + TODO 注释(架构位置留好),`New==nil` 时侧边栏不渲染。
 
-### 歌词舞台与动画
+### 导航树(完整网易云能力面)
 
-- 歌词拉取链路沿现状(原 `--lyric` 的 fetch + SortedLRC + currentLyricIndex 二分),仅默认改为开。原 `--lyric` flag **删除**,新增 `--no-lyric` 关闭(工具未发布,不做 flag 兼容)。
-- 舞台视口 5 行:上 2 渐暗、当前行(取色高亮 + bold)、下 2 渐暗——比原 3 行面板多一行上下文。换行时 harmonica 弹簧驱动垂直位移滑入。
-- 无歌词(接口失败/空):中央区封面居中放大一档,不留空白面板(沿 PRD-0013「无歌词不留空白行」语义);stderr 警告沿现状。
-- 动画驱动:tea.Tick ~30fps 跑弹簧插值(内存态);`Player.Progress()` 采样仍按 100ms tick(沿现状 refreshEvery),不加密 Player 调用。
+架构上完整,实现分批。✅ 已建 proto 域 / ⏳ proto 未建(注册表占位,侧边栏隐藏)/ ⚠️ proto 数据缺口:
 
-### 浮层
+```
+🔍 搜索                     [搜索域 ✅]
+── 发现 ──────────────────────
+  每日推荐               [推荐域 ✅ 日推歌+日推歌单]
+  私人 FM                [FM域 ✅]
+  排行榜                 [⏳ proto未建:飙升/新歌/热歌/原创/歌手榜]
+  新碟上架               [专辑域 ✅ shelf/newest/all]
+  精品歌单               [歌单域 ✅ HighQuality+分类标签]
+  新歌速递               [推荐域 ✅ RecommendNewSongs]
+  MV                     [⏳ proto未建:MV详情/播放/评论/相关]
+  电台/播客              [⏳ proto未建:DJRadio详情/节目/订阅/分类]
+── 我的 ──────────────────────
+  红心歌曲               [单曲域 ✅ LikedList → fan-out GetSongDetail]
+  我的歌单               [用户域 ✅ UserPlaylist created]
+  收藏歌单               [用户域 ✅ UserPlaylist subscribed]
+  收藏专辑               [专辑域 ✅ SubscribedAlbums]
+  关注歌手               [⚠️ proto缺口:有订阅写操作,无列表读接口]
+  关注的人               [用户域 ✅ Follows]
+  最近播放               [recall池 ✅ 零成本]
+  音乐网盘               [⏳ proto未建:上传/列表/删除]
+── 社交 ──────────────────────
+  朋友动态               [用户域 ✅ Events]
+  评论                   [⏳ proto未建:歌曲/专辑/歌单/MV评论,嵌详情页tab]
+  私信/通知              [⏳ proto未建]
+── 设置 ──────────────────────
+  我的账号               [用户域 ✅ 账号/等级/播放记录]
+  登录/切换/登出          [登录域 ✅]
+  签到/云贝              [⏳ proto未建:签到/云贝任务]
+```
 
-- 音量/静音键 → 底部音量浮层(弹簧入场,1.5s 无操作淡出);notice(seek 失败、歌词降级原因等)同通道,语义不变(一次性,下次按键清除)。
-- `?` help、`i` info 改居中 styled popup(lipgloss border + 取色边框),内容文案沿现状。
+### 双形态共存
 
-### 行为对齐清单(不变项)
+- 裸跑 `kite` → 工具型 onboarding(不变,CONTEXT.md「工具型定位」保留)
+- `kite tui` → 完整 TUI 客户端(新入口,不抢占裸跑默认行为)
+- CLI 子命令(search/download/play/recommend 等)→ 全部保留,与 TUI 平行
 
-- 键位集:空格(播放/暂停)、←/→(∓10s)、Shift+←/→(∓30s)、↑/↓(音量 ±5)、m(静音)、0-9(跳 N×10%)、?(help)、i(info)、q/Esc(退出)。
-- 守卫:非 TTY 报 `kit.ErrUsage`、拒绝 `--json`、`--volume` 0-100 校验、`--start` 秒数/mm:ss 解析。
-- StateBuffering 时进度条位置展示水位填充(PRD-0013「缓冲中(水位可见)」)。
-- stdin EOF → 退出(bubbletea input 关闭触发 Quit)。
-- 终端最小尺寸:宽<40 或高<12 → 居中提示「终端窗口过小」,q 仍可退出。
-- 进度类输出仍走 stderr(play 进入 TUI 前的解析/缓冲提示),stdout 保持干净。
+## 视觉与加载态
+
+### 视觉调性:封面驱动动态色
+
+背景/边框/高亮/进度条随当前播放专辑封面取色。每首歌界面主色随封面变化。无封面用默认调色板(Charm 紫粉 `#7D56F4 → #EE6FF8`)。复用取色算法(解码图缩至 8×8 → HSL 过滤 → 主色+强调色)。
+
+### 封面:真实图片(协议矩阵)
+
+支持终端显示真实图片,渐进增强协议矩阵(参考 oh-my-pi):
+1. **Kitty 图形协议**(ghostty/kitty):transmit-once, place-many,View 输出永远不含 base64
+2. **iTerm2 inline**(OSC 1337):图像转义作静态行,bubbletea 行 diff 天然 transmit-once
+3. **半块字符画**:U+2580 `▀`,最近邻采样,任意 truecolor 终端
+
+检测纯环境变量(不做 query-response 探测,避免启动阻塞):
+- `TERM=xterm-kitty`/`xterm-ghostty`/`KITTY_WINDOW_ID` → kitty
+- `TERM_PROGRAM=iTerm.app`/`WEZTERM_EXECUTABLE` → iterm2
+- 其余 → 半块
+
+env 覆盖:`KITE_IMAGE_PROTOCOL=kitty|iterm2|halfblock|off`(对齐 oh-my-pi `PI_FORCE_IMAGE_PROTOCOL`)。
+
+高度保持 fallback:三种渲染占用同一封面 rect,协议降级不改变布局行数。
+
+### 加载态:shimmer(oh-my-pi 同款)
+
+加载态 = spinner 帧(unicode preset status 帧 `⣾⣽⣻⢿⡿⣟⣯⣷`,染 accent 色,80ms 换帧)+ 空格 + shimmer 文字。
+
+shimmer 算法(移植自 oh-my-pi `packages/coding-agent/src/modes/theme/shimmer.ts` 的 classic 模式):
+- 亮带从左向右扫过,带外 dim(文字始终可读),带内按余弦强度分 3 档(low/mid/high),high 加粗
+- 固定速度 30 cells/s(不是固定周期,长文不抖,每帧推进 ≤1 cell)
+- 亮带半宽 6,padding 10,3 档阈值 0.65/0.22
+- 同档连续字符合并 ANSI 输出(减少转义序列)
+
+调色板用紫粉主题:`low=#5a3a8a`(暗紫)/ `mid=#9d6ff5`(中紫)/ `high=#ee6ff8`(亮粉)+ bold。spinner 染 `#ee6ff8`。
+
+> 参考实现:mimo-blog 的 `mimo-music/internal/cli/auth/qrtui/shimmer.go`(扫码登录已落地,同款算法)。
+
+## 待定细节(按推荐默认,实现时再调)
+
+以下 grill 时未最终拍板,先按推荐默认值写进 PRD,标注可调:
+
+### 队列模型(推荐:歌单/专辑顺序 + 手动加)
+
+- 从歌单/专辑进入播放 → 队列 = 该歌单/专辑全部曲目,按顺序
+- 单曲 `song play` → 单曲队列(无下一首)
+- 随机/循环模式:顺序 / 单曲循环 / 随机 三档(键 `r` 切换)
+- 手动加:列表项按 `a` 加到队列尾部,按 `A` 加到下一首
+
+### 键位方案(推荐:全局键 + 视图局部键)
+
+全局键:
+- `Tab` / `Shift+Tab`:焦点切换(侧边栏 ↔ 主区 ↔ mini-player)
+- `1-9`:快速跳侧边栏分类
+- `q`:返回上一级 / 退出(根级)
+- `Ctrl+C` / `Esc Esc`:退出
+
+主区列表键:
+- `↑↓` / `j k`:上下移动
+- `Enter`:进详情页 / 播放(歌曲)
+- `/`:搜索(任意视图呼出搜索框)
+- `a` / `A`:加队列尾 / 加下一首
+
+全屏播放页键(沿现有播放屏语义):
+- `空格`:播放/暂停
+- `← →`:∓10s(Shift ∓30s)
+- `↑ ↓`:音量 ±5
+- `m`:静音
+- `n` / `p`:下一首 / 上一首
+- `r`:循环模式切换
+- `t`:歌词翻译开关(proto Lyric 已有 translation,零成本)
+- `+` / `-`:歌词字号(小/中/大三档,存本地配置)
+- `?`:help,`i`:info,`q`:返回
+
+mini-player 键:
+- `Enter`:进全屏播放页
+- `空格`:播放/暂停
+
+### mini-player 内容(推荐)
+
+- 封面缩略图(20×10,走协议矩阵)
+- 艺人 - 歌名
+- 进度条(渐变,封面取色)
+- 当前时间 / 总时长
+- 播放/暂停图标 + 上下首图标(文字,不用 emoji)
+
+### 登录态(推荐:未登录可浏览,写操作引导登录)
+
+- 未登录进 `kite tui`:可浏览公开内容(推荐/搜索/新碟/精品歌单)
+- 触发写操作(红心/收藏/创建歌单)或需登录的入口(每日推荐/FM/我的歌单)→ 弹登录引导(QR 扫码,复用 qrtui 包)
+- 登录后不重启 TUI,原地刷新登录态
+
+### 搜索交互(推荐:全局 `/` 呼出输入框)
+
+- 任意视图按 `/` → 顶部弹出搜索输入框(bubbles/textinput)
+- 结果分类型 tab:单曲 / 歌单 / 专辑 / 歌手 / 用户
+- Enter 播放(单曲)或进详情页(其他)
+
+### 播放交接(推荐:TUI 独占 player 实例)
+
+- `kite tui` 启动时构造 player 实例,TUI 生命周期内独占
+- `kite song play --id X`(CLI)独立运行,不与 TUI 共享实例(两者不同时跑)
+- 未来若需 CLI 与 TUI 互通(IPC),单独立项
+
+## 依赖选型
+
+- **bubbletea v2**(`charm.land/bubbletea/v2`,v2 渲染管线对外部图像转义序列共存更友好)
+- **lipgloss v2**(`charm.land/lipgloss/v2`,样式/布局)
+- **bubbles v2**(`charm.land/bubbles/v2`,textinput/list/spinner 等组件)
+- 图像解码用标准库 `image/jpeg`/`image/png`,不引第三方缩放库
+
+> mimo-blog 的 `mimo-music` 已引入同款依赖栈(`charm.land/bubbletea/v2 v2.0.8` + `lipgloss/v2 v2.0.5`),可参考其 go.mod 锁定版本。
+
+## 包结构
+
+```
+internal/tui/
+├── client.go          # tea.Model 顶层:三栏布局 + 焦点管理
+├── sidebar.go         # 侧边栏(从 registry 生成)
+├── miniplayer.go      # 底部 mini-player
+├── view/              # 各域视图(插件式注册)
+│   ├── registry.go    # View 注册表(含未建域 nil 占位)
+│   ├── search.go      # 搜索视图
+│   ├── recommend.go   # 每日推荐
+│   ├── playlist.go    # 歌单列表 + 详情页
+│   ├── album.go       # 专辑
+│   ├── ...
+│   └── login.go       # TUI 内登录视图(复用 qrtui)
+├── playscreen/        # 全屏播放页
+│   ├── model.go       # 封面 + 歌词舞台 + 进度 + 浮层
+│   ├── cover.go       # 协议矩阵(kitty/iterm2/半块)
+│   ├── palette.go     # 封面取色
+│   ├── lyric.go       # 歌词舞台
+│   └── shimmer.go     # shimmer 加载态(从 qrtui 提取复用)
+└── queue.go           # 播放队列模型
+```
+
+`internal/cli/song/play.go` 的播放逻辑(player 装配、音源解析)提取到共享层,TUI 与 CLI 共用;play.go 保留 CLI 入口(flag 解析、TTY 守卫),末端调共享层。
 
 ## Testing Decisions
 
-好测试标准:只测外部行为(键位分派语义、View 金线、降级链选择、取色结果),不测动画数值与真实终端渲染。
+好测试标准:只测外部行为(导航/键位分派/View 金线/降级链),不测动画数值与真实终端渲染。
 
-**Seam 1 — Model 纯化**:Init/Update/View 不直接碰 io;Player 用 mock(沿 `play_test.go` 既有 MockPlayer 先例)。键位分派测试对齐现有语义:pause/resume、seek ±10/±30、volume ±5 收敛 0-100、mute 差值语义、seekPercent(缓冲中/总时长未知跳过)、quit。
+- **Seam 1 — Model 纯化**:各 view 的 Init/Update/View 不直接碰 io;service 调用经 deps 注入(沿 play_test.go 的 deps 惯例)。
+- **Seam 2 — 取色纯函数**:合成 image 断言 Palette。
+- **Seam 3 — 封面渲染降级链**:渲染器接口 + 探测函数注入;断言检测矩阵、`KITE_IMAGE_PROTOCOL` 覆盖、transmit-once。
+- **Seam 4 — shimmer 算法**:亮带形状、带外 tierLow、时间推进变色(参考 qrtui 的 shimmerText 测试)。
+- **Seam 5 — 注册表**:未建域(New==nil)不渲染,已建域渲染;新增 view 注册后侧边栏自动出现。
 
-**Seam 2 — 取色纯函数**:构造合成 image(已知像素分布)断言 Palette;边界:全黑图 → 默认调色板;单色图 → 单色渐变;无色相距离达标第二色 → 单色。
-
-**Seam 3 — 封面渲染降级链**:渲染器接口 + 探测函数注入;断言检测矩阵(env 各组合 → kitty/iterm2/半块/off)、`KITE_IMAGE_PROTOCOL` 覆盖生效、拉取失败走占位;**transmit-once 断言**:Kitty 路径 base64 只在加载 Cmd 出现一次,View 行输出不含 base64(只含 placement/placeholder);三种渲染器输出 rect 行数一致(高度保持)。
-
-**Seam 4 — teatest 集成**:fake Player + 固定歌词驱动 Model,断言 View 含金线(标题/当前行/进度时钟/键位栏);歌词 nil 时无舞台占位行;`--no-lyric` 等价路径不拉歌词。
-
-**不测的**:harmonica 弹簧数值(动画手感,人眼验收);真实 Kitty 转义序列在 ghostty 的渲染效果(人工 smoke);真实终端尺寸探测。
+不测的:真实 bubbletea Program 渲染(人工 smoke);harmonica 弹簧数值;真实 Kitty 转义在 ghostty 的效果。
 
 ## Out of Scope
 
-- **逐字卡拉OK(yrc)**:新增 yrc 拉取 + 逐字解析器 + 行内按字高亮,列后续增量 PRD(访谈已确认「后续」)。
-- **Phase D 第二步全屏播放器**:队列/菜单/浏览/`kite tui` 入口/裸跑行为变更,单独立项。
-- **频谱 FFT 可视化**、**sixel 图片协议**:FFT 成本与收益不成正比;sixel 需引第三方 Go 库且 ghostty 不支持,sixel-only 终端(xterm/foot)属小众,后续有真实需求再议。
-- **ANSI 旧 UI flag 保留**:直接删除,工具未发布不做兼容形态(沿 CLI 重构「不做旧命令兼容别名」惯例)。
-- **`--lyric` flag 保留**:直接删除,由 `--no-lyric` 取代(同上惯例)。
+- **逐字卡拉OK(yrc)**:后续增量 PRD。
+- **频谱 FFT 可视化**、**sixel 图片协议**:成本与收益不成正比。
+- **CLI 与 TUI 的 IPC 互通**:单独立项。
+- **主题系统**(用户可切换配色):TUI 客户端用封面驱动动态色,主题系统后续。
+- **play.go 手写 ANSI UI 的渐进迁移**:直接删除,工具未发布不做兼容(沿「不做旧命令兼容别名」惯例)。
 
 ## Further Notes
 
-- roadmap Phase D 第一步(列表选择器小验证)由本 PRD supersede——技术栈验证在播放屏重写中完成;roadmap 文档已同步标注,ADR 见 `play-screen-bubbletea.md`。
-- CONTEXT.md 新增「播放屏(Play Screen)」词汇,作为本 PRD 交付物的一部分。
-- 人工 smoke 清单(实现完成后):ghostty(Kitty 高清封面 + Unicode placeholder)、iTerm2(OSC 1337)、tmux 内(半块降级)、`KITE_IMAGE_PROTOCOL=off`、无封面歌曲、无歌词歌曲、终端缩放至 30×8(小尺寸提示)、`--no-lyric`、缓冲水位展示。
-- 提交拆分建议(沿仓库原子性规范):① go.mod 引入 charm 栈;② `internal/tui` 取色器+测试;③ `internal/tui` 封面渲染器+测试;④ `internal/tui` 歌词舞台+浮层+model;⑤ play.go 接入 tui.Run 并删除手写 ANSI;⑥ 文档同步(CONTEXT.md/roadmap,即本文档已含)。
+- 本 PRD supersede 原「单曲播放屏重写」范围——播放屏升级为 TUI 客户端的一个视图(playscreen 包),不再是独立产物。
+- roadmap Phase D 段同步更新:原「第一步小验证 + 第二步全屏播放器」两步合并为「TUI 客户端」一步,范围扩大但架构统一。
+- CONTEXT.md 新增「TUI 客户端」「插件式 view 注册」「shimmer 加载态」词汇。
+- 人工 smoke 清单:侧边栏导航、各域列表加载、mini-player 常驻、全屏播放页(ghostty 封面高清 + shimmer 加载态 + 歌词翻译/字号)、搜索分类型、未登录浏览 + 写操作引导登录、tmux 内封面降级、`KITE_IMAGE_PROTOCOL=off`。
+- 提交拆分建议(沿仓库原子性规范):
+  1. go.mod 引入 charm 栈
+  2. `internal/tui/playscreen` shimmer + 取色 + 封面渲染器(从 qrtui 提取复用)
+  3. `internal/tui` 三栏布局骨架 + 注册表
+  4. 各域 view(按域分批,每域一 commit)
+  5. mini-player + 全屏播放页 + 队列
+  6. CLI play.go 接入共享播放层 + 删除手写 ANSI
+  7. 文档同步(CONTEXT.md / roadmap)
