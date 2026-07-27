@@ -7,26 +7,26 @@ import (
 	"path/filepath"
 )
 
-// userConfigDir 返回 musicctl 本地状态所在基目录,默认指向 os.UserConfigDir()/musicctl
-// (macOS ~/Library/Application Support/musicctl、Linux ~/.config/musicctl、Windows %AppData%\musicctl)。
+// userConfigDir 返回 kite 本地状态所在基目录,默认指向 os.UserConfigDir()/kite
+// (macOS ~/Library/Application Support/kite、Linux ~/.config/kite、Windows %AppData%\kite)。
 //
 // 它是包级变量(而非直接调 os.UserConfigDir),便于测试覆写把路径树重定向到
 // t.TempDir(),不碰用户真实主目录。这是召回池(#G)/补全/doctor(#J)/session 测试
 // 共用的唯一路径 seam(PRD-0015)。
 var userConfigDir = defaultUserConfigDir
 
-// defaultUserConfigDir 返回 os.UserConfigDir()/musicctl。
+// defaultUserConfigDir 返回 os.UserConfigDir()/kite。
 // os.UserConfigDir() 已含平台子目录(macOS: ~/Library/Application Support;
-// Linux: ~/.config;Windows: %AppData%),只需再拼 musicctl。
+// Linux: ~/.config;Windows: %AppData%),只需再拼 kite。
 func defaultUserConfigDir() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("定位用户配置目录失败: %w", err)
 	}
-	return filepath.Join(base, "musicctl"), nil
+	return filepath.Join(base, "kite"), nil
 }
 
-// ConfigDir 返回 musicctl 本地状态基目录(所有状态文件派生自此)。
+// ConfigDir 返回 kite 本地状态基目录(所有状态文件派生自此)。
 // 目录在首次写盘时由调用方 MkdirAll(0700);本函数只算路径不创建。
 func ConfigDir() (string, error) {
 	return userConfigDir()
@@ -53,7 +53,7 @@ func HistoryPath() (string, error) {
 	return filepath.Join(d, "history.jsonl"), nil
 }
 
-// legacySessionPath 返回迁移前旧路径 ~/.musicctl/session.json。
+// legacySessionPath 返回迁移前旧路径 ~/.kite/session.json。
 //
 // 仅迁移逻辑使用:当新路径无文件时查此路径,存在则搬移到新路径。不作为长期读路径
 // (长期只读新路径,避免双真相)。失败时返回 error,迁移逻辑据此判「旧路径不可用,跳过」。
@@ -62,10 +62,10 @@ func legacySessionPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("定位主目录失败: %w", err)
 	}
-	return filepath.Join(home, ".musicctl", "session.json"), nil
+	return filepath.Join(home, ".kite", "session.json"), nil
 }
 
-// migrateLegacySession 把旧路径 ~/.musicctl/session.json 迁到新路径(若需要)。
+// migrateLegacySession 把旧路径 ~/.kite/session.json 迁到新路径(若需要)。
 //
 // 惰性触发:LoadSession 首次发现新路径无文件时调用。一次性、无感:
 //   - 新路径已有文件 → 已迁移或新用户已登录,直接返回(不查旧路径)。
@@ -111,6 +111,6 @@ func migrateLegacySession(errOut io.Writer) error {
 	if err := os.Chmod(newPath, 0o600); err != nil {
 		return fmt.Errorf("设置会话文件权限失败: %w", err)
 	}
-	fmt.Fprintf(errOut, "已迁移会话到 %s(旧目录 ~/.musicctl/ 可手动删除)\n", filepath.Dir(newPath))
+	fmt.Fprintf(errOut, "已迁移会话到 %s(旧目录 ~/.kite/ 可手动删除)\n", filepath.Dir(newPath))
 	return nil
 }

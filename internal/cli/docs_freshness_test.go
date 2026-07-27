@@ -12,7 +12,7 @@ import (
 // TestDocsFreshness 守护:重新生成命令 markdown 与入库的 docs/cmd/ diff,
 // 不一致即红——命令树变了但文档没刷新。
 //
-// 改命令(新增/删除/改 Short/Long/Flag)后必须跑 `make docs`(cmd/musicctl-docs)
+// 改命令(新增/删除/改 Short/Long/Flag)后必须跑 `make docs`(cmd/kite-docs)
 // 刷新 docs/cmd/,否则本测试失败。生成物非手写真相,天然不腐烂(clig.dev 双轨)。
 //
 // 跳过条件:docs/cmd/ 不存在(未生成,如全新 checkout 未跑 make docs)→ 跳过而非失败,

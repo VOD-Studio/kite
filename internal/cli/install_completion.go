@@ -24,11 +24,11 @@ func newInstallCompletionCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "install-completion",
 		Short: "生成当前 shell 的 Tab 补全脚本到标准目录(bash/fish 自动加载;zsh 需手动加 fpath)",
-		Long: `生成 musicctl 的 Tab 补全脚本到当前 shell($SHELL)的标准目录:
+		Long: `生成 kite 的 Tab 补全脚本到当前 shell($SHELL)的标准目录:
 
-  zsh   → ~/.zsh/completions/_musicctl(zsh 默认 fpath 不含此目录,需手动加 fpath)
-  bash  → ~/.local/share/bash-completion/completions/musicctl(bash-completion 自动加载)
-  fish  → ~/.config/fish/completions/musicctl.fish(fish 自动加载)
+  zsh   → ~/.zsh/completions/_kite(zsh 默认 fpath 不含此目录,需手动加 fpath)
+  bash  → ~/.local/share/bash-completion/completions/kite(bash-completion 自动加载)
+  fish  → ~/.config/fish/completions/kite.fish(fish 自动加载)
 
 本命令不改写你的 shell 配置文件(避免拖慢启动/覆盖框架策略)。bash/fish 装好即用;
 zsh 需在 ~/.zshrc 的 compinit 之前手动加一行:
@@ -37,7 +37,7 @@ zsh 需在 ~/.zshrc 的 compinit 之前手动加一行:
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// 必须传 root:cobra 生成脚本时用命令的 Name() 注册,
-			// 传子命令会生成 install-completion 的补全而非 musicctl 的。
+			// 传子命令会生成 install-completion 的补全而非 kite 的。
 			return runInstallCompletion(cmd.Root(), cmd.OutOrStdout())
 		},
 	}
@@ -53,7 +53,7 @@ func runInstallCompletion(root *cobra.Command, out io.Writer) error {
 	case "zsh", "bash", "fish":
 		// 继续生成。
 	default:
-		return fmt.Errorf("无法识别当前 shell($SHELL=%q);手动跑 musicctl completion <shell> 并按 shell 文档加载", os.Getenv("SHELL"))
+		return fmt.Errorf("无法识别当前 shell($SHELL=%q);手动跑 kite completion <shell> 并按 shell 文档加载", os.Getenv("SHELL"))
 	}
 	script, err := genCompletionScript(root, shell)
 	if err != nil {
@@ -72,7 +72,7 @@ func runInstallCompletion(root *cobra.Command, out io.Writer) error {
 			fmt.Fprintln(out, "zsh 默认 fpath 不含 ~/.zsh/completions,需在 ~/.zshrc 的 compinit 之前加一行:")
 			fmt.Fprintln(out, "  fpath=(~/.zsh/completions $fpath)")
 		}
-		fmt.Fprintln(out, "重开终端后 musicctl <TAB> 会列命令。")
+		fmt.Fprintln(out, "重开终端后 kite <TAB> 会列命令。")
 	} else {
 		fmt.Fprintf(out, "%s 补全脚本已是最新(%s)。\n", shell, target)
 	}
@@ -107,11 +107,11 @@ func completionScriptPath(shell string) (string, error) {
 	}
 	switch shell {
 	case "zsh":
-		return filepath.Join(home, ".zsh", "completions", "_musicctl"), nil
+		return filepath.Join(home, ".zsh", "completions", "_kite"), nil
 	case "bash":
-		return filepath.Join(home, ".local", "share", "bash-completion", "completions", "musicctl"), nil
+		return filepath.Join(home, ".local", "share", "bash-completion", "completions", "kite"), nil
 	case "fish":
-		return filepath.Join(home, ".config", "fish", "completions", "musicctl.fish"), nil
+		return filepath.Join(home, ".config", "fish", "completions", "kite.fish"), nil
 	}
 	return "", fmt.Errorf("不支持的 shell: %s", shell)
 }

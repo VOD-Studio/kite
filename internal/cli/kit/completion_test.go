@@ -27,7 +27,7 @@ func newRootWithCompletion(t *testing.T, events []recall.Event) (*cobra.Command,
 	k := &Kit{}
 	k.SetRecallPool(pool)
 
-	root := &cobra.Command{Use: "musicctl"}
+	root := &cobra.Command{Use: "kite"}
 	// 子命令带 --id / --level / --area。
 	sub := &cobra.Command{Use: "play", RunE: func(*cobra.Command, []string) error { return nil }}
 	var id int64
@@ -107,7 +107,7 @@ func TestCompleteID_PrefixFilters(t *testing.T) {
 
 func TestCompleteID_NilPoolReturnsEmpty(t *testing.T) {
 	k := &Kit{} // 无 pool
-	root := &cobra.Command{Use: "musicctl"}
+	root := &cobra.Command{Use: "kite"}
 	sub := &cobra.Command{Use: "play"}
 	var id int64
 	sub.Flags().Int64Var(&id, "id", 0, "")
@@ -152,7 +152,7 @@ func TestMountCompletion_RespectsExistingRegistration(t *testing.T) {
 	pool := recall.NewPool(func() (string, error) { return filepath.Join(dir, "h.jsonl"), nil })
 	k := &Kit{}
 	k.SetRecallPool(pool)
-	root := &cobra.Command{Use: "musicctl"}
+	root := &cobra.Command{Use: "kite"}
 	sub := &cobra.Command{Use: "play"}
 	var id int64
 	sub.Flags().Int64Var(&id, "id", 0, "")

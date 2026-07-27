@@ -36,7 +36,7 @@ func SessionChecker(cookieProbe func() string, netProbe func(ctx context.Context
 		cookie := cookieProbe()
 		if cookie == "" {
 			return Result{Name: "会话", Status: StatusFail, Detail: "未登录",
-				FixHint: "运行 musicctl login 扫码登录"}
+				FixHint: "运行 kite login 扫码登录"}
 		}
 		if err := netProbe(context.Background(), cookie); err != nil {
 			return Result{Name: "会话", Status: StatusFail,
@@ -49,12 +49,12 @@ func SessionChecker(cookieProbe func() string, netProbe func(ctx context.Context
 
 // CompletionChecker 检查当前 shell 的补全脚本是否已安装。
 //
-// 检测常见安装位置是否存在补全脚本(zsh: ~/.zsh/completions/_musicctl;
-// bash: ~/.local/share/bash-completion/completions/musicctl;fish: ~/.config/fish/...)。
+// 检测常见安装位置是否存在补全脚本(zsh: ~/.zsh/completions/_kite;
+// bash: ~/.local/share/bash-completion/completions/kite;fish: ~/.config/fish/...)。
 // 这覆盖大多数安装方式;fpath 是否真 source 无法跨进程可靠检测,故文件存在视为已装。
 //
 // 已装 → pass(显示路径);未装 → warn(给一键安装命令,引导用户装上)。
-// warn 非 fail:没装补全 musicctl 仍可用,只是 Tab 不列命令。
+// warn 非 fail:没装补全 kite 仍可用,只是 Tab 不列命令。
 //
 // shell 从 $SHELL 推断;installedProbe 注入使测试用 fake(不碰真实文件系统)。
 func CompletionChecker(shell string, installedProbe func(shell string) (path string, ok bool)) Checker {
@@ -64,7 +64,7 @@ func CompletionChecker(shell string, installedProbe func(shell string) (path str
 		if sh == "" {
 			return Result{Name: "补全", Status: StatusWarn,
 				Detail: "无法识别当前 shell($SHELL 未设)",
-				FixHint: "手动跑 musicctl completion <shell> 并按 shell 文档 source"}
+				FixHint: "手动跑 kite completion <shell> 并按 shell 文档 source"}
 		}
 		path, ok := installedProbe(sh)
 		if ok {
@@ -73,12 +73,12 @@ func CompletionChecker(shell string, installedProbe func(shell string) (path str
 			r := Result{Name: "补全", Status: StatusPass,
 				Detail: fmt.Sprintf("%s 补全脚本已安装(%s)", sh, path)}
 			if sh == "zsh" {
-				r.FixHint = "若 musicctl <TAB> 仍列文件,确认 ~/.zshrc 在 compinit 前含: fpath=(~/.zsh/completions $fpath)"
+				r.FixHint = "若 kite <TAB> 仍列文件,确认 ~/.zshrc 在 compinit 前含: fpath=(~/.zsh/completions $fpath)"
 			}
 			return r
 		}
 		return Result{Name: "补全", Status: StatusWarn,
-			Detail: fmt.Sprintf("%s 补全未安装(Tab 将列文件而非 musicctl 命令)", sh),
+			Detail: fmt.Sprintf("%s 补全未安装(Tab 将列文件而非 kite 命令)", sh),
 			FixHint: completionInstallHint(sh)}
 	})
 }
@@ -108,13 +108,13 @@ func ShellName(shellPath string) string {
 }
 
 // completionInstallHint 返回该 shell 的一键安装命令。
-// 统一指向 musicctl install-completion(自动检测 shell + 生成补全脚本,不改 shell 配置)。
+// 统一指向 kite install-completion(自动检测 shell + 生成补全脚本,不改 shell 配置)。
 func completionInstallHint(shell string) string {
 	switch shell {
 	case "zsh", "bash", "fish":
-		return "运行 musicctl install-completion 生成补全脚本(bash/fish 自动加载;zsh 需手动加 fpath)"
+		return "运行 kite install-completion 生成补全脚本(bash/fish 自动加载;zsh 需手动加 fpath)"
 	default:
-		return "运行 musicctl install-completion,或手动 musicctl completion <shell> 并按 shell 文档 source"
+		return "运行 kite install-completion,或手动 kite completion <shell> 并按 shell 文档 source"
 	}
 }
 
@@ -127,7 +127,7 @@ func AudioChecker(audioProbe func() error) Checker {
 		if err := audioProbe(); err != nil {
 			return Result{Name: "音频", Status: StatusWarn,
 				Detail: "无可用音频设备(headless?)",
-				FixHint: "用 musicctl song download 替代播放"}
+				FixHint: "用 kite song download 替代播放"}
 		}
 		return Result{Name: "音频", Status: StatusPass, Detail: "音频后端可用"}
 	})

@@ -7,13 +7,13 @@ import (
 	"testing"
 )
 
-// writeLegacySession 在 ~/.musicctl/(用 os.UserHomeDir 注入到临时目录)写一个旧 session。
+// writeLegacySession 在 ~/.kite/(用 os.UserHomeDir 注入到临时目录)写一个旧 session。
 // 返回创建的 legacy 目录路径,供测试断言迁移行为。
 func writeLegacySession(t *testing.T, cookie string) {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HOME", home) // legacySessionPath 用 os.UserHomeDir()
-	legacyDir := filepath.Join(home, ".musicctl")
+	legacyDir := filepath.Join(home, ".kite")
 	if err := os.MkdirAll(legacyDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestMigrate_LegacyExists_NewPathAbsent(t *testing.T) {
 	}
 	// 旧文件已移走。
 	home, _ := os.UserHomeDir()
-	legacyFile := filepath.Join(home, ".musicctl", "session.json")
+	legacyFile := filepath.Join(home, ".kite", "session.json")
 	if _, err := os.Stat(legacyFile); !os.IsNotExist(err) {
 		t.Errorf("旧文件应已移走,stat err = %v", err)
 	}
@@ -110,8 +110,8 @@ func TestMigrate_Failure_MkdirAllBlocked(t *testing.T) {
 	// 用 withTestConfigDir 拿到新基目录,把它改成不可写的形态:在基目录的同级放一个同名文件
 	// 使 MkdirAll 因「路径被文件占用」失败。
 	tmp := t.TempDir()
-	// 让 ConfigDir 指向 tmp/musicctl,但 tmp/musicctl 先创建为一个文件,阻塞 MkdirAll。
-	blockingFile := filepath.Join(tmp, "musicctl")
+	// 让 ConfigDir 指向 tmp/kite,但 tmp/kite 先创建为一个文件,阻塞 MkdirAll。
+	blockingFile := filepath.Join(tmp, "kite")
 	if err := os.WriteFile(blockingFile, []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestMigrate_Failure_MkdirAllBlocked(t *testing.T) {
 	}
 	// 旧文件保留(没被丢)。
 	home, _ := os.UserHomeDir()
-	legacyFile := filepath.Join(home, ".musicctl", "session.json")
+	legacyFile := filepath.Join(home, ".kite", "session.json")
 	if _, err := os.Stat(legacyFile); err != nil {
 		t.Errorf("迁移失败时旧文件应保留,stat err = %v", err)
 	}

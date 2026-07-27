@@ -126,7 +126,7 @@ func TestHandleVersion_NotTriggeredBySubcommandArg(t *testing.T) {
 	// 间接验证:song 子命令的 --id(非 version flag)不应让 handleVersion 触发。
 	// handleVersion 在遇第一个非 flag 参数时停止扫描。
 	// 这里用字符串扫模拟逻辑,确认「song --version」中 song 是子命令停止扫描。
-	args := []string{"musicctl", "song", "--version"}
+	args := []string{"kite", "song", "--version"}
 	// 模拟 handleVersion 的扫描:遇 song(非 flag)停止,--version 不被扫到。
 	wantVersion := false
 	for _, a := range args[1:] {

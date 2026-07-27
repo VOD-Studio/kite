@@ -19,7 +19,7 @@ var ungroupedAllowlist = map[string]string{}
 // TestGuard_EveryCommandHasGroup 守护:root 的每个直接子命令都必须有 GroupID,
 // 或在 ungroupedAllowlist 显式登记理由。
 //
-// cobra 的分组只对 root 的直接子命令生效(它们出现在 `musicctl --help` 的分组里);
+// cobra 的分组只对 root 的直接子命令生效(它们出现在 `kite --help` 的分组里);
 // 孙命令(song play 等)在各自父命令的 --help 里展示,不继承父 GroupID,不要求分组。
 // 无 GroupID 的直接子命令会静默落 "Additional Commands",随接口增长 silently 腐烂——
 // 本测试拦这个。

@@ -1,4 +1,4 @@
-// Package doctor 实现 musicctl doctor 命令:逐项环境自检。
+// Package doctor 实现 kite doctor 命令:逐项环境自检。
 //
 // 检查项:版本(build info)/会话与网络(一次轻量 rpc)/补全安装指引/音频后端。
 // 渲染层输出(✓/✗/! 清单 + 每项修复指引),任一 fail → exit 1;warn 不影响。

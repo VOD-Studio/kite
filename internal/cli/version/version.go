@@ -6,7 +6,7 @@ import (
 	"runtime/debug"
 )
 
-// VersionInfo 是 musicctl 的构建信息,经 debug.ReadBuildInfo() 读取。
+// VersionInfo 是 kite 的构建信息,经 debug.ReadBuildInfo() 读取。
 //
 // go install 安装时自动嵌入 module version + vcs revision/time;非 install 构建
 // (如 go run / 本地 go build 无 vcs)则 version 为 (devel)、vcs 字段缺失。
@@ -58,15 +58,15 @@ func LoadVersion() VersionInfo {
 }
 
 // String 渲染人类可读的单行版本信息(供 cobra Version 模板用)。
-// 例:`musicctl v0.1.0 (commit: 4a8047b, built: 2026-07-24, go: go1.25.0)`
-// 无 vcs 信息时:`musicctl (devel, no vcs info)`
+// 例:`kite v0.1.0 (commit: 4a8047b, built: 2026-07-24, go: go1.25.0)`
+// 无 vcs 信息时:`kite (devel, no vcs info)`
 func (v VersionInfo) String() string {
 	if v.Commit == "" {
 		modified := ""
 		if v.Modified {
 			modified = ", dirty"
 		}
-		return fmt.Sprintf("musicctl %s (no vcs info%s, go: %s)", v.Version, modified, v.GoVersion)
+		return fmt.Sprintf("kite %s (no vcs info%s, go: %s)", v.Version, modified, v.GoVersion)
 	}
 	dirty := ""
 	if v.Modified {
@@ -76,7 +76,7 @@ func (v VersionInfo) String() string {
 	if len(buildTime) >= 10 {
 		buildTime = buildTime[:10] // 只取日期部分(去掉时间)
 	}
-	return fmt.Sprintf("musicctl %s (commit: %s, built: %s%s, go: %s)",
+	return fmt.Sprintf("kite %s (commit: %s, built: %s%s, go: %s)",
 		v.Version, v.Commit, buildTime, dirty, v.GoVersion)
 }
 

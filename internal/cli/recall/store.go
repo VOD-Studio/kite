@@ -44,7 +44,7 @@ func (p *Pool) WithClock(now func() time.Time) *Pool {
 // Append 把事件追加到 JSONL,并在超容量时 drop oldest。
 //
 // 原子写:不直接 append 到主文件(避免并发/中断留半行),而是读全量 + 追加新事件 +
-// 裁剪 + 写 tmp + rename。musicctl 是 run-and-exit 单进程,无并发,但仍用 tmp+rename
+// 裁剪 + 写 tmp + rename。kite 是 run-and-exit 单进程,无并发,但仍用 tmp+rename
 // 保证进程被杀时主文件完整(沿 kit.SaveSession 模式)。
 //
 // 单次 Append 多个事件时一起裁剪。失败返回 error(调用方决定是否告警,埋点失败不阻塞主命令)。

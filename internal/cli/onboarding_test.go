@@ -106,7 +106,7 @@ func TestRenderOnboarding_NotLoggedIn(t *testing.T) {
 	var buf bytes.Buffer
 	renderOnboarding(&buf, false, at(2026, 7, 22, 8))
 	out := buf.String()
-	require.Contains(t, out, "musicctl login")
+	require.Contains(t, out, "kite login")
 	require.Contains(t, out, "login-cellphone")
 	require.NotContains(t, out, "daily-songs", "未登录不应给场景推荐")
 }

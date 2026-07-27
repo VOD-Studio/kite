@@ -1,4 +1,4 @@
-// Package kit 是 musicctl 命令层的共享工具包。
+// Package kit 是 kite 命令层的共享工具包。
 //
 // 封装 engine 调用、登录会话读写、输出与确认交互,各领域命令包(song/playlist/...)
 // 只依赖本包,不直接碰 engine 细节。
@@ -168,7 +168,7 @@ func Exec[Req, Resp any](k *Kit, ctx context.Context, ep *engine.Endpoint[Req, R
 // 未登录返回包装了 ErrNotLogin 的错误,Execute 映射退出码 3。
 func (k *Kit) RequireLogin() error {
 	if k.CurrentCookie() == "" {
-		return fmt.Errorf("%w:先运行 `musicctl login` 扫码登录(也可用 NETEASE_COOKIE 环境变量临时指定 cookie)", ErrNotLogin)
+		return fmt.Errorf("%w:先运行 `kite login` 扫码登录(也可用 NETEASE_COOKIE 环境变量临时指定 cookie)", ErrNotLogin)
 	}
 	return nil
 }

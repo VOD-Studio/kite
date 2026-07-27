@@ -1,4 +1,4 @@
-// Package cli 装配 musicctl 的根命令。
+// Package cli 装配 kite 的根命令。
 package cli
 
 import (
@@ -30,15 +30,15 @@ import (
 // 登录类命令挂顶层(高频入口),接口按领域分组(song/album/...)。
 // 登录态来源: 1. NETEASE_COOKIE 环境变量(优先,临时换号调试)
 // 2. 本地配置目录下的 session.json(login/login-cellphone 写入,logout 删除);
-//    路径见 musicctl doctor(macOS ~/Library/Application Support/musicctl/、
-//    Linux ~/.config/musicctl/、Windows %AppData%\musicctl\)。
+//    路径见 kite doctor(macOS ~/Library/Application Support/kite/、
+//    Linux ~/.config/kite/、Windows %AppData%\kite\)。
 func NewRootCommand() *cobra.Command {
 	k := kit.New()
 
 	root := &cobra.Command{
-		Use:   "musicctl",
-		Short: "musicctl - mimo-music 网易云接口 CLI",
-		Long: `musicctl - mimo-music 接口调试与实用工具
+		Use:   "kite",
+		Short: "kite - mimo-music 网易云接口 CLI",
+		Long: `kite - mimo-music 接口调试与实用工具
 
 直连 engine + endpoint 声明,不经 gRPC/gateway。
 登录态接口需先 login(扫码)或 login-cellphone(手机号验证码)。
@@ -46,7 +46,7 @@ func NewRootCommand() *cobra.Command {
 登录态来源:
   1. 环境变量 NETEASE_COOKIE(优先,用于临时换号调试)
   2. 本地配置目录的 session.json(login 写入,logout 删除);
-     路径见 musicctl doctor(macOS: ~/Library/Application Support/musicctl/ 等)`,
+     路径见 kite doctor(macOS: ~/Library/Application Support/kite/ 等)`,
 		SilenceUsage:  true,
 		SilenceErrors: true, // 错误由 Execute 统一以「错误: 」格式打印(与旧 CLI 一致)
 		// 裸跑(无子命令)→ onboarding 引导:未登录给登录引导,已登录按时段/周末推荐
@@ -283,7 +283,7 @@ func Execute() {
 // rewriteAliases 就地重写 os.Args 以展开跨级别名。
 //
 // cobra.Command.Execute() 从 os.Args[1:] 取参数,故:
-//   - 执行路径:别名在 os.Args[1](musicctl pp --id X → 重写 [1])。
+//   - 执行路径:别名在 os.Args[1](kite pp --id X → 重写 [1])。
 //   - __complete/__completeNoDesc 路径:os.Args[1]=__complete,别名在 os.Args[2]。
 //
 // 未命中别名时 os.Args 不变。
@@ -304,7 +304,7 @@ func rewriteAliases() {
 //
 // 必须在 cobra Execute 前拦截:cobra 的内置 --version 走 VersionTemplate,
 // 无法按 --json 切结构化输出。这里手动扫 os.Args(--version 形态:
-// --version、--version=true、-v 若注册了简写;musicctl 只用 --version)。
+// --version、--version=true、-v 若注册了简写;kite 只用 --version)。
 // --json 与 --version 同给时 --json 优先(结构化),否则人类可读单行。
 //
 // 不用 cobra 的 flag 解析(那需要构造 root),手扫足够 robust:

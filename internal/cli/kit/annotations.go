@@ -19,7 +19,7 @@ import (
 // 值为短形式 "Service/Method"(如 "SongService/GetSongDetail"),多 rpc 用逗号分隔
 // (如 "SongService/GetSongURL,SongService/GetSongDetail")。值存在(含空串)即表示
 // 命令已被审视;无此 key 的叶子命令会被漏标守护捕获。
-const RpcsAnnotationKey = "musicctl/rpcs"
+const RpcsAnnotationKey = "kite/rpcs"
 
 // ParseRpcs 把注解值拆成 rpc 列表。空串与缺失 key 都返回 nil(无 rpc,合法)。
 // 逗号分隔,逐项去空白与空串(容错末尾/连续逗号)。

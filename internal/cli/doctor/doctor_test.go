@@ -107,12 +107,12 @@ func TestSessionChecker_Valid_Pass(t *testing.T) {
 func TestCompletionChecker_Installed_Pass(t *testing.T) {
 	t.Parallel()
 	c := CompletionChecker("/bin/zsh", func(shell string) (string, bool) {
-		return "/home/u/.zsh/completions/_musicctl", true
+		return "/home/u/.zsh/completions/_kite", true
 	})
 	r := c.Check()
 	require.Equal(t, StatusPass, r.Status)
 	require.Contains(t, r.Detail, "zsh")
-	require.Contains(t, r.Detail, "_musicctl")
+	require.Contains(t, r.Detail, "_kite")
 	// zsh 脚本在但默认 fpath 不含该目录,应附排查提示。
 	require.Contains(t, r.FixHint, "fpath")
 }
@@ -121,7 +121,7 @@ func TestCompletionChecker_BashInstalled_NoFixHint(t *testing.T) {
 	t.Parallel()
 	// bash 自动加载,已装无需 fpath 排查提示。
 	c := CompletionChecker("/bin/bash", func(shell string) (string, bool) {
-		return "/home/u/.local/share/bash-completion/completions/musicctl", true
+		return "/home/u/.local/share/bash-completion/completions/kite", true
 	})
 	r := c.Check()
 	require.Equal(t, StatusPass, r.Status)

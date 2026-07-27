@@ -1,4 +1,4 @@
-// Package auth 提供 musicctl 的登录态命令:扫码/手机号登录、登录状态、登出。
+// Package auth 提供 kite 的登录态命令:扫码/手机号登录、登录状态、登出。
 package auth
 
 import (

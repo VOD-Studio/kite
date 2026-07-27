@@ -46,7 +46,7 @@ func NeedsRemoteRefresh(pool *Pool) bool {
 
 // WarmBackground 起 fire-and-forget goroutine 拉远端快照并写入池子。
 //
-// **绝不阻塞调用方**:立即返回,拉取在后台;musicctl 是 run-and-exit CLI,进程退出时
+// **绝不阻塞调用方**:立即返回,拉取在后台;kite 是 run-and-exit CLI,进程退出时
 // 未完成的 Append 直接丢弃——tmp+rename 保证主文件不被半拉子数据污染(Pool.Append 已保证)。
 // fetcher 为 nil 或拉取失败:静默放弃,下次启动再试。
 //

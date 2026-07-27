@@ -87,10 +87,10 @@ func probeSpeaker() error {
 // probeCompletionInstalled 检测指定 shell 的补全脚本是否已安装到常见位置。
 //
 // 各 shell 的检测路径(覆盖主流安装方式):
-//   - zsh:~/.zsh/completions/_musicctl、$XDG_DATA_HOME/zsh/site-functions/_musicctl
-//   - bash:~/.local/share/bash-completion/completions/musicctl、/etc/bash_completion.d/musicctl、
-//     $(brew --prefix)/etc/bash_completion.d/musicctl(省略 brew,需外部命令不查)
-//   - fish:~/.config/fish/completions/musicctl.fish、$XDG_CONFIG_HOME/fish/completions/musicctl.fish
+//   - zsh:~/.zsh/completions/_kite、$XDG_DATA_HOME/zsh/site-functions/_kite
+//   - bash:~/.local/share/bash-completion/completions/kite、/etc/bash_completion.d/kite、
+//     $(brew --prefix)/etc/bash_completion.d/kite(省略 brew,需外部命令不查)
+//   - fish:~/.config/fish/completions/kite.fish、$XDG_CONFIG_HOME/fish/completions/kite.fish
 //   - powershell:不查文件(Microsoft.PowerShell_profile.ps1 里 source 不可靠),返回未装+指引
 //
 // 返回找到的路径(供 doctor 显示)+ 是否存在。fpath 是否真 source 无法跨进程检测,
@@ -106,25 +106,25 @@ func probeCompletionInstalled(shell string) (path string, ok bool) {
 	switch shell {
 	case "zsh":
 		candidates = []string{
-			filepath.Join(home, ".zsh", "completions", "_musicctl"),
+			filepath.Join(home, ".zsh", "completions", "_kite"),
 		}
 		if xdgData != "" {
-			candidates = append(candidates, filepath.Join(xdgData, "zsh", "site-functions", "_musicctl"))
+			candidates = append(candidates, filepath.Join(xdgData, "zsh", "site-functions", "_kite"))
 		}
 	case "bash":
 		candidates = []string{
-			filepath.Join(home, ".local", "share", "bash-completion", "completions", "musicctl"),
-			filepath.Join("/etc", "bash_completion.d", "musicctl"),
+			filepath.Join(home, ".local", "share", "bash-completion", "completions", "kite"),
+			filepath.Join("/etc", "bash_completion.d", "kite"),
 		}
 		if xdgData != "" {
-			candidates = append(candidates, filepath.Join(xdgData, "bash-completion", "completions", "musicctl"))
+			candidates = append(candidates, filepath.Join(xdgData, "bash-completion", "completions", "kite"))
 		}
 	case "fish":
 		candidates = []string{
-			filepath.Join(home, ".config", "fish", "completions", "musicctl.fish"),
+			filepath.Join(home, ".config", "fish", "completions", "kite.fish"),
 		}
 		if xdgConfig != "" {
-			candidates = append(candidates, filepath.Join(xdgConfig, "fish", "completions", "musicctl.fish"))
+			candidates = append(candidates, filepath.Join(xdgConfig, "fish", "completions", "kite.fish"))
 		}
 	default:
 		// powershell 等不查文件,返回未装让 hint 引导。

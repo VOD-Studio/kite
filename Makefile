@@ -17,10 +17,10 @@ proto-deps:
 	cd proto && $(BUF) dep update
 	@echo "proto 依赖更新完成"
 
-## docs: 生成 musicctl 全命令 markdown 参考(cobra GenMarkdownTree → docs/cmd/)
+## docs: 生成 kite 全命令 markdown 参考(cobra GenMarkdownTree → docs/cmd/)
 ## 改命令树后跑此 target 刷新,否则 freshness 守护测试会红。
 docs:
-	go run cmd/musicctl-docs/main.go docs/cmd
+	go run cmd/kite-docs/main.go docs/cmd
 	@echo "命令参考已刷新(若 docs/cmd/ 有变化记得提交)"
 
 ## clean: 清除生成产物

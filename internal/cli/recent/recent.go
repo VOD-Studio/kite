@@ -1,4 +1,4 @@
-// Package recent 提供 musicctl recent 命令:读召回池按 frecency 展示最近条目。
+// Package recent 提供 kite recent 命令:读召回池按 frecency 展示最近条目。
 //
 // 解决「刚才那首叫什么」(PRD-0014 #24)。纯读本地召回池(召回池的远端快照由
 // recall 包后台预热,本命令不主动拉),不触发网络请求,秒出。

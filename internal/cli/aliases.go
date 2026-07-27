@@ -1,6 +1,6 @@
 package cli
 
-// aliases 是 musicctl 的跨级命令别名表(argv 重写实现)。
+// aliases 是 kite 的跨级命令别名表(argv 重写实现)。
 //
 // 机制(git run_argv / gh expandedArgs / cargo [alias] 同款):执行路径把 args[0] 的
 // 别名替换为展开序列;__complete/__completeNoDesc 补全请求路径同样重写 args[1]
@@ -60,7 +60,7 @@ func expand(args []string) ([]string, bool) {
 
 // expandForCompletion 是 __complete/__completeNoDesc 补全请求路径的 argv 重写。
 //
-// cobra 补全协议:实际命令是 `musicctl __complete <真实 args...>`,即 args[0]="__complete"
+// cobra 补全协议:实际命令是 `kite __complete <真实 args...>`,即 args[0]="__complete"
 // (或 "__completeNoDesc"),真正的命令参数从 args[1] 开始。故别名在 args[1]。
 //
 // 与 expand 对称:命中则把 args[1] 替换为展开序列。返回 (rewritten, true/fase)。

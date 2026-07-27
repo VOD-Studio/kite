@@ -29,7 +29,7 @@ import (
 
 // rpcsWithoutCliAllowlist 登记「刻意不进 CLI 的 rpc」(PRD-0014 User Story 3)。
 //
-// musicctl 定位调试/实用工具,357 接口不无脑 1:1 进 CLI(云贝/签到/音乐人后台这类
+// kite 定位调试/实用工具,357 接口不无脑 1:1 进 CLI(云贝/签到/音乐人后台这类
 // 大概率只登记)。「rpc 不进 CLI」是合法且受守护保护的决策,不是待消灭的债。
 //
 // key 是短形式 rpc 名(Service/Method),value 是不接 CLI 的理由。
@@ -87,7 +87,7 @@ func allRpcsFromProto(t *testing.T) map[string]bool {
 
 // rpcCmd 是 rpcGuardWalk 的访问单元。
 type rpcCmd struct {
-	// path 是完整命令路径(如 "musicctl song play"),用于失败信息定位。
+	// path 是完整命令路径(如 "kite song play"),用于失败信息定位。
 	path string
 	// name 是命令名(不含父路径),用于查 noRpcAllowlist。
 	name string
@@ -109,7 +109,7 @@ func rpcGuardWalk(root *cobra.Command) []rpcCmd {
 	walk = func(c *cobra.Command, prefix string) {
 		path := prefix + c.Name()
 		if c.Name() == "" { // root 自身
-			path = "musicctl"
+			path = "kite"
 		}
 		if c.Name() != "" { // 跳过 root
 			rc := rpcCmd{

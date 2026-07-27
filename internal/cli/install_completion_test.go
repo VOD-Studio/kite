@@ -26,9 +26,9 @@ func TestCompletionScriptPath(t *testing.T) {
 		shell string
 		want  string
 	}{
-		{"zsh", filepath.Join(dir, ".zsh", "completions", "_musicctl")},
-		{"bash", filepath.Join(dir, ".local", "share", "bash-completion", "completions", "musicctl")},
-		{"fish", filepath.Join(dir, ".config", "fish", "completions", "musicctl.fish")},
+		{"zsh", filepath.Join(dir, ".zsh", "completions", "_kite")},
+		{"bash", filepath.Join(dir, ".local", "share", "bash-completion", "completions", "kite")},
+		{"fish", filepath.Join(dir, ".config", "fish", "completions", "kite.fish")},
 	}
 	for _, tc := range cases {
 		t.Run(tc.shell, func(t *testing.T) {
@@ -75,11 +75,11 @@ func TestWriteCompletionScript_ContentChange_Changed(t *testing.T) {
 func TestRunInstallCompletion_ZshDoesNotTouchZshrc(t *testing.T) {
 	dir := withTestHome(t)
 	t.Setenv("SHELL", "/bin/zsh")
-	root := &cobra.Command{Use: "musicctl"}
+	root := &cobra.Command{Use: "kite"}
 	var out strings.Builder
 	require.NoError(t, runInstallCompletion(root, &out))
 	// 脚本应生成。
-	require.FileExists(t, filepath.Join(dir, ".zsh", "completions", "_musicctl"))
+	require.FileExists(t, filepath.Join(dir, ".zsh", "completions", "_kite"))
 	// 关键(路线 A):绝不创建/改写 .zshrc。
 	_, err := os.Stat(filepath.Join(dir, ".zshrc"))
 	require.True(t, os.IsNotExist(err), "install-completion 不应碰 .zshrc")
@@ -90,10 +90,10 @@ func TestRunInstallCompletion_ZshDoesNotTouchZshrc(t *testing.T) {
 func TestRunInstallCompletion_BashNoFpathHint(t *testing.T) {
 	dir := withTestHome(t)
 	t.Setenv("SHELL", "/bin/bash")
-	root := &cobra.Command{Use: "musicctl"}
+	root := &cobra.Command{Use: "kite"}
 	var out strings.Builder
 	require.NoError(t, runInstallCompletion(root, &out))
-	require.FileExists(t, filepath.Join(dir, ".local", "share", "bash-completion", "completions", "musicctl"))
+	require.FileExists(t, filepath.Join(dir, ".local", "share", "bash-completion", "completions", "kite"))
 	// bash 自动加载,不应有手动 fpath 提示。
 	require.NotContains(t, out.String(), "fpath")
 }
@@ -101,17 +101,17 @@ func TestRunInstallCompletion_BashNoFpathHint(t *testing.T) {
 func TestRunInstallCompletion_FishNoFpathHint(t *testing.T) {
 	dir := withTestHome(t)
 	t.Setenv("SHELL", "/usr/local/bin/fish")
-	root := &cobra.Command{Use: "musicctl"}
+	root := &cobra.Command{Use: "kite"}
 	var out strings.Builder
 	require.NoError(t, runInstallCompletion(root, &out))
-	require.FileExists(t, filepath.Join(dir, ".config", "fish", "completions", "musicctl.fish"))
+	require.FileExists(t, filepath.Join(dir, ".config", "fish", "completions", "kite.fish"))
 	require.NotContains(t, out.String(), "fpath")
 }
 
 func TestRunInstallCompletion_UnknownShell_Error(t *testing.T) {
 	withTestHome(t)
 	t.Setenv("SHELL", "/bin/xonsh")
-	root := &cobra.Command{Use: "musicctl"}
+	root := &cobra.Command{Use: "kite"}
 	err := runInstallCompletion(root, &strings.Builder{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "无法识别")
@@ -120,7 +120,7 @@ func TestRunInstallCompletion_UnknownShell_Error(t *testing.T) {
 func TestRunInstallCompletion_Idempotent(t *testing.T) {
 	withTestHome(t)
 	t.Setenv("SHELL", "/bin/bash")
-	root := &cobra.Command{Use: "musicctl"}
+	root := &cobra.Command{Use: "kite"}
 	var out1, out2 strings.Builder
 	require.NoError(t, runInstallCompletion(root, &out1))
 	require.NoError(t, runInstallCompletion(root, &out2))
@@ -128,21 +128,21 @@ func TestRunInstallCompletion_Idempotent(t *testing.T) {
 }
 
 // RunE 真实接线回归:经 Execute 跑 install-completion,生成的脚本必须注册为
-// musicctl 而非子命令名(RunE 若传 cmd 而非 cmd.Root(),脚本会注册错命令名)。
+// kite 而非子命令名(RunE 若传 cmd 而非 cmd.Root(),脚本会注册错命令名)。
 func TestInstallCompletion_RunE_GeneratesRootScript(t *testing.T) {
 	dir := withTestHome(t)
 	t.Setenv("SHELL", "/usr/local/bin/fish")
-	root := &cobra.Command{Use: "musicctl"}
+	root := &cobra.Command{Use: "kite"}
 	var out strings.Builder
 	root.SetOut(&out)
 	root.AddCommand(newInstallCompletionCommand())
 	root.SetArgs([]string{"install-completion"})
 	require.NoError(t, root.Execute())
 
-	data, err := os.ReadFile(filepath.Join(dir, ".config", "fish", "completions", "musicctl.fish"))
+	data, err := os.ReadFile(filepath.Join(dir, ".config", "fish", "completions", "kite.fish"))
 	require.NoError(t, err)
-	require.Contains(t, string(data), "fish completion for musicctl")
-	require.Contains(t, string(data), "complete -c musicctl")
+	require.Contains(t, string(data), "fish completion for kite")
+	require.Contains(t, string(data), "complete -c kite")
 	require.NotContains(t, string(data), "install-completion")
 }
 
@@ -151,7 +151,7 @@ func TestInstallCompletion_RunE_GeneratesRootScript(t *testing.T) {
 func TestRunInstallCompletion_WindowsPwshExe(t *testing.T) {
 	withTestHome(t)
 	t.Setenv("SHELL", `C:\Program Files\PowerShell\7\pwsh.exe`)
-	root := &cobra.Command{Use: "musicctl"}
+	root := &cobra.Command{Use: "kite"}
 	err := runInstallCompletion(root, &strings.Builder{})
 	// pwsh 不在 install-completion 支持列表(只 zsh/bash/fish),应报无法识别
 	// (而非崩溃)。验证 Windows 路径解析不 panic。
