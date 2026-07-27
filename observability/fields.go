@@ -1,4 +1,4 @@
-// Package observability 提供 mimo-music 的可观测性基础设施。
+// Package observability 提供 kite 的可观测性基础设施。
 //
 // 包含结构化日志（slog）、链路追踪（OTel 最小初始化）、敏感字段脱敏、
 // 统一字段名常量、高频日志采样。所有日志只写 stdout，不落盘。

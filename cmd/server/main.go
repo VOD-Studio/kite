@@ -1,4 +1,4 @@
-// Package main 是 mimo-music 服务的入口。
+// Package main 是 kite 服务的入口。
 //
 // 启动 gRPC server（对外强类型 RPC）+ grpc-gateway（REST 暴露）双 server，
 // 收到 SIGINT/SIGTERM 时优雅关闭。

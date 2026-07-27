@@ -1,7 +1,7 @@
-// Package config 定义 mimo-music 服务的配置结构。
+// Package config 定义 kite 服务的配置结构。
 //
 // 配置分模块：Server / Provider / Redis / Worker 各自独立文件。
-// 通过环境变量加载，MIMO_MUSIC_ 前缀 + 模块名 + 字段名。
+// 通过环境变量加载，KITE_ 前缀 + 模块名 + 字段名。
 package config
 
 import (
@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// Config 是 mimo-music 服务的顶层配置。
+// Config 是 kite 服务的顶层配置。
 type Config struct {
 	// Server 是 HTTP 服务相关配置。
 	Server ServerConfig
@@ -87,7 +87,7 @@ type OTelConfig struct {
 	// 仅 Exporter 非 none 时生效。
 	Endpoint string
 
-	// ServiceName 是上报到后端的服务名（如 mimo-music）。
+	// ServiceName 是上报到后端的服务名（如 kite）。
 	ServiceName string
 
 	// SampleRatio 是根 span 采样率，0.0-1.0，1.0 表示全采样。
@@ -117,7 +117,7 @@ func Default() Config {
 		},
 		OTel: OTelConfig{
 			Exporter:    "none",
-			ServiceName: "mimo-music",
+			ServiceName: "kite",
 			SampleRatio: 1.0,
 		},
 	}
@@ -130,26 +130,26 @@ func (r RedisConfig) Addr() string {
 
 // Load 从环境变量加载配置，覆盖默认值。
 //
-// 环境变量前缀为 MIMO_MUSIC_，格式：MIMO_MUSIC_{MODULE}_{FIELD}。
-// 例如 MIMO_MUSIC_SERVER_PORT、MIMO_MUSIC_REDIS_HOST。
+// 环境变量前缀为 KITE_，格式：KITE_{MODULE}_{FIELD}。
+// 例如 KITE_SERVER_PORT、KITE_REDIS_HOST。
 func Load() Config {
 	cfg := Default()
 
-	cfg.Server.Port = envInt("MIMO_MUSIC_SERVER_PORT", cfg.Server.Port)
-	cfg.Server.Env = envStr("MIMO_MUSIC_SERVER_ENV", cfg.Server.Env)
-	cfg.Provider.UpstreamTimeout = envInt("MIMO_MUSIC_PROVIDER_UPSTREAM_TIMEOUT", cfg.Provider.UpstreamTimeout)
-	cfg.Provider.MaxRetries = envInt("MIMO_MUSIC_PROVIDER_MAX_RETRIES", cfg.Provider.MaxRetries)
-	cfg.Redis.Host = envStr("MIMO_MUSIC_REDIS_HOST", cfg.Redis.Host)
-	cfg.Redis.Port = envInt("MIMO_MUSIC_REDIS_PORT", cfg.Redis.Port)
-	cfg.Redis.Password = envStr("MIMO_MUSIC_REDIS_PASSWORD", cfg.Redis.Password)
-	cfg.Redis.DB = envInt("MIMO_MUSIC_REDIS_DB", cfg.Redis.DB)
-	cfg.Redis.PoolSize = envInt("MIMO_MUSIC_REDIS_POOL_SIZE", cfg.Redis.PoolSize)
-	cfg.Worker.Concurrency = envInt("MIMO_MUSIC_WORKER_CONCURRENCY", cfg.Worker.Concurrency)
-	cfg.Worker.CookieCheckInterval = envInt("MIMO_MUSIC_WORKER_COOKIE_CHECK_INTERVAL", cfg.Worker.CookieCheckInterval)
-	cfg.OTel.Exporter = envStr("MIMO_MUSIC_OTEL_EXPORTER", cfg.OTel.Exporter)
-	cfg.OTel.Endpoint = envStr("MIMO_MUSIC_OTEL_ENDPOINT", cfg.OTel.Endpoint)
-	cfg.OTel.ServiceName = envStr("MIMO_MUSIC_OTEL_SERVICE_NAME", cfg.OTel.ServiceName)
-	cfg.OTel.SampleRatio = envFloat("MIMO_MUSIC_OTEL_SAMPLE_RATIO", cfg.OTel.SampleRatio)
+	cfg.Server.Port = envInt("KITE_SERVER_PORT", cfg.Server.Port)
+	cfg.Server.Env = envStr("KITE_SERVER_ENV", cfg.Server.Env)
+	cfg.Provider.UpstreamTimeout = envInt("KITE_PROVIDER_UPSTREAM_TIMEOUT", cfg.Provider.UpstreamTimeout)
+	cfg.Provider.MaxRetries = envInt("KITE_PROVIDER_MAX_RETRIES", cfg.Provider.MaxRetries)
+	cfg.Redis.Host = envStr("KITE_REDIS_HOST", cfg.Redis.Host)
+	cfg.Redis.Port = envInt("KITE_REDIS_PORT", cfg.Redis.Port)
+	cfg.Redis.Password = envStr("KITE_REDIS_PASSWORD", cfg.Redis.Password)
+	cfg.Redis.DB = envInt("KITE_REDIS_DB", cfg.Redis.DB)
+	cfg.Redis.PoolSize = envInt("KITE_REDIS_POOL_SIZE", cfg.Redis.PoolSize)
+	cfg.Worker.Concurrency = envInt("KITE_WORKER_CONCURRENCY", cfg.Worker.Concurrency)
+	cfg.Worker.CookieCheckInterval = envInt("KITE_WORKER_COOKIE_CHECK_INTERVAL", cfg.Worker.CookieCheckInterval)
+	cfg.OTel.Exporter = envStr("KITE_OTEL_EXPORTER", cfg.OTel.Exporter)
+	cfg.OTel.Endpoint = envStr("KITE_OTEL_ENDPOINT", cfg.OTel.Endpoint)
+	cfg.OTel.ServiceName = envStr("KITE_OTEL_SERVICE_NAME", cfg.OTel.ServiceName)
+	cfg.OTel.SampleRatio = envFloat("KITE_OTEL_SAMPLE_RATIO", cfg.OTel.SampleRatio)
 
 	cfg.Server.Env = strings.ToLower(cfg.Server.Env)
 	return cfg

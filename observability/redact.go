@@ -1,4 +1,4 @@
-// Package observability 提供 mimo-music 的可观测性基础设施。
+// Package observability 提供 kite 的可观测性基础设施。
 package observability
 
 import (

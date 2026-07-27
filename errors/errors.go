@@ -1,4 +1,4 @@
-// Package errors 定义 mimo-music 的统一错误模型。
+// Package errors 定义 kite 的统一错误模型。
 //
 // 所有 provider 实现返回这些错误类型，server 层据此映射到 HTTP 状态码。
 package errors

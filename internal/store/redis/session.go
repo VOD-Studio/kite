@@ -21,9 +21,9 @@ import (
 
 const (
 	// sessionKeyPrefix 是 session cookie 的 key 前缀。
-	sessionKeyPrefix = "mimo-music:session:"
+	sessionKeyPrefix = "kite:session:"
 	// availKeyPrefix 是可用性标记的 key 前缀。存在表示不可用（减少写入）。
-	availKeyPrefix = "mimo-music:session-unavail:"
+	availKeyPrefix = "kite:session-unavail:"
 	// unavailTTL 是不可用标记的过期时间。超时自动恢复，避免永久跳过。
 	unavailTTL = 30 * time.Minute
 )

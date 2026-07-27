@@ -1,4 +1,4 @@
-// Package redis 提供 mimo-music 的共享 Redis 客户端。
+// Package redis 提供 kite 的共享 Redis 客户端。
 //
 // cache / store / asynq 三个组件共用同一个 Redis 连接池，
 // 避免维护多份连接。server 和 worker 启动时各自调用 New 初始化。

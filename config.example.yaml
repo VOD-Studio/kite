@@ -1,7 +1,7 @@
-# mimo-music 配置示例
+# kite 配置示例
 #
-# 环境变量可覆盖字段值，格式 MIMO_MUSIC_{MODULE}_{FIELD}。
-# 例如：MIMO_MUSIC_SERVER_PORT=9091
+# 环境变量可覆盖字段值，格式 KITE_{MODULE}_{FIELD}。
+# 例如：KITE_SERVER_PORT=9091
 
 server:
   # HTTP 服务监听端口
@@ -38,6 +38,6 @@ otel:
   # otlp-grpc 默认端口 4317，otlp-http 默认端口 4318
   endpoint: "localhost:4317"
   # 上报到后端的服务名
-  service_name: mimo-music
+  service_name: kite
   # 根 span 采样率，0.0-1.0，1.0 表示全采样
   sample_ratio: 1.0

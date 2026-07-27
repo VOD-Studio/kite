@@ -54,7 +54,7 @@ func TestDocsFreshness(t *testing.T) {
 		t.Errorf("命令文档与命令树不一致(文件数入库=%d 生成=%d)。\n"+
 			"入库有但生成无(命令已删?删文档): %v\n"+
 			"生成有但入库无(新增命令?跑 make docs): %v\n"+
-			"修复:在 mimo-music/ 下跑 make docs 并提交 docs/cmd/",
+			"修复:在 kite/ 下跑 make docs 并提交 docs/cmd/",
 			len(committedFiles), len(tmpFiles), missing, extra)
 		return
 	}
@@ -118,7 +118,7 @@ func truncate(s string, n int) string {
 	return s[:n] + "..."
 }
 
-// findRepoRoot 找 mimo-music 模块根(含 go.mod 的目录),用于定位 docs/cmd/。
+// findRepoRoot 找 kite 模块根(含 go.mod 的 目录),用于定位 docs/cmd/。
 func findRepoRoot(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()
@@ -135,6 +135,6 @@ func findRepoRoot(t *testing.T) string {
 		}
 		dir = parent
 	}
-	t.Fatal("找不到 go.mod(mimo-music 模块根)")
+	t.Fatal("找不到 go.mod(kite 模块根)")
 	return ""
 }

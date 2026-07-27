@@ -1,4 +1,4 @@
-// Package observability 提供 mimo-music 的可观测性基础设施。
+// Package observability 提供 kite 的可观测性基础设施。
 package observability
 
 import (
@@ -88,5 +88,5 @@ func newExporter(ctx context.Context, cfg config.OTelConfig) (sdktrace.SpanExpor
 //
 // 供 handler / service 在关键操作处调用，自动生成 trace_id 注入日志。
 func StartSpan(ctx context.Context, name string) (context.Context, trace.Span) {
-	return otel.Tracer("mimo-music").Start(ctx, name)
+	return otel.Tracer("kite").Start(ctx, name)
 }

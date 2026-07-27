@@ -1,12 +1,12 @@
-// Package observability 提供 mimo-music 的可观测性基础设施。
+// Package observability 提供 kite 的可观测性基础设施。
 //
 // metrics.go 定义 Prometheus 指标，供 server middleware、service 层、worker
-// 统一埋点。所有指标以 mimomusic_ 为前缀，遵循 Prometheus 命名规范。
+// 统一埋点。所有指标以 kite_ 为前缀，遵循 Prometheus 命名规范。
 package observability
 
 import "github.com/prometheus/client_golang/prometheus"
 
-// Metrics 持有 mimo-music 全量 Prometheus 指标。
+// Metrics 持有 kite 全量 Prometheus 指标。
 //
 // server middleware、service 层、worker 各自在对应位置调用方法递增指标。
 // 通过依赖注入传入各组件，避免全局变量散落。
@@ -71,33 +71,33 @@ func (m *Metrics) SetCookieHealth(userID string, healthy bool) {
 func newMetrics(register bool, reg prometheus.Registerer) *Metrics {
 	m := &Metrics{
 		RequestTotal: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "mimomusic_request_total",
+			Name: "kite_request_total",
 			Help: "HTTP 请求总数",
 		}, []string{"method", "path", "status"}),
 		RequestDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name:    "mimomusic_request_duration_seconds",
+			Name:    "kite_request_duration_seconds",
 			Help:    "HTTP 请求处理耗时",
 			Buckets: prometheus.DefBuckets,
 		}, []string{"method", "path"}),
 		CacheHits: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "mimomusic_cache_hits_total",
+			Name: "kite_cache_hits_total",
 			Help: "缓存命中次数",
 		}),
 		CacheMisses: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "mimomusic_cache_misses_total",
+			Name: "kite_cache_misses_total",
 			Help: "缓存未命中次数",
 		}),
 		UpstreamErrors: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "mimomusic_upstream_errors_total",
+			Name: "kite_upstream_errors_total",
 			Help: "上游调用失败次数",
 		}),
 		UpstreamLatency: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name:    "mimomusic_upstream_latency_seconds",
+			Name:    "kite_upstream_latency_seconds",
 			Help:    "上游调用耗时",
 			Buckets: prometheus.DefBuckets,
 		}, []string{"operation"}),
 		CookieHealthStatus: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "mimomusic_cookie_health_status",
+			Name: "kite_cookie_health_status",
 			Help: "Cookie 健康状态（1=可用，0=失效）",
 		}, []string{"user_id"}),
 	}

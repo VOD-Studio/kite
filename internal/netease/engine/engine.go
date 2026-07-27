@@ -1,4 +1,4 @@
-// Package engine 是网易云共享执行引擎，是 mimo-music 的核心深模块。
+// Package engine 是网易云共享执行引擎，是 kite 的核心深模块。
 //
 // Engine 持有 transport（HTTP）、SessionStore（cookie 池）、Cache（缓存）、
 // retryPolicy、circuitBreaker，暴露唯一深方法 RawDo。一个方法背后藏全部脏活：

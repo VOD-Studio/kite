@@ -30,4 +30,4 @@ plugins:
     opt:
       - logtostderr=true
       - allow_merge=true
-      - merge_file_name=mimo-music
+      - merge_file_name=kite
