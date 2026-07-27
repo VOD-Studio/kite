@@ -80,7 +80,7 @@ func TestRecommendForTime_WeekdayNight(t *testing.T) {
 	now := at(2026, 7, 22, 23) // 周三夜
 	recs := recommendForTime(now)
 	require.Len(t, recs, 1)
-	require.Contains(t, recs[0].cmd, "song play --id <TAB>")
+	require.Contains(t, recs[0].cmd, "song download --id <TAB>")
 }
 
 func TestRecommendForTime_WeekendOverridesTime(t *testing.T) {

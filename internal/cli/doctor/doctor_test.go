@@ -33,16 +33,16 @@ func TestRenderHuman_AllStatuses(t *testing.T) {
 	results := []Result{
 		{Name: "版本", Status: StatusPass, Detail: "v0.1.0"},
 		{Name: "会话", Status: StatusFail, Detail: "未登录", FixHint: "运行 login"},
-		{Name: "音频", Status: StatusWarn, Detail: "headless", FixHint: "用 download"},
+		{Name: "补全", Status: StatusWarn, Detail: "未装", FixHint: "运行 install-completion"},
 	}
 	var buf bytes.Buffer
 	RenderHuman(&buf, results)
 	out := buf.String()
 	require.Contains(t, out, "✓ 版本")
 	require.Contains(t, out, "✗ 会话")
-	require.Contains(t, out, "! 音频")
+	require.Contains(t, out, "! 补全")
 	require.Contains(t, out, "→ 运行 login", "fail/warn 应渲染修复指引")
-	require.Contains(t, out, "→ 用 download")
+	require.Contains(t, out, "→ 运行 install-completion")
 }
 
 func TestRenderHuman_NoFixHintForPass(t *testing.T) {
@@ -180,21 +180,6 @@ func TestShellName(t *testing.T) {
 			require.Equal(t, tc.want, ShellName(tc.shellPath), "shellPath=%q", tc.shellPath)
 		})
 	}
-}
-
-func TestAudioChecker_Available_Pass(t *testing.T) {
-	t.Parallel()
-	c := AudioChecker(func() error { return nil })
-	r := c.Check()
-	require.Equal(t, StatusPass, r.Status)
-}
-
-func TestAudioChecker_NoDevice_Warn(t *testing.T) {
-	t.Parallel()
-	c := AudioChecker(func() error { return errors.New("no audio device") })
-	r := c.Check()
-	require.Equal(t, StatusWarn, r.Status, "headless 无音频应 warn 非 fail")
-	require.Contains(t, r.FixHint, "download")
 }
 
 // TestStatusIcon 状态符号(人类渲染核心)。

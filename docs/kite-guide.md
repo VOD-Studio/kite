@@ -24,7 +24,7 @@ go install github.com/VOD-Studio/kite/cmd/kite@latest
 
 ## 登录
 
-登录态接口(播放/下载/红心等)需先登录。两条路径:
+登录态接口(下载/红心/歌单管理等)需先登录。两条路径:
 
 ```sh
 kite login              # 扫码登录(推荐,App 扫码)
@@ -45,18 +45,6 @@ kite search 周杰伦                 # 关键词可作位置参数(≡ --keywor
 kite se 周杰伦                     # 别名 se = search(见下方别名表)
 ```
 
-### 播放
-
-```sh
-kite song play --id 347230         # 播放(交互式,键盘控制)
-kite song play 347230              # 位置参数(≡ --id 347230)
-kite pp 347230                     # 别名 pp = song play
-kite song play --id 347230 --lyric # 带歌词同步滚动
-```
-
-播放时键盘:`空格`暂停、`←/→`∓10s、`↑/↓`音量、`q`退出。headless/无音频环境
-用 `song download` 替代。
-
 ### 下载
 
 ```sh
@@ -71,7 +59,7 @@ kite song download 347230 --level 3   # 指定音质:1标准 2较高 3无损 4Hi
 播放/下载/搜索过的歌会自动进入**召回池**。补全与 `recent` 都读它:
 
 ```sh
-kite song play --id <TAB>          # 按 Tab 列出最近听过的歌(带歌名/艺人)
+kite song download --id <TAB>      # 按 Tab 列出最近听过的歌(带歌名/艺人)
 kite recent                        # 列出召回池最近条目(按 frecency 排序)
 kite recent --limit 5              # 只看前 5
 ```
@@ -84,14 +72,13 @@ kite recent --limit 5              # 只看前 5
 
 | 别名 | 等价于 |
 |---|---|
-| `pp` | `song play` |
 | `dl` | `song download` |
 | `pll` | `playlist download` |
 | `se` | `search` |
 | `rd` | `recommend daily-songs` |
 | `whoami` | `login-status` |
 
-别名支持位置参数与补全(`pp 347230`、`pp --id <TAB>` 都可用)。
+别名支持位置参数与补全(`dl 347230`、`dl --id <TAB>` 都可用)。
 
 ## 裸跑引导
 
@@ -100,7 +87,7 @@ kite recent --limit 5              # 只看前 5
 
 ## 位置参数
 
-所有单值 `--id` 命令和 `search --keyword` 都接受位置参数(`song play 347230` ≡
+所有单值 `--id` 命令和 `search --keyword` 都接受位置参数(`song download 347230` ≡
 `--id 347230`)。同时给位置参数和 `--id` 会报歧义错。`--uid`/`--tracks` 等多值
 flag 不支持位置参数。
 

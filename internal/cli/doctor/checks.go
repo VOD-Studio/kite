@@ -117,18 +117,3 @@ func completionInstallHint(shell string) string {
 		return "运行 kite install-completion,或手动 kite completion <shell> 并按 shell 文档 source"
 	}
 }
-
-// AudioChecker 检查音频后端(beep speaker 探测)。
-//
-// audioProbe 尝试初始化音频设备(生产:speaker.Init);失败视为 warn(合法场景:
-// headless/容器无音频,用 song download 替代),不是 fail。
-func AudioChecker(audioProbe func() error) Checker {
-	return CheckerFunc(func() Result {
-		if err := audioProbe(); err != nil {
-			return Result{Name: "音频", Status: StatusWarn,
-				Detail: "无可用音频设备(headless?)",
-				FixHint: "用 kite song download 替代播放"}
-		}
-		return Result{Name: "音频", Status: StatusPass, Detail: "音频后端可用"}
-	})
-}

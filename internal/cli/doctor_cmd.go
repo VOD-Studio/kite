@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gopxl/beep/v2/speaker"
 	"github.com/spf13/cobra"
 
 	"github.com/VOD-Studio/kite/internal/cli/doctor"
@@ -18,12 +17,12 @@ import (
 
 // newDoctorCommand 创建 doctor 环境自检命令(PRD-0014 #J)。
 //
-// 检查项:版本(build info)/会话与网络/补全/音频后端。渲染层输出,
+// 检查项:版本(build info)/会话与网络/补全。渲染层输出,
 // 任一 fail → exit 1;warn 不影响。--json 白拿。
 func newDoctorCommand(k *kit.Kit) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "doctor",
-		Short: "环境自检(版本/会话/补全/音频),出问题一眼定位",
+		Short: "环境自检(版本/会话/补全),出问题一眼定位",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runDoctor(k, cmd)
@@ -48,7 +47,6 @@ func runDoctor(k *kit.Kit, cmd *cobra.Command) error {
 			},
 		),
 		doctor.CompletionChecker(os.Getenv("SHELL"), probeCompletionInstalled),
-		doctor.AudioChecker(probeSpeaker),
 	}
 	results := doctor.Run(checkers)
 
@@ -75,13 +73,6 @@ func renderDoctorJSON(cmd *cobra.Command, results []doctor.Result) error {
 		return fmt.Errorf("环境自检未通过")
 	}
 	return nil
-}
-
-// probeSpeaker 探测音频后端(标准采样率/缓冲区)。
-// headless/容器无音频设备 → 返回 error(doctor 标记为 warn)。
-func probeSpeaker() error {
-	// 44100Hz / 4410 样本缓冲(与 beep.go outRate/speakerBuf 一致)。
-	return speaker.Init(44100, 4410)
 }
 
 // probeCompletionInstalled 检测指定 shell 的补全脚本是否已安装到常见位置。

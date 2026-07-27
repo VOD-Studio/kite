@@ -25,14 +25,14 @@ func NewCommand(k *kit.Kit) *cobra.Command {
 		newSimilarSongs(k),
 		newLike(k), newTrash(k), newDisallowRecommend(k),
 		newLikedList(k), newIsLike(k),
-		newDownload(k), newPlay(k),
+		newDownload(k),
 	)
 	annotateSongRpcs(c)
 	return c
 }
 
 // annotateSongRpcs 给 song 组各子命令打 rpc 注解(PRD-0014 #B 命令树守护)。
-// 值为 grpc rpc 短形式 Service/Method;play/download 多 rpc 逗号分隔。
+// 值为 grpc rpc 短形式 Service/Method;download 多 rpc 逗号分隔。
 // endpoint 变量名 ≠ rpc method 名(URL↔GetSongURL、WordLyricEP↔GetWordLyric)。
 func annotateSongRpcs(c *cobra.Command) {
 	rpcs := map[string][]string{
@@ -52,8 +52,7 @@ func annotateSongRpcs(c *cobra.Command) {
 		"disallow-recommend": {"SongService/DisallowRecommend"},
 		"liked-list":         {"SongService/LikedList"},
 		"is-like":            {"SongService/IsLike"},
-		// play/download 消费多个读 rpc(fetchURL + fetchDetail [+ fetchLyric])。
-		"play":     {"SongService/GetSongURL", "SongService/GetSongDetail", "SongService/GetLyric"},
+		// download 消费多个读 rpc(fetchURL + fetchDetail)。
 		"download": {"SongService/GetSongURL", "SongService/GetSongDetail"},
 	}
 	for _, sub := range c.Commands() {

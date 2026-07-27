@@ -283,7 +283,7 @@ func Execute() {
 // rewriteAliases 就地重写 os.Args 以展开跨级别名。
 //
 // cobra.Command.Execute() 从 os.Args[1:] 取参数,故:
-//   - 执行路径:别名在 os.Args[1](kite pp --id X → 重写 [1])。
+//   - 执行路径:别名在 os.Args[1](kite dl --id X → 重写 [1])。
 //   - __complete/__completeNoDesc 路径:os.Args[1]=__complete,别名在 os.Args[2]。
 //
 // 未命中别名时 os.Args 不变。

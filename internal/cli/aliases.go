@@ -7,11 +7,10 @@ package cli
 // (透过别名补全可用)。别名不进命令树 → tab 补全天然不含别名(保持候选干净);
 // --help 与裸跑引导里另有静态节显式列出(那属 #E help 分组 / #D onboarding)。
 //
-// 首发六枚固定内置,不做用户自定义(cargo #6221 的遮蔽教训)。
-// 别名规范为双字符(CONTEXT.md 双字符别名段:song/search/playlist/play 多 P/S 开头,
+// 首发五枚固定内置,不做用户自定义(cargo #6221 的遮蔽教训)。
+// 别名规范为双字符(CONTEXT.md 双字符别名段:song/search/playlist 多 P/S 开头,
 // 单字母结构性撞前缀;whoami 是唯一例外,因 login-status 语义清晰且无前缀冲突)。
 var aliases = map[string][]string{
-	"pp":     {"song", "play"},
 	"dl":     {"song", "download"},
 	"pll":    {"playlist", "download"},
 	"se":     {"search"},
@@ -23,7 +22,7 @@ var aliases = map[string][]string{
 // 顺序按 key 字典序,保证 --help 输出确定性。
 func aliasList() []aliasEntry {
 	// 固定顺序而非 map 遍历(map 迭代无序会让 --help 输出抖动)。
-	order := []string{"pp", "dl", "pll", "se", "rd", "whoami"}
+	order := []string{"dl", "pll", "se", "rd", "whoami"}
 	out := make([]aliasEntry, 0, len(order))
 	for _, a := range order {
 		out = append(out, aliasEntry{Alias: a, Expands: aliases[a]})

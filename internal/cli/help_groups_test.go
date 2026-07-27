@@ -81,7 +81,7 @@ func TestHelp_DefaultShowsGroupsAndAliases(t *testing.T) {
 	for _, title := range []string{"快速上手:", "账号:", "音乐:", "发现:", "工具:", "别名(跨级简写):"} {
 		require.Contains(t, out, title, "默认 help 应含 %q", title)
 	}
-	require.Contains(t, out, "pp\tsong play", "别名节应列出 pp")
+	require.Contains(t, out, "dl\tsong download", "别名节应列出 dl")
 }
 
 // TestHelp_VerboseFlattensAllCommands 验证 --help-verbose 平铺全部命令(无分组标题)。
