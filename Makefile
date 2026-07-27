@@ -23,6 +23,6 @@ docs:
 	go run cmd/kite-docs/main.go docs/cmd
 	@echo "命令参考已刷新(若 docs/cmd/ 有变化记得提交)"
 
-## clean: 清除生成产物
+## clean: 清除本地构建产物(tmp/、bin/)。不清 gen/——已进版本控制。
 clean:
-	rm -rf gen/
+	rm -rf tmp/ bin/
