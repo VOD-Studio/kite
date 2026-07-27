@@ -6,10 +6,21 @@ before:
   hooks:
     - go mod tidy
 
-# 当前只发 server 镜像。CLI 二进制发版(CLI build + archives)等 #14
-# 「移除 CLI 播放」完成后补回——CLI 的 beep/oto 依赖 cgo,与 CGO_ENABLED=0
-# 静态编译冲突,linux 上编译失败。播放功能将迁移到 TUI,CLI 不再承担播放。
 builds:
+  # ---- CLI:跨平台二进制(linux/darwin/windows × amd64/arm64)----
+  - id: cli
+    main: ./cmd/kite
+    binary: kite
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w   # strip 调试信息减小体积;version 走 debug.ReadBuildInfo,无需 -X
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
   # ---- server:只 linux × amd64/arm64,供镜像使用 ----
   - id: server
     main: ./cmd/server
@@ -21,17 +32,20 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w   # strip 调试信息减小体积;version 走 debug.ReadBuildInfo,无需 -X
+      - -s -w
     mod_timestamp: "{{ .CommitTimestamp }}"
 
-# CLI 二进制归档(#14 完成后补回):
-# archives:
-#   - id: cli
-#     ids: [cli]
-#     formats: [tar.gz]
-#     format_overrides:
-#       - goos: windows
-#         formats: [zip]
+archives:
+  - id: cli
+    ids: [cli]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "darwin"}}macOS
+      {{- else}}{{ .Os }}{{end}}_{{ .Arch }}
 
 dockers_v2:
   - id: server-image
@@ -60,13 +74,16 @@ docker_signs:
       - "${artifact}"
       - "--yes"
 
-# CLI checksum 签名(#14 完成后补回):
-# signs:
-#   - cmd: cosign
-#     signature: "${artifact}.sigstore.json"
-#     args: ["sign-blob", "--bundle=${signature}", "${artifact}", "--yes"]
-#     artifacts: checksum
-#     output: true
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - "sign-blob"
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+    output: true
 
 changelog:
   use: github

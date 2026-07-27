@@ -59,14 +59,13 @@ type recommendation struct {
 //
 // 纯函数(now 注入保证确定性),硬编码零新依赖。
 func recommendForTime(now time.Time) []recommendation {
-	t := now.Local()
-	if isWeekend(t.Weekday()) {
+	if isWeekend(now.Weekday()) {
 		return []recommendation{
 			{cmd: "kite recommend playlists", desc: "周末了,挑个歌单慢慢听"},
 			{cmd: "kite album shelf", desc: "或翻翻新碟上架"},
 		}
 	}
-	switch bucketOf(t.Hour()) {
+	switch bucketOf(now.Hour()) {
 	case bucketMorning:
 		return []recommendation{{cmd: "kite recommend daily-songs", desc: "早安,今日日推已更新"}}
 	case bucketNoon:
