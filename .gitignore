@@ -2,6 +2,12 @@
 tmp/
 bin/
 *.exe
+*.test
+
+# 测试覆盖率输出（go test -coverprofile / -coverpkg）
+*.out
+coverage.*
+coverage/
 
 # proto 生成产物（buf generate 产出，不进版本控制）
 gen/
@@ -9,8 +15,18 @@ gen/
 # OpenAPI 生成文件
 openapi.json
 
+# 依赖 vendoring（若有 go mod vendor）
+vendor/
+
 # 本地配置
 config.yaml
+
+# kite CLI 运行态产物（落系统配置目录，防仓库内误提交）
+session.json
+history.jsonl
+
+# macOS
+.DS_Store
 
 # IDE
 .idea/
