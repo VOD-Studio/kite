@@ -6,7 +6,7 @@ import "google/api/annotations.proto";
 import "netease/music/v1/song.proto";
 import "netease/music/v1/playlist.proto";
 
-option go_package = "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1;mmpb";
+option go_package = "github.com/VOD-Studio/kite/gen/go/netease/music/v1;mmpb";
 
 // RecommendService 提供推荐能力（需登录态）。
 service RecommendService {

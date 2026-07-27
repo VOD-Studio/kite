@@ -4,7 +4,7 @@ package netease.music.v1;
 
 import "google/api/annotations.proto";
 
-option go_package = "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1;mmpb";
+option go_package = "github.com/VOD-Studio/kite/gen/go/netease/music/v1;mmpb";
 
 // AuthService 提供登录认证能力。
 service AuthService {

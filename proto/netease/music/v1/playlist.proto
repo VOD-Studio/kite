@@ -6,7 +6,7 @@ import "google/api/annotations.proto";
 import "netease/music/v1/song.proto";
 import "netease/music/v1/search.proto";
 
-option go_package = "github.com/VOD-Studio/mimo-music/gen/go/netease/music/v1;mmpb";
+option go_package = "github.com/VOD-Studio/kite/gen/go/netease/music/v1;mmpb";
 
 // PlaylistService 提供歌单查询与浏览能力。
 service PlaylistService {
