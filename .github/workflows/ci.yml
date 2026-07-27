@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read   # for golangci-lint only-new-issues
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12   # 锁定 patch 版本,不用 latest(避免某天升级导致 CI 红)
+          args: --timeout 5m
+          only-new-issues: true   # 只报 PR 新增问题,历史债不阻塞
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Go vet
+        run: go vet ./...
+      - name: Test with race detector
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage.out
+
+  verify-gen:
+    name: Verify gen/ no drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      # buf-setup-action 已于 2026-07 归档,改用统一的 buf-action(setup_only 仅装 CLI)
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+      - name: Regenerate & check drift
+        run: |
+          make proto
+          git diff --exit-code -- gen/

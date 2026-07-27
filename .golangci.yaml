@@ -1,0 +1,30 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - gosec          # 安全:gRPC 服务必备
+    - revive         # golint 现代继任者,风格/命名
+    - bodyclose      # http.Response.Body 未 Close(网易云请求 + gRPC 常见)
+    - misspell       # 注释拼写
+    - unconvert      # 冗余类型转换
+    - contextcheck   # context 传递一致性
+    - nilerr         # 返回 nil 但 err 非 nil
+    - gocritic       # bug + 性能 + 风格诊断
+  exclusions:
+    presets:
+      - comments
+      - std-error-handling
+      - common-false-positives
+    warn-unused: true
+  settings:
+    staticcheck:
+      checks: ["all", "-ST1000"]   # 关掉 package doc 强制
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

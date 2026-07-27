@@ -1,0 +1,36 @@
+name: Release Please
+
+# release-please 从 Conventional Commits 自动推导版本号 + 维护 CHANGELOG.md + 打 tag。
+# 工作流:push 到 main → release-please 开「release PR」(含待发 changelog)→
+# 维护者 review 后合并 → 自动打 tag → 触发 release.yml(GoReleaser 构建产物)。
+#
+# v0.x 阶段:BREAKING CHANGE 只 bump minor(semver 0.x 规则)。
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write       # 创建 release PR + 打 tag
+  pull-requests: write  # 开/合并 release PR
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v5
+        with:
+          release-type: go
+          # 仓库已存在 CHANGELOG.md(v0.1.0 段),release-please 会接续维护而非覆盖
+          bootstrap-changelog: false
+          # v0.x:允许 breaking change 被处理(默认就是 minor bump,无需特殊配置)
+          changelog-types: |
+            [
+              {"type":"feat","section":"Features","hidden":false},
+              {"type":"fix","section":"Bug Fixes","hidden":false},
+              {"type":"perf","section":"Performance","hidden":false},
+              {"type":"refactor","section":"Refactoring","hidden":false},
+              {"type":"docs","section":"Documentation","hidden":true},
+              {"type":"chore","section":"Miscellaneous","hidden":true},
+              {"type":"test","section":"Tests","hidden":true}
+            ]
