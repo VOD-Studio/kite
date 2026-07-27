@@ -24,7 +24,7 @@ kite search [flags]
 
 ### SEE ALSO
 
-* [kite](kite.md)	 - kite - mimo-music 网易云接口 CLI
+* [kite](kite.md)	 - kite - 网易云接口 CLI
 * [kite search default-keyword](kite_search_default-keyword.md)	 - 默认搜索关键词
 * [kite search hot](kite_search_hot.md)	 - 热搜列表
 * [kite search hot-detail](kite_search_hot-detail.md)	 - 热搜详情

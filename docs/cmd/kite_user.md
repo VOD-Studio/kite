@@ -17,7 +17,7 @@
 
 ### SEE ALSO
 
-* [kite](kite.md)	 - kite - mimo-music 网易云接口 CLI
+* [kite](kite.md)	 - kite - 网易云接口 CLI
 * [kite user account](kite_user_account.md)	 - 当前账号信息(登录态)
 * [kite user detail](kite_user_detail.md)	 - 用户详情
 * [kite user detail-by-name](kite_user_detail-by-name.md)	 - 按昵称查用户 ID

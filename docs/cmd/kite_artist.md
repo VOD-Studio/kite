@@ -17,7 +17,7 @@
 
 ### SEE ALSO
 
-* [kite](kite.md)	 - kite - mimo-music 网易云接口 CLI
+* [kite](kite.md)	 - kite - 网易云接口 CLI
 * [kite artist albums](kite_artist_albums.md)	 - 歌手专辑列表
 * [kite artist desc](kite_artist_desc.md)	 - 歌手简介
 * [kite artist detail](kite_artist_detail.md)	 - 歌手详情

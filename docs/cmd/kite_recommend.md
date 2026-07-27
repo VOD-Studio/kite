@@ -17,7 +17,7 @@
 
 ### SEE ALSO
 
-* [kite](kite.md)	 - kite - mimo-music 网易云接口 CLI
+* [kite](kite.md)	 - kite - 网易云接口 CLI
 * [kite recommend daily-playlists](kite_recommend_daily-playlists.md)	 - 每日推荐歌单(登录态)
 * [kite recommend daily-songs](kite_recommend_daily-songs.md)	 - 每日推荐歌曲
 * [kite recommend new-songs](kite_recommend_new-songs.md)	 - 推荐新歌

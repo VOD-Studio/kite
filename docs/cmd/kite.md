@@ -1,10 +1,10 @@
 ## kite
 
-kite - mimo-music 网易云接口 CLI
+kite - 网易云接口 CLI
 
 ### Synopsis
 
-kite - mimo-music 接口调试与实用工具
+kite - 接口调试与实用工具
 
 直连 engine + endpoint 声明,不经 gRPC/gateway。
 登录态接口需先 login(扫码)或 login-cellphone(手机号验证码)。

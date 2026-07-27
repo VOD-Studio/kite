@@ -23,7 +23,7 @@ See each sub-command's help for details on how to use the generated script.
 
 ### SEE ALSO
 
-* [kite](kite.md)	 - kite - mimo-music 网易云接口 CLI
+* [kite](kite.md)	 - kite - 网易云接口 CLI
 * [kite completion bash](kite_completion_bash.md)	 - Generate the autocompletion script for bash
 * [kite completion fish](kite_completion_fish.md)	 - Generate the autocompletion script for fish
 * [kite completion powershell](kite_completion_powershell.md)	 - Generate the autocompletion script for powershell

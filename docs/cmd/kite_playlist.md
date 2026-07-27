@@ -17,7 +17,7 @@
 
 ### SEE ALSO
 
-* [kite](kite.md)	 - kite - mimo-music 网易云接口 CLI
+* [kite](kite.md)	 - kite - 网易云接口 CLI
 * [kite playlist catlist](kite_playlist_catlist.md)	 - 歌单分类列表
 * [kite playlist create](kite_playlist_create.md)	 - 创建歌单(写操作,登录态)
 * [kite playlist delete](kite_playlist_delete.md)	 - 删除歌单(写操作,登录态)

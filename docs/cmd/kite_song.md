@@ -17,7 +17,7 @@
 
 ### SEE ALSO
 
-* [kite](kite.md)	 - kite - mimo-music 网易云接口 CLI
+* [kite](kite.md)	 - kite - 网易云接口 CLI
 * [kite song check-available](kite_song_check-available.md)	 - 检查歌曲是否可用
 * [kite song chorus-time](kite_song_chorus-time.md)	 - 副歌(eapi)
 * [kite song creator-info](kite_song_creator-info.md)	 - 创作者(eapi)

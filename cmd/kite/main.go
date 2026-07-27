@@ -1,4 +1,4 @@
-// Package main 是 mimo-music 接口调试与实用 CLI 工具 kite。
+// Package main 是 kite 接口调试与实用 CLI 工具。
 //
 // 命令实现按领域分包在 internal/cli/{auth,song,album,...},这里只做装配入口。
 //
