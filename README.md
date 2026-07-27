@@ -1,4 +1,4 @@
-# mimo-music
+# kite
 
 多平台音乐能力服务，用 Go 实现。
 
@@ -14,10 +14,10 @@ go run ./cmd/server
 air
 
 # Docker
-docker compose up mimo-music
+docker compose up kite
 ```
 
-默认监听 `:3721`（避开 8080/8000 等常用端口），环境变量 `MIMO_MUSIC_SERVER_PORT` 可覆盖。
+默认监听 `:3721`（避开 8080/8000 等常用端口），环境变量 `KITE_SERVER_PORT` 可覆盖。
 
 ## 验证
 
