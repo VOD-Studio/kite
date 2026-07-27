@@ -32,7 +32,7 @@ kite [flags]
 * [kite album](kite_album.md)	 - 专辑相关命令
 * [kite artist](kite_artist.md)	 - 歌手相关命令
 * [kite completion](kite_completion.md)	 - Generate the autocompletion script for the specified shell
-* [kite doctor](kite_doctor.md)	 - 环境自检(版本/会话/补全/音频),出问题一眼定位
+* [kite doctor](kite_doctor.md)	 - 环境自检(版本/会话/补全),出问题一眼定位
 * [kite fm](kite_fm.md)	 - 私人 FM
 * [kite install-completion](kite_install-completion.md)	 - 生成当前 shell 的 Tab 补全脚本到标准目录(bash/fish 自动加载;zsh 需手动加 fpath)
 * [kite login](kite_login.md)	 - 扫码登录,cookie 持久化到本地配置目录

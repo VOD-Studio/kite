@@ -257,3 +257,24 @@ func (r downloadResult) writeJSON(w io.Writer) error {
 	_, err = w.Write(append(b, '\n'))
 	return err
 }
+
+// unavailableReason 查歌曲不可用原因(check-available 接口);无原因或查询失败返回空串。
+// 下载前用于给用户更明确的「为何下不了」提示。
+func unavailableReason(ctx context.Context, check func(context.Context, int64) (string, error), id int64) string {
+	if check == nil {
+		return ""
+	}
+	reason, err := check(ctx, id)
+	if err != nil {
+		return ""
+	}
+	return reason
+}
+
+// songArtist 取歌曲首位艺术家名(无则空),供召回池埋点与文件名。
+func songArtist(s *mmpb.Song) string {
+	if s == nil || len(s.Artists) == 0 {
+		return ""
+	}
+	return s.Artists[0].Name
+}

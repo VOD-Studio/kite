@@ -55,7 +55,7 @@ type recommendation struct {
 //   - 工作日晨(06-11):recommend daily-songs
 //   - 工作日午(11-18):recommend playlists
 //   - 工作日晚(18-23):fm
-//   - 工作日夜(23-06):song play --id <TAB>(从召回池复听)
+//   - 工作日夜(23-06):song download --id <TAB>(从召回池挑歌下载)
 //
 // 纯函数(now 注入保证确定性),硬编码零新依赖。
 func recommendForTime(now time.Time) []recommendation {
@@ -74,7 +74,7 @@ func recommendForTime(now time.Time) []recommendation {
 	case bucketEvening:
 		return []recommendation{{cmd: "kite fm", desc: "晚间,开个私人 FM"}}
 	default: // 夜
-		return []recommendation{{cmd: "kite song play --id <TAB>", desc: "夜了,从最近听过的歌复听"}}
+		return []recommendation{{cmd: "kite song download --id <TAB>", desc: "夜了,从最近听过的歌挑首下载"}}
 	}
 }
 
@@ -90,7 +90,7 @@ func renderOnboarding(w io.Writer, loggedIn bool, now time.Time) {
 		fmt.Fprintln(w, "  kite login           扫码登录(推荐)")
 		fmt.Fprintln(w, "  kite login-cellphone 手机号验证码登录")
 		fmt.Fprintln(w)
-		fmt.Fprintln(w, "登录后可播放/下载/红心等;先试试 kite search <关键词>。")
+		fmt.Fprintln(w, "登录后可下载/红心/管理歌单等;先试试 kite search <关键词>。")
 		fmt.Fprintln(w, "(环境变量 NETEASE_COOKIE 可临时指定 cookie,优先级高于会话文件)")
 		return
 	}
@@ -99,6 +99,6 @@ func renderOnboarding(w io.Writer, loggedIn bool, now time.Time) {
 		fmt.Fprintf(w, "  %s   %s\n", r.cmd, r.desc)
 	}
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "<TAB> 表示该位置可按 Tab 从最近搜索/播放补全候选。")
-	fmt.Fprintln(w, "音乐命令带 --id 也接受位置参数(如 kite song play 347230)。")
+	fmt.Fprintln(w, "<TAB> 表示该位置可按 Tab 从最近搜索/下载补全候选。")
+	fmt.Fprintln(w, "音乐命令带 --id 也接受位置参数(如 kite song download 347230)。")
 }

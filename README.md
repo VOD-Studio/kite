@@ -31,7 +31,6 @@ curl localhost:3721/health
 go install github.com/VOD-Studio/kite/cmd/kite@latest
 kite login               # 扫码登录
 kite search 周杰伦        # 搜索(位置参数 ≡ --keyword)
-kite song play 347230    # 播放(beep 内嵌,键盘控制)
 kite song download 347230 --level 3   # 下载单曲(1标准 2较高 3无损 4Hi-Res)
 ```
 
@@ -71,7 +70,6 @@ go vet ./...              # 检查
 
 - Go 1.25 + gRPC + grpc-gateway(契约优先,proto 定义 RPC)
 - bubbletea v2 / lipgloss v2(TUI)、cobra(CLI 命令树)
-- beep 内嵌音频播放(oto v2 跨平台,无外部播放器依赖)
 - OpenTelemetry 可观测性(OTLP exporter / Prometheus 指标 / 结构化日志)
 - Redis 缓存与会话存储(当前 noop,后续接入)
 - 网易云 weapi/eapi 加密自实现(Go 标准库,不依赖第三方音乐库)

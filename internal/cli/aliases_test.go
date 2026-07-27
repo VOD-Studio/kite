@@ -11,7 +11,6 @@ func TestExpand_HitReplacesArg0(t *testing.T) {
 		alias string
 		want  []string
 	}{
-		{"pp", []string{"song", "play"}},
 		{"dl", []string{"song", "download"}},
 		{"pll", []string{"playlist", "download"}},
 		{"se", []string{"search"}},
@@ -53,12 +52,12 @@ func TestExpand_EmptyArgs(t *testing.T) {
 }
 
 func TestExpand_PreservesTrailingArgs(t *testing.T) {
-	// pp --id 347230 --level 2 → song play --id 347230 --level 2
-	got, ok := expand([]string{"pp", "--id", "347230", "--level", "2"})
+	// dl --id 347230 --level 2 → song download --id 347230 --level 2
+	got, ok := expand([]string{"dl", "--id", "347230", "--level", "2"})
 	if !ok {
-		t.Fatal("pp 应命中")
+		t.Fatal("dl 应命中")
 	}
-	want := []string{"song", "play", "--id", "347230", "--level", "2"}
+	want := []string{"song", "download", "--id", "347230", "--level", "2"}
 	if !sliceEq(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
@@ -69,11 +68,11 @@ func TestExpand_PreservesTrailingArgs(t *testing.T) {
 func TestExpandForCompletion_HitReplacesArg1(t *testing.T) {
 	for _, proto := range []string{"__complete", "__completeNoDesc"} {
 		t.Run(proto, func(t *testing.T) {
-			got, ok := expandForCompletion([]string{proto, "pp", "--id", ""})
+			got, ok := expandForCompletion([]string{proto, "dl", "--id", ""})
 			if !ok {
 				t.Fatalf("ok=false,want true")
 			}
-			want := []string{proto, "song", "play", "--id", ""}
+			want := []string{proto, "song", "download", "--id", ""}
 			if !sliceEq(got, want) {
 				t.Errorf("got %v, want %v", got, want)
 			}
@@ -82,8 +81,8 @@ func TestExpandForCompletion_HitReplacesArg1(t *testing.T) {
 }
 
 func TestExpandForCompletion_MissNonCompleteProto(t *testing.T) {
-	// 非 __complete 协议命令(args[0]=play),不应触发补全路径重写。
-	args := []string{"play", "pp"}
+	// 非 __complete 协议命令(args[0]=search),不应触发补全路径重写。
+	args := []string{"search", "dl"}
 	got, ok := expandForCompletion(args)
 	if ok {
 		t.Error("非补全协议应 miss")
@@ -121,8 +120,8 @@ func TestExpandForCompletion_TooShortArgs(t *testing.T) {
 
 func TestAliasList_StableOrder(t *testing.T) {
 	list := aliasList()
-	// 顺序应为 pp/dl/pll/se/rd/whoami(字典序)。
-	wantAliases := []string{"pp", "dl", "pll", "se", "rd", "whoami"}
+	// 顺序应为 dl/pll/se/rd/whoami(字典序)。
+	wantAliases := []string{"dl", "pll", "se", "rd", "whoami"}
 	if len(list) != len(wantAliases) {
 		t.Fatalf("got %d 别名,want %d", len(list), len(wantAliases))
 	}

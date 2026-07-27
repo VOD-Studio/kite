@@ -30,7 +30,6 @@
 * [kite song like-count](kite_song_like-count.md)	 - 红心数(eapi)
 * [kite song liked-list](kite_song_liked-list.md)	 - 红心歌曲列表(登录态)
 * [kite song lyric](kite_song_lyric.md)	 - 歌词
-* [kite song play](kite_song_play.md)	 - 播放歌曲(交互式,键盘控制)
 * [kite song quality-detail](kite_song_quality-detail.md)	 - 音质详情(eapi)
 * [kite song similar-songs](kite_song_similar-songs.md)	 - 相似歌曲
 * [kite song trash](kite_song_trash.md)	 - 丢进垃圾桶,降推荐权重(写操作,登录态)

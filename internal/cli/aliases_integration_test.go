@@ -16,7 +16,6 @@ func TestAlias_RoutesToCorrectCommand(t *testing.T) {
 		alias   string
 		expands []string // 期望展开的命令路径
 	}{
-		{"pp", []string{"song", "play"}},
 		{"dl", []string{"song", "download"}},
 		{"pll", []string{"playlist", "download"}},
 		{"se", []string{"search"}},
@@ -62,10 +61,10 @@ func TestAlias_UnknownAliasFallsThroughToCobra(t *testing.T) {
 // TestAlias_KnownAliasesComplete 验证全部六枚别名都在表里(防漏)。
 func TestAlias_KnownAliasesComplete(t *testing.T) {
 	want := map[string]bool{
-		"pp": true, "dl": true, "pll": true,
+		"dl": true, "pll": true,
 		"se": true, "rd": true, "whoami": true,
 	}
-	require.Equal(t, len(want), len(aliases), "别名数量应为 6")
+	require.Equal(t, len(want), len(aliases), "别名数量应为 5")
 	for a := range want {
 		_, ok := aliases[a]
 		require.True(t, ok, "缺少别名 %q", a)
