@@ -1,0 +1,83 @@
+version: 2
+
+project_name: kite
+
+before:
+  hooks:
+    - go mod tidy
+
+# 当前只发 server 镜像。CLI 二进制发版(CLI build + archives)等 #14
+# 「移除 CLI 播放」完成后补回——CLI 的 beep/oto 依赖 cgo,与 CGO_ENABLED=0
+# 静态编译冲突,linux 上编译失败。播放功能将迁移到 TUI,CLI 不再承担播放。
+builds:
+  # ---- server:只 linux × amd64/arm64,供镜像使用 ----
+  - id: server
+    main: ./cmd/server
+    binary: server
+    env:
+      - CGO_ENABLED=0
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w   # strip 调试信息减小体积;version 走 debug.ReadBuildInfo,无需 -X
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+# CLI 二进制归档(#14 完成后补回):
+# archives:
+#   - id: cli
+#     ids: [cli]
+#     formats: [tar.gz]
+#     format_overrides:
+#       - goos: windows
+#         formats: [zip]
+
+dockers_v2:
+  - id: server-image
+    ids: [server]
+    images:
+      - "ghcr.io/vod-studio/kite-server"
+    tags:
+      - "latest"
+      - "{{ .Tag }}"
+      - "v{{ .Major }}.{{ .Minor }}"
+    dockerfile: Dockerfile.release
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    sbom: true
+    labels:
+      org.opencontainers.image.source: "{{ .GitURL }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.version: "{{ .Version }}"
+
+docker_signs:
+  - cmd: cosign
+    output: true
+    args:
+      - "sign"
+      - "${artifact}"
+      - "--yes"
+
+# CLI checksum 签名(#14 完成后补回):
+# signs:
+#   - cmd: cosign
+#     signature: "${artifact}.sigstore.json"
+#     args: ["sign-blob", "--bundle=${signature}", "${artifact}", "--yes"]
+#     artifacts: checksum
+#     output: true
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+
+release:
+  github: {}
+  draft: false
+  prerelease: auto   # v0.x.y 会被自动判为 prerelease

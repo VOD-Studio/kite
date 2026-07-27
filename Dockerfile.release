@@ -1,0 +1,17 @@
+# 发布用 Dockerfile —— 配合 GoReleaser dockers_v2
+#
+# GoReleaser 已在 dist/ 编译好二进制,dockers_v2 按 $TARGETPLATFORM 注入构建上下文。
+# 本文件绝不 RUN go build——只 COPY 已编译的二进制到 distroless。
+# 本地开发用根目录 Dockerfile(多阶段,自己 go build),两者职责分离。
+
+FROM gcr.io/distroless/static-debian12:nonroot
+
+# $TARGETPLATFORM 由 dockers_v2 的 buildx 自动注入(linux/amd64 或 linux/arm64)
+ARG TARGETPLATFORM
+
+# static-debian12 自带 CA 证书包,gRPC over TLS 可用;:nonroot 已是非 root 用户
+COPY $TARGETPLATFORM/server /usr/local/bin/server
+
+EXPOSE 3721 3722
+
+ENTRYPOINT ["/usr/local/bin/server"]
