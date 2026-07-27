@@ -36,10 +36,10 @@ Go 实现的网易云能力服务 + 命令行工具(单体仓库)。
 
 所有代码生成走根 `Makefile`:
 
-- **`make proto`** —— 改 `proto/` 后重新生成 Go stub / gRPC service / gateway / OpenAPI 到 `gen/`(不进版本控制)。
+- **`make proto`** —— 改 `proto/` 后重新生成 Go stub / gRPC service / gateway / OpenAPI 到 `gen/`。`gen/` **提交进版本控制**(被项目代码 `import` 硬依赖,clone 即可编译;与 `docs/cmd/` 同性质)。改 proto 后跑此命令再 `git add gen/` 提交,CI 守护 job 会校验漂移。决策见 [ADR](docs/adr/generated-code-commit-policy.md)。
 - **`make proto-lint`** —— 检查 proto 文件规范。
 - **`make docs`** —— 改命令树后重新生成 `docs/cmd/` 命令参考。**freshness 守护测试依赖此 target**,不跑会导致 `docs_freshness_test.go` 红。
-- **`make clean`** —— 清除生成产物(`gen/`)。
+- **`make clean`** —— 清除本地构建产物(`tmp/`、`bin/` 等)。**不清 `gen/`**——它已进版本控制(见上条),清了等于删跟踪文件。
 
 裸命令:
 
@@ -66,7 +66,8 @@ go vet ./...              # 检查
 - **上手流程**:[`docs/kite-guide.md`](docs/kite-guide.md) —— 安装 / 登录 / 常用操作 / 别名 / 补全。
 - **CLI 设计背景**:[`docs/kite-cli-design.md`](docs/kite-cli-design.md) —— 输出层、渲染层、退出码等架构决策。
 - **功能路线图**:[`docs/kite-roadmap.md`](docs/kite-roadmap.md) —— 各 Phase(输出层 / 实用功能 / 配置 / 工程化 / TUI)状态与规划。
-- **ADR**:[`docs/adr/`](docs/adr/) —— 架构决策记录(目前有 `tui-client-architecture.md`)。
+- **领域术语与决策索引**:[`CONTEXT.md`](CONTEXT.md) —— 项目领域词汇表 + 不可逆决策索引(访谈产出,后续实现引用)。
+- **ADR**:[`docs/adr/`](docs/adr/) —— 架构决策记录(`tui-client-architecture`、`generated-code-commit-policy`)。
 - **PRD**:[`docs/prd/`](docs/prd/) —— 具体 feature 规格(最新 PRD-0016 TUI 客户端)。
 
 agent 友好原则:`--help` 是命令语法唯一真相。skill 或外部文档一律指向 `--help` 或生成参考,不要复制命令手册——复制即第二份真相,必然腐烂。

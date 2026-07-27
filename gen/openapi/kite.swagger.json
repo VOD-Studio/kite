@@ -1,0 +1,4967 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Package netease.music.v1 定义网易云音乐能力的 gRPC 契约。",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "SongService"
+    },
+    {
+      "name": "AlbumService"
+    },
+    {
+      "name": "ArtistService"
+    },
+    {
+      "name": "AuthService"
+    },
+    {
+      "name": "FMService"
+    },
+    {
+      "name": "SearchService"
+    },
+    {
+      "name": "PlaylistService"
+    },
+    {
+      "name": "RecommendService"
+    },
+    {
+      "name": "UserService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/albums/new": {
+      "get": {
+        "summary": "AllNewAlbums 获取全部新碟（分页，按地区过滤）。",
+        "operationId": "AlbumService_AllNewAlbums",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AllNewAlbumsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "area",
+            "description": "地区过滤，默认全部。\n\n - ALBUM_AREA_UNSPECIFIED: 未指定，默认全部。\n - ALBUM_AREA_ALL: 全部。\n - ALBUM_AREA_ZH: 华语。\n - ALBUM_AREA_EA: 欧美。\n - ALBUM_AREA_KR: 韩国。\n - ALBUM_AREA_JP: 日本。",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ALBUM_AREA_UNSPECIFIED",
+              "ALBUM_AREA_ALL",
+              "ALBUM_AREA_ZH",
+              "ALBUM_AREA_EA",
+              "ALBUM_AREA_KR",
+              "ALBUM_AREA_JP"
+            ],
+            "default": "ALBUM_AREA_UNSPECIFIED"
+          },
+          {
+            "name": "limit",
+            "description": "返回数量，默认 30。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量，默认 0。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AlbumService"
+        ]
+      }
+    },
+    "/api/v1/albums/new/shelf": {
+      "get": {
+        "summary": "NewAlbumShelf 获取新碟上架（按地区/年/月过滤的榜单式新碟）。",
+        "operationId": "AlbumService_NewAlbumShelf",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1NewAlbumShelfResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "area",
+            "description": "地区过滤，默认全部。\n\n - ALBUM_AREA_UNSPECIFIED: 未指定，默认全部。\n - ALBUM_AREA_ALL: 全部。\n - ALBUM_AREA_ZH: 华语。\n - ALBUM_AREA_EA: 欧美。\n - ALBUM_AREA_KR: 韩国。\n - ALBUM_AREA_JP: 日本。",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ALBUM_AREA_UNSPECIFIED",
+              "ALBUM_AREA_ALL",
+              "ALBUM_AREA_ZH",
+              "ALBUM_AREA_EA",
+              "ALBUM_AREA_KR",
+              "ALBUM_AREA_JP"
+            ],
+            "default": "ALBUM_AREA_UNSPECIFIED"
+          },
+          {
+            "name": "type",
+            "description": "类型：new 全部 / hot 热门，默认 new。",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "year",
+            "description": "年，默认本年。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "month",
+            "description": "月（1-12），默认本月。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "limit",
+            "description": "返回数量，默认 50。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量，默认 0。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AlbumService"
+        ]
+      }
+    },
+    "/api/v1/albums/newest": {
+      "get": {
+        "summary": "NewestAlbums 获取云音乐首页最新专辑。",
+        "operationId": "AlbumService_NewestAlbums",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1NewestAlbumsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AlbumService"
+        ]
+      }
+    },
+    "/api/v1/albums/subscribed": {
+      "get": {
+        "summary": "SubscribedAlbums 获取已收藏专辑列表（需登录态，分页）。",
+        "operationId": "AlbumService_SubscribedAlbums",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubscribedAlbumsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "description": "返回数量，默认 25。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量，默认 0。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AlbumService"
+        ]
+      }
+    },
+    "/api/v1/albums/{albumId}": {
+      "get": {
+        "summary": "GetAlbum 获取专辑详情（含歌曲列表）。",
+        "operationId": "AlbumService_GetAlbum",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetAlbumResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "albumId",
+            "description": "专辑 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "AlbumService"
+        ]
+      }
+    },
+    "/api/v1/albums/{albumId}/dynamic": {
+      "get": {
+        "summary": "AlbumDynamic 获取专辑动态信息（是否收藏、收藏数、评论数、分享数）。",
+        "operationId": "AlbumService_AlbumDynamic",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AlbumDynamicResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "albumId",
+            "description": "专辑 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "AlbumService"
+        ]
+      }
+    },
+    "/api/v1/albums/{albumId}/quality": {
+      "get": {
+        "summary": "AlbumSongQuality 获取专辑内歌曲可选音质。",
+        "operationId": "AlbumService_AlbumSongQuality",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AlbumSongQualityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "albumId",
+            "description": "专辑 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "AlbumService"
+        ]
+      }
+    },
+    "/api/v1/albums/{albumId}/subscribe": {
+      "post": {
+        "summary": "SubscribeAlbum 收藏专辑。",
+        "operationId": "AlbumService_SubscribeAlbum",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubscribeAlbumResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "albumId",
+            "description": "专辑 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AlbumServiceSubscribeAlbumBody"
+            }
+          }
+        ],
+        "tags": [
+          "AlbumService"
+        ]
+      }
+    },
+    "/api/v1/albums/{albumId}/unsubscribe": {
+      "post": {
+        "summary": "UnsubscribeAlbum 取消收藏专辑。",
+        "operationId": "AlbumService_UnsubscribeAlbum",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UnsubscribeAlbumResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "albumId",
+            "description": "专辑 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AlbumServiceUnsubscribeAlbumBody"
+            }
+          }
+        ],
+        "tags": [
+          "AlbumService"
+        ]
+      }
+    },
+    "/api/v1/artists/top": {
+      "get": {
+        "summary": "TopArtists 获取热门歌手列表。",
+        "operationId": "ArtistService_TopArtists",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TopArtistsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ArtistService"
+        ]
+      }
+    },
+    "/api/v1/artists/{artistId}": {
+      "get": {
+        "summary": "GetArtist 获取歌手基础信息及热门歌曲。",
+        "operationId": "ArtistService_GetArtist",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetArtistResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "artistId",
+            "description": "歌手 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ArtistService"
+        ]
+      }
+    },
+    "/api/v1/artists/{artistId}/albums": {
+      "get": {
+        "summary": "Albums 获取歌手专辑列表。",
+        "operationId": "ArtistService_Albums",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AlbumsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "artistId",
+            "description": "歌手 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ArtistService"
+        ]
+      }
+    },
+    "/api/v1/artists/{artistId}/desc": {
+      "get": {
+        "summary": "Desc 获取歌手详细描述。",
+        "operationId": "ArtistService_Desc",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DescResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "artistId",
+            "description": "歌手 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ArtistService"
+        ]
+      }
+    },
+    "/api/v1/artists/{artistId}/fans": {
+      "get": {
+        "summary": "Fans 获取歌手粉丝数。",
+        "operationId": "ArtistService_Fans",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FansResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "artistId",
+            "description": "歌手 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ArtistService"
+        ]
+      }
+    },
+    "/api/v1/artists/{artistId}/similar": {
+      "get": {
+        "summary": "Similar 获取相似歌手。",
+        "operationId": "ArtistService_Similar",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SimilarResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "artistId",
+            "description": "歌手 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ArtistService"
+        ]
+      }
+    },
+    "/api/v1/artists/{artistId}/songs": {
+      "get": {
+        "summary": "AllSongs 获取歌手全部歌曲（分页）。",
+        "operationId": "ArtistService_AllSongs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AllSongsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "artistId",
+            "description": "歌手 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ArtistService"
+        ]
+      }
+    },
+    "/api/v1/artists/{artistId}/subscribe": {
+      "post": {
+        "summary": "Subscribe 收藏/取消收藏歌手。",
+        "operationId": "ArtistService_ArtistSubscribe",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ArtistSubscribeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "artistId",
+            "description": "歌手 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ArtistServiceArtistSubscribeBody"
+            }
+          }
+        ],
+        "tags": [
+          "ArtistService"
+        ]
+      }
+    },
+    "/api/v1/artists/{artistId}/top": {
+      "get": {
+        "summary": "TopSongs 获取歌手热门 50 首。",
+        "operationId": "ArtistService_TopSongs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TopSongsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "artistId",
+            "description": "歌手 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ArtistService"
+        ]
+      }
+    },
+    "/api/v1/auth/captcha": {
+      "post": {
+        "summary": "SendCaptcha 发送验证码到手机号。",
+        "operationId": "AuthService_SendCaptcha",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SendCaptchaResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SendCaptchaRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/api/v1/auth/login/cellphone": {
+      "post": {
+        "summary": "LoginByCellphone 用手机号 + 验证码登录，返回会话凭证。",
+        "operationId": "AuthService_LoginByCellphone",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoginByCellphoneResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LoginByCellphoneRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/api/v1/auth/login/qrcode": {
+      "get": {
+        "summary": "LoginQrcode 获取登录二维码。",
+        "operationId": "AuthService_LoginQrcode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoginQrcodeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/api/v1/auth/login/qrcode/check": {
+      "get": {
+        "summary": "CheckQrcode 轮询二维码登录状态。",
+        "operationId": "AuthService_CheckQrcode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CheckQrcodeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "description": "轮询 key（LoginQrcode 返回）。",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "Logout 登出当前会话。",
+        "operationId": "AuthService_Logout",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LogoutResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LogoutRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/api/v1/auth/status": {
+      "get": {
+        "summary": "LoginStatus 查询当前登录态。",
+        "operationId": "AuthService_LoginStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoginStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/api/v1/fm": {
+      "get": {
+        "summary": "GetPersonalFM 获取私人 FM 歌曲（需登录）。",
+        "operationId": "FMService_GetPersonalFM",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetPersonalFMResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "FMService"
+        ]
+      }
+    },
+    "/api/v1/playlists": {
+      "post": {
+        "summary": "Create 新建歌单。",
+        "operationId": "PlaylistService_Create",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/categories": {
+      "get": {
+        "summary": "CatList 获取歌单分类列表。",
+        "operationId": "PlaylistService_CatList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CatListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/highquality": {
+      "get": {
+        "summary": "HighQuality 获取精品歌单列表。",
+        "operationId": "PlaylistService_HighQuality",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1HighQualityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cat",
+            "description": "分类标签（空=全部）。",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/highquality/tags": {
+      "get": {
+        "summary": "HighQualityTags 获取精品歌单标签列表。",
+        "operationId": "PlaylistService_HighQualityTags",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1HighQualityTagsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/hot": {
+      "get": {
+        "summary": "BrowseHot 获取网友精选碟（热门歌单）。",
+        "operationId": "PlaylistService_BrowseHot",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BrowseHotResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cat",
+            "description": "分类标签。",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "order",
+            "description": "排序方式（new/hot）。",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/{playlistId}": {
+      "get": {
+        "summary": "GetPlaylist 获取歌单详情（含歌曲列表）。",
+        "operationId": "PlaylistService_GetPlaylist",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetPlaylistResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "playlistId",
+            "description": "歌单 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      },
+      "delete": {
+        "summary": "Delete 删除歌单。",
+        "operationId": "PlaylistService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "playlistId",
+            "description": "歌单 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/{playlistId}/desc": {
+      "patch": {
+        "summary": "UpdateDesc 更新歌单描述。",
+        "operationId": "PlaylistService_UpdateDesc",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateDescResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "playlistId",
+            "description": "歌单 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PlaylistServiceUpdateDescBody"
+            }
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/{playlistId}/name": {
+      "patch": {
+        "summary": "UpdateName 更新歌单名。",
+        "operationId": "PlaylistService_UpdateName",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateNameResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "playlistId",
+            "description": "歌单 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PlaylistServiceUpdateNameBody"
+            }
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/{playlistId}/related-recommend": {
+      "get": {
+        "summary": "RelatedPlaylistRecommend 基于歌单获取相关歌单推荐（替代已废弃的 HTML 抓取相关歌单接口）。",
+        "operationId": "PlaylistService_RelatedPlaylistRecommend",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RelatedPlaylistRecommendResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "playlistId",
+            "description": "歌单 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/{playlistId}/subscribe": {
+      "post": {
+        "summary": "Subscribe 收藏/取消收藏歌单（toggle）。",
+        "operationId": "PlaylistService_Subscribe",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubscribeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "playlistId",
+            "description": "歌单 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PlaylistServiceSubscribeBody"
+            }
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/{playlistId}/subscribers": {
+      "get": {
+        "summary": "Subscribers 获取歌单收藏者列表。",
+        "operationId": "PlaylistService_Subscribers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubscribersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "playlistId",
+            "description": "歌单 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/{playlistId}/tags": {
+      "patch": {
+        "summary": "UpdateTags 更新歌单标签。",
+        "operationId": "PlaylistService_UpdateTags",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateTagsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "playlistId",
+            "description": "歌单 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PlaylistServiceUpdateTagsBody"
+            }
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/playlists/{playlistId}/tracks": {
+      "get": {
+        "summary": "AllTracks 获取歌单全量歌曲（分页）。",
+        "operationId": "PlaylistService_AllTracks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AllTracksResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "playlistId",
+            "description": "歌单 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      },
+      "post": {
+        "summary": "UpdateTracks 添加或删除歌曲（op=add/del）。",
+        "operationId": "PlaylistService_UpdateTracks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateTracksResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "playlistId",
+            "description": "歌单 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PlaylistServiceUpdateTracksBody"
+            }
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/recommend/daily": {
+      "get": {
+        "summary": "GetDailyRecommend 获取每日推荐歌曲（需登录）。",
+        "operationId": "RecommendService_GetDailyRecommend",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetDailyRecommendResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "RecommendService"
+        ]
+      }
+    },
+    "/api/v1/recommend/daily-playlists": {
+      "get": {
+        "summary": "DailyRecommendPlaylists 获取每日推荐歌单（需登录，个性化）。",
+        "operationId": "RecommendService_DailyRecommendPlaylists",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DailyRecommendPlaylistsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "RecommendService"
+        ]
+      }
+    },
+    "/api/v1/recommend/new-songs": {
+      "get": {
+        "summary": "RecommendNewSongs 获取推荐新音乐（匿名）。",
+        "operationId": "RecommendService_RecommendNewSongs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RecommendNewSongsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "description": "返回数量，默认 10（网易云不支持 offset）。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "RecommendService"
+        ]
+      }
+    },
+    "/api/v1/recommend/playlists": {
+      "get": {
+        "summary": "RecommendPlaylists 获取推荐歌单（匿名，热门）。",
+        "operationId": "RecommendService_RecommendPlaylists",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RecommendPlaylistsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "description": "返回数量，默认 30（网易云不支持 offset）。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "RecommendService"
+        ]
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "summary": "Search 按关键词搜索，type 控制搜索类型。",
+        "operationId": "SearchService_Search",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SearchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "keyword",
+            "description": "搜索关键词。",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "搜索类型，地基阶段固定 SONG。\n\n - SEARCH_TYPE_UNSPECIFIED: 未指定，默认单曲。\n - SEARCH_TYPE_SONG: 单曲。\n - SEARCH_TYPE_ALBUM: 专辑。\n - SEARCH_TYPE_ARTIST: 歌手。\n - SEARCH_TYPE_PLAYLIST: 歌单。\n - SEARCH_TYPE_USER: 用户。\n - SEARCH_TYPE_MV: MV。\n - SEARCH_TYPE_LYRIC: 歌词。\n - SEARCH_TYPE_DJ: 主播电台。\n - SEARCH_TYPE_VIDEO: 视频。\n - SEARCH_TYPE_ALL: 综合。",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "SEARCH_TYPE_UNSPECIFIED",
+              "SEARCH_TYPE_SONG",
+              "SEARCH_TYPE_ALBUM",
+              "SEARCH_TYPE_ARTIST",
+              "SEARCH_TYPE_PLAYLIST",
+              "SEARCH_TYPE_USER",
+              "SEARCH_TYPE_MV",
+              "SEARCH_TYPE_LYRIC",
+              "SEARCH_TYPE_DJ",
+              "SEARCH_TYPE_VIDEO",
+              "SEARCH_TYPE_ALL"
+            ],
+            "default": "SEARCH_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "SearchService"
+        ]
+      }
+    },
+    "/api/v1/search/default": {
+      "get": {
+        "summary": "DefaultKeyword 获取默认搜索关键词。",
+        "operationId": "SearchService_DefaultKeyword",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DefaultKeywordResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SearchService"
+        ]
+      }
+    },
+    "/api/v1/search/hot": {
+      "get": {
+        "summary": "Hot 获取热搜词列表（简略）。",
+        "operationId": "SearchService_Hot",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1HotResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SearchService"
+        ]
+      }
+    },
+    "/api/v1/search/hot/detail": {
+      "get": {
+        "summary": "HotDetail 获取热搜词列表（详细，含封面/排名）。",
+        "operationId": "SearchService_HotDetail",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1HotDetailResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SearchService"
+        ]
+      }
+    },
+    "/api/v1/search/suggest": {
+      "get": {
+        "summary": "Suggest 获取搜索建议（输入补全）。",
+        "operationId": "SearchService_Suggest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SuggestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "keyword",
+            "description": "输入关键词。",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SearchService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}": {
+      "get": {
+        "summary": "GetSongDetail 获取歌曲详情。",
+        "operationId": "SongService_GetSongDetail",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSongDetailResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/availability": {
+      "get": {
+        "summary": "CheckAvailable 检查音乐是否可用（能否播放）。",
+        "operationId": "SongService_CheckAvailable",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CheckAvailableResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/chorus": {
+      "get": {
+        "summary": "ChorusTime 获取歌曲副歌时间段。",
+        "operationId": "SongService_ChorusTime",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ChorusTimeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/creators": {
+      "get": {
+        "summary": "CreatorInfo 获取歌曲创作者信息（作词/作曲/编曲）。",
+        "operationId": "SongService_CreatorInfo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreatorInfoResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/disallow-recommend": {
+      "post": {
+        "summary": "DisallowRecommend 标记每日推荐歌曲不感兴趣。",
+        "operationId": "SongService_DisallowRecommend",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DisallowRecommendResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "每日推荐歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SongServiceDisallowRecommendBody"
+            }
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/dynamic-cover": {
+      "get": {
+        "summary": "DynamicCover 获取歌曲动态封面。",
+        "operationId": "SongService_DynamicCover",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DynamicCoverResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/like": {
+      "post": {
+        "summary": "Like 喜欢或取消喜欢歌曲（toggle）。",
+        "operationId": "SongService_Like",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LikeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SongServiceLikeBody"
+            }
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/like-count": {
+      "get": {
+        "summary": "LikeCount 获取歌曲红心数量。",
+        "operationId": "SongService_LikeCount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LikeCountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/liked": {
+      "get": {
+        "summary": "IsLike 判断当前用户是否已喜爱指定歌曲。",
+        "operationId": "SongService_IsLike",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1IsLikeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/lyric": {
+      "get": {
+        "summary": "GetLyric 获取歌词（含原文、翻译、音译）。",
+        "operationId": "SongService_GetLyric",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetLyricResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/quality": {
+      "get": {
+        "summary": "QualityDetail 获取歌曲音质详情（可选音质等级）。",
+        "operationId": "SongService_QualityDetail",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1QualityDetailResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/similar-playlists": {
+      "get": {
+        "summary": "SimilarPlaylists 基于歌曲获取相似歌单。",
+        "operationId": "PlaylistService_SimilarPlaylists",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SimilarPlaylistsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "description": "返回数量，默认 50。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量，默认 0。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "PlaylistService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/similar-songs": {
+      "get": {
+        "summary": "SimilarSongs 基于歌曲获取相似音乐。",
+        "operationId": "SongService_SimilarSongs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SimilarSongsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "description": "返回数量，默认 50。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量，默认 0。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/similar-users": {
+      "get": {
+        "summary": "SimilarUsers 基于歌曲获取听歌的人（最近听过该歌曲的用户）。",
+        "operationId": "UserService_SimilarUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SimilarUsersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "description": "返回数量，默认 50。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量，默认 0。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/trash": {
+      "post": {
+        "summary": "Trash 把歌曲丢进垃圾桶，降低其推荐权重。",
+        "operationId": "SongService_Trash",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TrashResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SongServiceTrashBody"
+            }
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/url": {
+      "get": {
+        "summary": "GetSongURL 获取歌曲播放直链。level 控制音质。",
+        "operationId": "SongService_GetSongURL",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSongURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "level",
+            "description": "音质级别，默认 standard。\n\n - SONG_LEVEL_UNSPECIFIED: 未指定，默认标准。\n - SONG_LEVEL_STANDARD: 标准。\n - SONG_LEVEL_EXHIGH: 极高。\n - SONG_LEVEL_LOSSLESS: 无损。\n - SONG_LEVEL_HRES: Hi-Res。",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "SONG_LEVEL_UNSPECIFIED",
+              "SONG_LEVEL_STANDARD",
+              "SONG_LEVEL_EXHIGH",
+              "SONG_LEVEL_LOSSLESS",
+              "SONG_LEVEL_HRES"
+            ],
+            "default": "SONG_LEVEL_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/songs/{songId}/word-lyric": {
+      "get": {
+        "summary": "GetWordLyric 获取逐字歌词（结构化时间戳，卡拉 OK 式逐字高亮）。\n与 GetLyric 分离：逐字歌词体积大，调用方按需取。",
+        "operationId": "SongService_GetWordLyric",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetWordLyricResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "songId",
+            "description": "歌曲 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/user/account": {
+      "get": {
+        "summary": "Account 获取当前登录账号信息（需登录态）。",
+        "operationId": "UserService_Account",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AccountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/users/lookup": {
+      "get": {
+        "summary": "DetailByName 根据 nickname 获取 userid。",
+        "operationId": "UserService_DetailByName",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DetailByNameResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "nickname",
+            "description": "昵称。",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/users/{userId}": {
+      "get": {
+        "summary": "Detail 获取用户详情。",
+        "operationId": "UserService_Detail",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DetailResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "用户 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/users/{userId}/events": {
+      "get": {
+        "summary": "Events 获取用户动态。",
+        "operationId": "UserService_Events",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EventsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "用户 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "lastEventId",
+            "description": "偏移量（最后一条动态的 ID）。",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/users/{userId}/follow-each-other": {
+      "get": {
+        "summary": "FollowEachOther 判断两个用户是否互相关注。",
+        "operationId": "UserService_FollowEachOther",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FollowEachOtherResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "用户 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "targetUserId",
+            "description": "对方用户 ID。",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/users/{userId}/followeds": {
+      "get": {
+        "summary": "Followeds 获取用户粉丝列表。",
+        "operationId": "UserService_Followeds",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FollowedsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "用户 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "lastTime",
+            "description": "最后一个粉丝的时间（翻页用）。",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/users/{userId}/follows": {
+      "get": {
+        "summary": "Follows 获取用户关注列表。",
+        "operationId": "UserService_Follows",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FollowsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "用户 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/users/{userId}/level": {
+      "get": {
+        "summary": "Level 获取用户等级信息。",
+        "operationId": "UserService_Level",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LevelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "用户 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/users/{userId}/liked-songs": {
+      "get": {
+        "summary": "LikedList 获取喜欢音乐列表（歌曲 ID 集合）。",
+        "operationId": "SongService_LikedList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LikedListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "用户 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SongService"
+        ]
+      }
+    },
+    "/api/v1/users/{userId}/playlists": {
+      "get": {
+        "summary": "Playlist 获取用户歌单列表。",
+        "operationId": "UserService_UserPlaylist",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UserPlaylistResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "用户 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "filter",
+            "description": "歌单过滤（ALL/CREATED/SUBSCRIBED）。\n\n - PLAYLIST_FILTER_UNSPECIFIED: 未指定，返回全部。\n - PLAYLIST_FILTER_ALL: 全部歌单。\n - PLAYLIST_FILTER_CREATED: 用户创建的歌单。\n - PLAYLIST_FILTER_SUBSCRIBED: 用户收藏的歌单。",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "PLAYLIST_FILTER_UNSPECIFIED",
+              "PLAYLIST_FILTER_ALL",
+              "PLAYLIST_FILTER_CREATED",
+              "PLAYLIST_FILTER_SUBSCRIBED"
+            ],
+            "default": "PLAYLIST_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "description": "偏移量。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/users/{userId}/record": {
+      "get": {
+        "summary": "Record 获取用户播放记录。",
+        "operationId": "UserService_Record",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RecordResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "用户 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "type",
+            "description": "类型：0 本周，1 全部。",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/users/{userId}/subcount": {
+      "get": {
+        "summary": "SubCount 获取用户信息/歌单/收藏/mv/dj 数量统计。",
+        "operationId": "UserService_SubCount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubCountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "用户 ID。",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "AlbumServiceSubscribeAlbumBody": {
+      "type": "object",
+      "title": "SubscribeAlbum 请求。"
+    },
+    "AlbumServiceUnsubscribeAlbumBody": {
+      "type": "object",
+      "title": "UnsubscribeAlbum 请求。"
+    },
+    "ArtistServiceArtistSubscribeBody": {
+      "type": "object",
+      "title": "ArtistSubscribe 请求。"
+    },
+    "PlaylistServiceSubscribeBody": {
+      "type": "object",
+      "title": "Subscribe 请求。"
+    },
+    "PlaylistServiceUpdateDescBody": {
+      "type": "object",
+      "properties": {
+        "desc": {
+          "type": "string",
+          "title": "新描述。"
+        }
+      },
+      "title": "UpdateDesc 请求。"
+    },
+    "PlaylistServiceUpdateNameBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "新名称。"
+        }
+      },
+      "title": "UpdateName 请求。"
+    },
+    "PlaylistServiceUpdateTagsBody": {
+      "type": "object",
+      "properties": {
+        "tags": {
+          "type": "string",
+          "title": "标签列表（分号分隔）。"
+        }
+      },
+      "title": "UpdateTags 请求。"
+    },
+    "PlaylistServiceUpdateTracksBody": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "$ref": "#/definitions/v1TracksOp",
+          "title": "操作类型。"
+        },
+        "trackIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          },
+          "title": "歌曲 ID 列表。"
+        }
+      },
+      "title": "UpdateTracks 请求。"
+    },
+    "SongServiceDisallowRecommendBody": {
+      "type": "object",
+      "title": "DisallowRecommend 请求。"
+    },
+    "SongServiceLikeBody": {
+      "type": "object",
+      "properties": {
+        "like": {
+          "type": "boolean",
+          "title": "true 喜欢，false 取消喜欢。"
+        }
+      },
+      "title": "Like 请求。"
+    },
+    "SongServiceTrashBody": {
+      "type": "object",
+      "title": "Trash 请求。"
+    },
+    "musicV1AlbumSongQuality": {
+      "type": "object",
+      "properties": {
+        "songId": {
+          "type": "string",
+          "format": "int64",
+          "title": "歌曲 ID。"
+        },
+        "qualities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SongQuality"
+          },
+          "title": "可选音质列表。"
+        }
+      },
+      "title": "专辑内单首歌曲的音质信息。"
+    },
+    "musicV1HotDetail": {
+      "type": "object",
+      "properties": {
+        "searchWord": {
+          "type": "string",
+          "title": "热搜词。"
+        },
+        "score": {
+          "type": "integer",
+          "format": "int32",
+          "title": "排名。"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32",
+          "title": "排名位置。"
+        },
+        "coverUrl": {
+          "type": "string",
+          "title": "封面 URL。"
+        },
+        "iconUrl": {
+          "type": "string",
+          "title": "图标 URL。"
+        }
+      },
+      "title": "热搜词条目（详细，含封面）。"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AccountResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1UserDetail",
+          "title": "账号信息。"
+        }
+      },
+      "title": "Account 响应。"
+    },
+    "v1Album": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64",
+          "title": "专辑 ID。"
+        },
+        "name": {
+          "type": "string",
+          "title": "专辑名。"
+        },
+        "picUrl": {
+          "type": "string",
+          "title": "专辑封面 URL。"
+        },
+        "publishTime": {
+          "type": "string",
+          "title": "发行时间（网易云原始格式字符串）。"
+        },
+        "artist": {
+          "$ref": "#/definitions/v1Artist",
+          "title": "专辑歌手。"
+        }
+      },
+      "title": "Album 是专辑实体。被歌曲、专辑详情、搜索等接口复用。"
+    },
+    "v1AlbumArea": {
+      "type": "string",
+      "enum": [
+        "ALBUM_AREA_UNSPECIFIED",
+        "ALBUM_AREA_ALL",
+        "ALBUM_AREA_ZH",
+        "ALBUM_AREA_EA",
+        "ALBUM_AREA_KR",
+        "ALBUM_AREA_JP"
+      ],
+      "default": "ALBUM_AREA_UNSPECIFIED",
+      "description": "- ALBUM_AREA_UNSPECIFIED: 未指定，默认全部。\n - ALBUM_AREA_ALL: 全部。\n - ALBUM_AREA_ZH: 华语。\n - ALBUM_AREA_EA: 欧美。\n - ALBUM_AREA_KR: 韩国。\n - ALBUM_AREA_JP: 日本。",
+      "title": "专辑地区过滤（新碟上架/全部新碟用）。"
+    },
+    "v1AlbumDynamicInfo": {
+      "type": "object",
+      "properties": {
+        "subscribed": {
+          "type": "boolean",
+          "title": "当前调用方是否已收藏该专辑。"
+        },
+        "subscribedCount": {
+          "type": "string",
+          "format": "int64",
+          "title": "收藏数。"
+        },
+        "commentCount": {
+          "type": "string",
+          "format": "int64",
+          "title": "评论数。"
+        },
+        "shareCount": {
+          "type": "string",
+          "format": "int64",
+          "title": "分享数。"
+        }
+      },
+      "title": "专辑动态信息（收藏数/评论数/分享数等）。"
+    },
+    "v1AlbumDynamicResponse": {
+      "type": "object",
+      "properties": {
+        "info": {
+          "$ref": "#/definitions/v1AlbumDynamicInfo",
+          "title": "专辑动态信息。"
+        }
+      },
+      "title": "AlbumDynamic 响应。"
+    },
+    "v1AlbumSongQualityResponse": {
+      "type": "object",
+      "properties": {
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/musicV1AlbumSongQuality"
+          },
+          "title": "专辑内各歌曲的音质信息。"
+        }
+      },
+      "title": "AlbumSongQuality 响应。"
+    },
+    "v1AlbumsResponse": {
+      "type": "object",
+      "properties": {
+        "albums": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Album"
+          },
+          "title": "专辑列表。"
+        },
+        "more": {
+          "type": "boolean",
+          "title": "是否还有更多。"
+        }
+      },
+      "title": "Albums 响应。"
+    },
+    "v1AllNewAlbumsResponse": {
+      "type": "object",
+      "properties": {
+        "albums": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Album"
+          },
+          "title": "全部新碟列表（完整 Album 实体）。"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数。"
+        }
+      },
+      "title": "AllNewAlbums 响应。"
+    },
+    "v1AllSongsResponse": {
+      "type": "object",
+      "properties": {
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Song"
+          },
+          "title": "歌曲列表。"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数。"
+        }
+      },
+      "title": "AllSongs 响应。"
+    },
+    "v1AllTracksResponse": {
+      "type": "object",
+      "properties": {
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Song"
+          },
+          "title": "全量歌曲列表（分页）。"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数。"
+        }
+      },
+      "title": "AllTracks 响应。"
+    },
+    "v1Artist": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64",
+          "title": "歌手 ID。"
+        },
+        "name": {
+          "type": "string",
+          "title": "歌手名。"
+        },
+        "alias": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "别名列表。"
+        },
+        "picUrl": {
+          "type": "string",
+          "title": "歌手头像 URL。"
+        }
+      },
+      "title": "Artist 是歌手实体。被歌曲、专辑、搜索、歌手扩展等接口复用。"
+    },
+    "v1ArtistSubscribeResponse": {
+      "type": "object",
+      "properties": {
+        "subscribed": {
+          "type": "boolean",
+          "title": "操作后是否已收藏。"
+        }
+      },
+      "title": "ArtistSubscribe 响应。"
+    },
+    "v1BrowseHotResponse": {
+      "type": "object",
+      "properties": {
+        "playlists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Playlist"
+          },
+          "title": "热门歌单列表。"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数。"
+        }
+      },
+      "title": "BrowseHot 响应。"
+    },
+    "v1CatListResponse": {
+      "type": "object",
+      "properties": {
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlaylistCategory"
+          },
+          "title": "分类列表。"
+        }
+      },
+      "title": "CatList 响应。"
+    },
+    "v1CheckAvailableResponse": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "boolean",
+          "title": "是否可播放。"
+        },
+        "message": {
+          "type": "string",
+          "title": "不可播放时的提示信息。"
+        }
+      },
+      "title": "CheckAvailable 响应。"
+    },
+    "v1CheckQrcodeResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/definitions/v1QrcodeCode",
+          "title": "状态码。"
+        },
+        "message": {
+          "type": "string",
+          "title": "状态描述。"
+        },
+        "session": {
+          "$ref": "#/definitions/v1Session",
+          "title": "登录成功时（code=CONFIRMED）的会话凭证。"
+        }
+      },
+      "title": "CheckQrcode 响应。"
+    },
+    "v1ChorusSegment": {
+      "type": "object",
+      "properties": {
+        "startMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "开始时间（毫秒）。"
+        },
+        "endMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "结束时间（毫秒）。"
+        }
+      },
+      "title": "副歌时间段。"
+    },
+    "v1ChorusTimeResponse": {
+      "type": "object",
+      "properties": {
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChorusSegment"
+          },
+          "title": "副歌时间段列表。"
+        }
+      },
+      "title": "ChorusTime 响应。"
+    },
+    "v1CreateRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "歌单名。"
+        },
+        "privacy": {
+          "type": "boolean",
+          "title": "是否隐私（默认 false）。"
+        }
+      },
+      "title": "Create 请求。"
+    },
+    "v1CreateResponse": {
+      "type": "object",
+      "properties": {
+        "playlistId": {
+          "type": "string",
+          "format": "int64",
+          "title": "新建歌单 ID。"
+        }
+      },
+      "title": "Create 响应。"
+    },
+    "v1CreatorInfoResponse": {
+      "type": "object",
+      "properties": {
+        "creators": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SongCreator"
+          },
+          "title": "创作者列表。"
+        }
+      },
+      "title": "CreatorInfo 响应。"
+    },
+    "v1DailyRecommendPlaylistsResponse": {
+      "type": "object",
+      "properties": {
+        "playlists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Playlist"
+          },
+          "title": "每日推荐歌单列表（完整 Playlist 实体）。"
+        }
+      },
+      "title": "DailyRecommendPlaylists 响应。"
+    },
+    "v1DefaultKeywordResponse": {
+      "type": "object",
+      "properties": {
+        "keyword": {
+          "type": "string",
+          "title": "默认搜索关键词。"
+        }
+      },
+      "title": "DefaultKeyword 响应。"
+    },
+    "v1DeleteResponse": {
+      "type": "object",
+      "title": "Delete 响应（无数据，成功即可）。"
+    },
+    "v1DescResponse": {
+      "type": "object",
+      "properties": {
+        "desc": {
+          "type": "string",
+          "title": "详细描述。"
+        }
+      },
+      "title": "Desc 响应。"
+    },
+    "v1DetailByNameResponse": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "format": "int64",
+          "title": "用户 ID。"
+        }
+      },
+      "title": "DetailByName 响应。"
+    },
+    "v1DetailResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1UserDetail",
+          "title": "用户详情。"
+        }
+      },
+      "title": "Detail 响应。"
+    },
+    "v1DisallowRecommendResponse": {
+      "type": "object",
+      "title": "DisallowRecommend 响应（仅表示操作受理，无额外字段）。"
+    },
+    "v1DynamicCoverResponse": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "title": "动态封面 URL。"
+        }
+      },
+      "title": "DynamicCover 响应。"
+    },
+    "v1EventsResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UserEvent"
+          },
+          "title": "动态列表。"
+        },
+        "more": {
+          "type": "boolean",
+          "title": "是否还有更多。"
+        },
+        "lastEventId": {
+          "type": "string",
+          "format": "int64",
+          "title": "最后一条动态 ID（翻页用）。"
+        }
+      },
+      "title": "Events 响应。"
+    },
+    "v1FansResponse": {
+      "type": "object",
+      "properties": {
+        "fans": {
+          "type": "string",
+          "format": "int64",
+          "title": "粉丝数。"
+        }
+      },
+      "title": "Fans 响应。"
+    },
+    "v1FollowEachOtherResponse": {
+      "type": "object",
+      "properties": {
+        "followEachOther": {
+          "type": "boolean",
+          "title": "是否互相关注。"
+        }
+      },
+      "title": "FollowEachOther 响应。"
+    },
+    "v1FollowedsResponse": {
+      "type": "object",
+      "properties": {
+        "followeds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UserDetail"
+          },
+          "title": "粉丝用户列表。"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数。"
+        }
+      },
+      "title": "Followeds 响应。"
+    },
+    "v1FollowsResponse": {
+      "type": "object",
+      "properties": {
+        "follows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UserDetail"
+          },
+          "title": "关注用户列表。"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数。"
+        }
+      },
+      "title": "Follows 响应。"
+    },
+    "v1GetAlbumResponse": {
+      "type": "object",
+      "properties": {
+        "album": {
+          "$ref": "#/definitions/v1Album",
+          "title": "专辑详情。"
+        },
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Song"
+          },
+          "title": "专辑内歌曲列表。"
+        }
+      },
+      "title": "GetAlbum 响应。"
+    },
+    "v1GetArtistResponse": {
+      "type": "object",
+      "properties": {
+        "artist": {
+          "$ref": "#/definitions/v1Artist",
+          "title": "歌手信息。"
+        },
+        "hotSongs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Song"
+          },
+          "title": "热门歌曲列表（网易云返回热门 50 首）。"
+        }
+      },
+      "title": "GetArtist 响应。"
+    },
+    "v1GetDailyRecommendResponse": {
+      "type": "object",
+      "properties": {
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Song"
+          },
+          "title": "推荐歌曲列表。"
+        }
+      },
+      "title": "GetDailyRecommend 响应。"
+    },
+    "v1GetLyricResponse": {
+      "type": "object",
+      "properties": {
+        "lyric": {
+          "$ref": "#/definitions/v1Lyric",
+          "title": "歌词信息。"
+        }
+      },
+      "title": "GetLyric 响应。"
+    },
+    "v1GetPersonalFMResponse": {
+      "type": "object",
+      "properties": {
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Song"
+          },
+          "title": "FM 推荐歌曲列表。"
+        }
+      },
+      "title": "GetPersonalFM 响应。"
+    },
+    "v1GetPlaylistResponse": {
+      "type": "object",
+      "properties": {
+        "playlist": {
+          "$ref": "#/definitions/v1Playlist",
+          "title": "歌单详情。"
+        }
+      },
+      "title": "GetPlaylist 响应。"
+    },
+    "v1GetSongDetailResponse": {
+      "type": "object",
+      "properties": {
+        "song": {
+          "$ref": "#/definitions/v1Song",
+          "title": "歌曲详情。"
+        }
+      },
+      "title": "GetSongDetail 响应。"
+    },
+    "v1GetSongURLResponse": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "$ref": "#/definitions/v1SongURL",
+          "title": "播放 URL 信息。"
+        }
+      },
+      "title": "GetSongURL 响应。"
+    },
+    "v1GetWordLyricResponse": {
+      "type": "object",
+      "properties": {
+        "wordLyric": {
+          "$ref": "#/definitions/v1WordLyric",
+          "title": "逐字歌词。"
+        }
+      },
+      "title": "GetWordLyric 响应。"
+    },
+    "v1HighQualityResponse": {
+      "type": "object",
+      "properties": {
+        "playlists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Playlist"
+          },
+          "title": "精品歌单列表。"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数。"
+        }
+      },
+      "title": "HighQuality 响应。"
+    },
+    "v1HighQualityTag": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "标签名。"
+        },
+        "category": {
+          "type": "string",
+          "title": "分类。"
+        }
+      },
+      "title": "精品歌单标签。"
+    },
+    "v1HighQualityTagsResponse": {
+      "type": "object",
+      "properties": {
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1HighQualityTag"
+          },
+          "title": "标签列表。"
+        }
+      },
+      "title": "HighQualityTags 响应。"
+    },
+    "v1HotDetailResponse": {
+      "type": "object",
+      "properties": {
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/musicV1HotDetail"
+          },
+          "title": "热搜详细列表。"
+        }
+      },
+      "title": "HotDetail 响应。"
+    },
+    "v1HotKeyword": {
+      "type": "object",
+      "properties": {
+        "searchWord": {
+          "type": "string",
+          "title": "热搜词。"
+        },
+        "score": {
+          "type": "integer",
+          "format": "int32",
+          "title": "排名。"
+        },
+        "iconUrl": {
+          "type": "string",
+          "title": "图标 URL。"
+        }
+      },
+      "title": "热搜词条目（简略）。"
+    },
+    "v1HotResponse": {
+      "type": "object",
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1HotKeyword"
+          },
+          "title": "热搜词列表。"
+        }
+      },
+      "title": "Hot 响应。"
+    },
+    "v1IsLikeResponse": {
+      "type": "object",
+      "properties": {
+        "liked": {
+          "type": "boolean",
+          "title": "当前用户是否已喜爱。"
+        }
+      },
+      "title": "IsLike 响应。"
+    },
+    "v1LevelResponse": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "$ref": "#/definitions/v1UserLevel",
+          "title": "等级信息。"
+        }
+      },
+      "title": "Level 响应。"
+    },
+    "v1LikeCountResponse": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "string",
+          "format": "int64",
+          "title": "红心数量。"
+        }
+      },
+      "title": "LikeCount 响应。"
+    },
+    "v1LikeResponse": {
+      "type": "object",
+      "properties": {
+        "liked": {
+          "type": "boolean",
+          "title": "操作后是否已喜欢。"
+        }
+      },
+      "title": "Like 响应。"
+    },
+    "v1LikedListResponse": {
+      "type": "object",
+      "properties": {
+        "songIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          },
+          "description": "网易云 /song/like/get 只返回 ID 数组（无分页、无歌曲详情），这里忠实回传。\n与「列表响应统一实体」ADR 不冲突：该端点本身不返回完整 Song，调用方按 ID 另行取详情。",
+          "title": "已喜欢的歌曲 ID 集合（无序）。"
+        }
+      },
+      "title": "LikedList 响应。"
+    },
+    "v1LoginByCellphoneRequest": {
+      "type": "object",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "title": "手机号（带区号）。"
+        },
+        "captcha": {
+          "type": "string",
+          "title": "验证码。"
+        }
+      },
+      "title": "LoginByCellphone 请求。"
+    },
+    "v1LoginByCellphoneResponse": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "$ref": "#/definitions/v1Session",
+          "title": "登录会话凭证。"
+        }
+      },
+      "title": "LoginByCellphone 响应。"
+    },
+    "v1LoginQrcodeResponse": {
+      "type": "object",
+      "properties": {
+        "qrcode": {
+          "$ref": "#/definitions/v1Qrcode",
+          "title": "二维码信息。"
+        }
+      },
+      "title": "LoginQrcode 响应。"
+    },
+    "v1LoginStatusResponse": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "$ref": "#/definitions/v1Session",
+          "title": "登录态信息（未登录时 session 为空）。"
+        }
+      },
+      "title": "LoginStatus 响应。"
+    },
+    "v1LogoutRequest": {
+      "type": "object",
+      "title": "Logout 请求（cookie 经 metadata \"x-netease-cookie\" 传入，不在此 message）。"
+    },
+    "v1LogoutResponse": {
+      "type": "object",
+      "title": "Logout 响应。"
+    },
+    "v1Lyric": {
+      "type": "object",
+      "properties": {
+        "lrc": {
+          "type": "string",
+          "title": "原始 LRC 歌词。"
+        },
+        "translated": {
+          "type": "string",
+          "title": "翻译歌词。"
+        },
+        "romanized": {
+          "type": "string",
+          "title": "音译歌词。"
+        }
+      },
+      "title": "歌词信息。"
+    },
+    "v1NewAlbumShelfResponse": {
+      "type": "object",
+      "properties": {
+        "albums": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Album"
+          },
+          "title": "新碟列表（完整 Album 实体，遵循列表响应统一实体 ADR）。"
+        },
+        "hasMore": {
+          "type": "boolean",
+          "title": "是否还有更多。"
+        }
+      },
+      "title": "NewAlbumShelf 响应。"
+    },
+    "v1NewestAlbumsResponse": {
+      "type": "object",
+      "properties": {
+        "albums": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Album"
+          },
+          "title": "最新专辑列表。"
+        }
+      },
+      "title": "NewestAlbums 响应。"
+    },
+    "v1PlayRecord": {
+      "type": "object",
+      "properties": {
+        "playCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "播放次数。"
+        },
+        "song": {
+          "$ref": "#/definitions/v1Song",
+          "title": "歌曲信息。"
+        }
+      },
+      "title": "播放记录条目。"
+    },
+    "v1Playlist": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64",
+          "title": "歌单 ID。"
+        },
+        "name": {
+          "type": "string",
+          "title": "歌单名。"
+        },
+        "coverUrl": {
+          "type": "string",
+          "title": "歌单封面 URL。"
+        },
+        "trackCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "歌曲总数。"
+        },
+        "creator": {
+          "$ref": "#/definitions/v1User",
+          "title": "创建者信息。"
+        },
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Song"
+          },
+          "title": "歌单内歌曲列表（列表/浏览场景留空）。"
+        },
+        "playCount": {
+          "type": "string",
+          "format": "int64",
+          "title": "播放数。"
+        }
+      },
+      "title": "Playlist 是歌单实体。"
+    },
+    "v1PlaylistCategory": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "分类名。"
+        },
+        "resourceCount": {
+          "type": "string",
+          "format": "int64",
+          "title": "资源数。"
+        },
+        "typeId": {
+          "type": "string",
+          "format": "int64",
+          "title": "类型 ID。"
+        }
+      },
+      "title": "歌单分类子项。"
+    },
+    "v1PlaylistFilter": {
+      "type": "string",
+      "enum": [
+        "PLAYLIST_FILTER_UNSPECIFIED",
+        "PLAYLIST_FILTER_ALL",
+        "PLAYLIST_FILTER_CREATED",
+        "PLAYLIST_FILTER_SUBSCRIBED"
+      ],
+      "default": "PLAYLIST_FILTER_UNSPECIFIED",
+      "description": "- PLAYLIST_FILTER_UNSPECIFIED: 未指定，返回全部。\n - PLAYLIST_FILTER_ALL: 全部歌单。\n - PLAYLIST_FILTER_CREATED: 用户创建的歌单。\n - PLAYLIST_FILTER_SUBSCRIBED: 用户收藏的歌单。",
+      "title": "歌单过滤类型。"
+    },
+    "v1Qrcode": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "title": "轮询 key。"
+        },
+        "qrImage": {
+          "type": "string",
+          "title": "base64 编码的二维码图片。"
+        },
+        "url": {
+          "type": "string",
+          "title": "二维码扫描 URL。"
+        }
+      },
+      "title": "二维码信息。"
+    },
+    "v1QrcodeCode": {
+      "type": "string",
+      "enum": [
+        "QRCODE_CODE_UNSPECIFIED",
+        "QRCODE_CODE_EXPIRED",
+        "QRCODE_CODE_WAITING",
+        "QRCODE_CODE_SCANNED",
+        "QRCODE_CODE_CONFIRMED"
+      ],
+      "default": "QRCODE_CODE_UNSPECIFIED",
+      "description": "- QRCODE_CODE_UNSPECIFIED: 未指定。\n - QRCODE_CODE_EXPIRED: 二维码失效。\n - QRCODE_CODE_WAITING: 等待扫描。\n - QRCODE_CODE_SCANNED: 已扫描，等待确认。\n - QRCODE_CODE_CONFIRMED: 确认登录成功。",
+      "title": "二维码轮询状态码。"
+    },
+    "v1QualityDetailResponse": {
+      "type": "object",
+      "properties": {
+        "qualities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SongQuality"
+          },
+          "title": "可选音质列表。"
+        }
+      },
+      "title": "QualityDetail 响应。"
+    },
+    "v1RecommendNewSongsResponse": {
+      "type": "object",
+      "properties": {
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Song"
+          },
+          "title": "推荐新音乐列表（完整 Song 实体）。"
+        }
+      },
+      "title": "RecommendNewSongs 响应。"
+    },
+    "v1RecommendPlaylistsResponse": {
+      "type": "object",
+      "properties": {
+        "playlists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Playlist"
+          },
+          "title": "推荐歌单列表（完整 Playlist 实体）。"
+        }
+      },
+      "title": "RecommendPlaylists 响应。"
+    },
+    "v1RecordResponse": {
+      "type": "object",
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlayRecord"
+          },
+          "title": "播放记录列表。"
+        }
+      },
+      "title": "Record 响应。"
+    },
+    "v1RelatedPlaylistRecommendResponse": {
+      "type": "object",
+      "properties": {
+        "playlists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Playlist"
+          },
+          "title": "相关歌单推荐列表（完整 Playlist 实体）。"
+        }
+      },
+      "title": "RelatedPlaylistRecommend 响应。"
+    },
+    "v1SearchMV": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64",
+          "title": "MV ID。"
+        },
+        "name": {
+          "type": "string",
+          "title": "MV 名。"
+        },
+        "coverUrl": {
+          "type": "string",
+          "title": "封面 URL。"
+        },
+        "artist": {
+          "type": "string",
+          "title": "歌手名。"
+        }
+      },
+      "title": "SearchMV 是搜索结果里的 MV（最小字段，歌手扩展 issue 0007 充实完整 MV 实体）。"
+    },
+    "v1SearchPlaylist": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64",
+          "title": "歌单 ID。"
+        },
+        "name": {
+          "type": "string",
+          "title": "歌单名。"
+        },
+        "coverUrl": {
+          "type": "string",
+          "title": "封面 URL。"
+        },
+        "playCount": {
+          "type": "string",
+          "format": "int64",
+          "title": "播放数。"
+        },
+        "trackCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "曲目数。"
+        },
+        "creator": {
+          "type": "string",
+          "title": "创建者昵称。"
+        }
+      },
+      "title": "SearchPlaylist 是搜索结果里的歌单（字段比详情精简）。"
+    },
+    "v1SearchResponse": {
+      "type": "object",
+      "properties": {
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Song"
+          },
+          "title": "匹配的单曲列表（type=SONG）。"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "结果总数。"
+        },
+        "albums": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Album"
+          },
+          "title": "匹配的专辑列表（type=ALBUM）。"
+        },
+        "artists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Artist"
+          },
+          "title": "匹配的歌手列表（type=ARTIST）。"
+        },
+        "playlists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SearchPlaylist"
+          },
+          "title": "匹配的歌单列表（type=PLAYLIST）。"
+        },
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SearchUser"
+          },
+          "title": "匹配的用户列表（type=USER）。"
+        },
+        "mvs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SearchMV"
+          },
+          "title": "匹配的 MV 列表（type=MV）。"
+        }
+      },
+      "title": "Search 响应。按请求 type 填充对应字段，其余为空。"
+    },
+    "v1SearchType": {
+      "type": "string",
+      "enum": [
+        "SEARCH_TYPE_UNSPECIFIED",
+        "SEARCH_TYPE_SONG",
+        "SEARCH_TYPE_ALBUM",
+        "SEARCH_TYPE_ARTIST",
+        "SEARCH_TYPE_PLAYLIST",
+        "SEARCH_TYPE_USER",
+        "SEARCH_TYPE_MV",
+        "SEARCH_TYPE_LYRIC",
+        "SEARCH_TYPE_DJ",
+        "SEARCH_TYPE_VIDEO",
+        "SEARCH_TYPE_ALL"
+      ],
+      "default": "SEARCH_TYPE_UNSPECIFIED",
+      "description": "- SEARCH_TYPE_UNSPECIFIED: 未指定，默认单曲。\n - SEARCH_TYPE_SONG: 单曲。\n - SEARCH_TYPE_ALBUM: 专辑。\n - SEARCH_TYPE_ARTIST: 歌手。\n - SEARCH_TYPE_PLAYLIST: 歌单。\n - SEARCH_TYPE_USER: 用户。\n - SEARCH_TYPE_MV: MV。\n - SEARCH_TYPE_LYRIC: 歌词。\n - SEARCH_TYPE_DJ: 主播电台。\n - SEARCH_TYPE_VIDEO: 视频。\n - SEARCH_TYPE_ALL: 综合。",
+      "title": "搜索类型。地基阶段只用 SONG，Phase 4 扩展全部。"
+    },
+    "v1SearchUser": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64",
+          "title": "用户 ID。"
+        },
+        "nickname": {
+          "type": "string",
+          "title": "昵称。"
+        },
+        "avatarUrl": {
+          "type": "string",
+          "title": "头像 URL。"
+        }
+      },
+      "title": "SearchUser 是搜索结果里的用户。"
+    },
+    "v1SendCaptchaRequest": {
+      "type": "object",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "title": "手机号（带区号，如 8613800138000）。"
+        }
+      },
+      "title": "SendCaptcha 请求。"
+    },
+    "v1SendCaptchaResponse": {
+      "type": "object",
+      "title": "SendCaptcha 响应。"
+    },
+    "v1Session": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "format": "int64",
+          "title": "用户 ID。"
+        },
+        "cookie": {
+          "type": "string",
+          "title": "Cookie 字符串（后续请求的登录态凭证）。"
+        },
+        "nickname": {
+          "type": "string",
+          "title": "昵称。"
+        },
+        "avatarUrl": {
+          "type": "string",
+          "title": "头像 URL。"
+        }
+      },
+      "title": "登录会话凭证。"
+    },
+    "v1SimilarPlaylistsResponse": {
+      "type": "object",
+      "properties": {
+        "playlists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Playlist"
+          },
+          "title": "相似歌单列表（完整 Playlist 实体）。"
+        }
+      },
+      "title": "SimilarPlaylists 响应。"
+    },
+    "v1SimilarResponse": {
+      "type": "object",
+      "properties": {
+        "artists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Artist"
+          },
+          "title": "相似歌手列表。"
+        }
+      },
+      "title": "Similar 响应。"
+    },
+    "v1SimilarSongsResponse": {
+      "type": "object",
+      "properties": {
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Song"
+          },
+          "title": "相似歌曲列表（完整 Song 实体）。"
+        }
+      },
+      "title": "SimilarSongs 响应。"
+    },
+    "v1SimilarUsersResponse": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1User"
+          },
+          "title": "听过该歌曲的用户列表（完整 User 实体）。"
+        }
+      },
+      "title": "SimilarUsers 响应。"
+    },
+    "v1Song": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64",
+          "title": "歌曲 ID。"
+        },
+        "name": {
+          "type": "string",
+          "title": "歌曲名。"
+        },
+        "artists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Artist"
+          },
+          "title": "歌手列表。"
+        },
+        "album": {
+          "$ref": "#/definitions/v1Album",
+          "title": "所属专辑。"
+        },
+        "durationMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "时长（毫秒）。"
+        },
+        "fee": {
+          "type": "integer",
+          "format": "int32",
+          "title": "付费类型：0 免费、1 VIP、4 数字专辑、8 试听片段。"
+        }
+      },
+      "title": "Song 是歌曲实体。被歌曲详情、歌单、专辑、搜索、推荐、FM 等接口复用。"
+    },
+    "v1SongCreator": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64",
+          "title": "创作者 ID。"
+        },
+        "name": {
+          "type": "string",
+          "title": "创作者名。"
+        },
+        "role": {
+          "type": "string",
+          "title": "角色（如 作词/作曲/编曲/制作人）。"
+        }
+      },
+      "title": "歌曲创作者（作词/作曲/编曲等角色）。"
+    },
+    "v1SongLevel": {
+      "type": "string",
+      "enum": [
+        "SONG_LEVEL_UNSPECIFIED",
+        "SONG_LEVEL_STANDARD",
+        "SONG_LEVEL_EXHIGH",
+        "SONG_LEVEL_LOSSLESS",
+        "SONG_LEVEL_HRES"
+      ],
+      "default": "SONG_LEVEL_UNSPECIFIED",
+      "description": "- SONG_LEVEL_UNSPECIFIED: 未指定，默认标准。\n - SONG_LEVEL_STANDARD: 标准。\n - SONG_LEVEL_EXHIGH: 极高。\n - SONG_LEVEL_LOSSLESS: 无损。\n - SONG_LEVEL_HRES: Hi-Res。",
+      "title": "音质级别。"
+    },
+    "v1SongQuality": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "string",
+          "title": "音质等级标识（standard / higher / exhigh / lossless / hires）。"
+        },
+        "bitrate": {
+          "type": "string",
+          "format": "int64",
+          "title": "比特率。"
+        },
+        "url": {
+          "type": "string",
+          "title": "该音质下的播放直链（部分等级可能为空）。"
+        }
+      },
+      "title": "歌曲音质详情。"
+    },
+    "v1SongURL": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64",
+          "title": "歌曲 ID。"
+        },
+        "url": {
+          "type": "string",
+          "title": "播放直链（VIP 歌曲可能为空）。"
+        },
+        "bitrate": {
+          "type": "string",
+          "format": "int64",
+          "title": "比特率。"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64",
+          "title": "文件大小（字节）。"
+        },
+        "format": {
+          "type": "string",
+          "title": "文件格式（mp3 / flac 等）。"
+        }
+      },
+      "title": "播放 URL 信息。"
+    },
+    "v1SubCountResponse": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "$ref": "#/definitions/v1UserSubCount",
+          "title": "数量统计。"
+        }
+      },
+      "title": "SubCount 响应。"
+    },
+    "v1SubscribeAlbumResponse": {
+      "type": "object",
+      "properties": {
+        "subscribed": {
+          "type": "boolean",
+          "title": "操作后是否已收藏。"
+        }
+      },
+      "title": "SubscribeAlbum 响应。"
+    },
+    "v1SubscribeResponse": {
+      "type": "object",
+      "properties": {
+        "subscribed": {
+          "type": "boolean",
+          "title": "操作后是否已收藏。"
+        }
+      },
+      "title": "Subscribe 响应。"
+    },
+    "v1SubscribedAlbumsResponse": {
+      "type": "object",
+      "properties": {
+        "albums": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Album"
+          },
+          "title": "已收藏专辑列表（完整 Album 实体）。"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数。"
+        }
+      },
+      "title": "SubscribedAlbums 响应。"
+    },
+    "v1SubscribersResponse": {
+      "type": "object",
+      "properties": {
+        "subscribers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1User"
+          },
+          "title": "收藏者列表。"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数。"
+        }
+      },
+      "title": "Subscribers 响应。"
+    },
+    "v1SuggestResponse": {
+      "type": "object",
+      "properties": {
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "匹配的单曲建议。"
+        },
+        "albums": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "匹配的专辑建议。"
+        },
+        "artists": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "匹配的歌手建议。"
+        },
+        "playlists": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "匹配的歌单建议。"
+        }
+      },
+      "title": "Suggest 响应。"
+    },
+    "v1TopArtistsResponse": {
+      "type": "object",
+      "properties": {
+        "artists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Artist"
+          },
+          "title": "热门歌手列表。"
+        }
+      },
+      "title": "TopArtists 响应。"
+    },
+    "v1TopSongsResponse": {
+      "type": "object",
+      "properties": {
+        "songs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Song"
+          },
+          "title": "热门 50 首。"
+        }
+      },
+      "title": "TopSongs 响应。"
+    },
+    "v1TracksOp": {
+      "type": "string",
+      "enum": [
+        "TRACKS_OP_UNSPECIFIED",
+        "TRACKS_OP_ADD",
+        "TRACKS_OP_DEL"
+      ],
+      "default": "TRACKS_OP_UNSPECIFIED",
+      "description": "- TRACKS_OP_UNSPECIFIED: 未指定。\n - TRACKS_OP_ADD: 添加歌曲。\n - TRACKS_OP_DEL: 删除歌曲。",
+      "title": "歌曲操作类型。"
+    },
+    "v1TrashResponse": {
+      "type": "object",
+      "title": "Trash 响应（仅表示操作受理，无额外字段）。"
+    },
+    "v1UnsubscribeAlbumResponse": {
+      "type": "object",
+      "properties": {
+        "subscribed": {
+          "type": "boolean",
+          "title": "操作后是否已收藏。"
+        }
+      },
+      "title": "UnsubscribeAlbum 响应。"
+    },
+    "v1UpdateDescResponse": {
+      "type": "object",
+      "title": "UpdateDesc 响应。"
+    },
+    "v1UpdateNameResponse": {
+      "type": "object",
+      "title": "UpdateName 响应。"
+    },
+    "v1UpdateTagsResponse": {
+      "type": "object",
+      "title": "UpdateTags 响应。"
+    },
+    "v1UpdateTracksResponse": {
+      "type": "object",
+      "properties": {
+        "bodyTrackIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          },
+          "title": "成功添加的歌曲 ID。"
+        }
+      },
+      "title": "UpdateTracks 响应。"
+    },
+    "v1User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64",
+          "title": "用户 ID。"
+        },
+        "nickname": {
+          "type": "string",
+          "title": "昵称。"
+        },
+        "avatarUrl": {
+          "type": "string",
+          "title": "头像 URL。"
+        }
+      },
+      "title": "User 是用户实体（简要）。被歌单创建者、用户模块等复用。"
+    },
+    "v1UserDetail": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "format": "int64",
+          "title": "用户 ID。"
+        },
+        "nickname": {
+          "type": "string",
+          "title": "昵称。"
+        },
+        "avatarUrl": {
+          "type": "string",
+          "title": "头像 URL。"
+        },
+        "gender": {
+          "type": "integer",
+          "format": "int32",
+          "title": "性别（0 未知 1 男 2 女）。"
+        },
+        "signature": {
+          "type": "string",
+          "title": "个人签名。"
+        },
+        "level": {
+          "type": "integer",
+          "format": "int32",
+          "title": "等级。"
+        },
+        "followeds": {
+          "type": "string",
+          "format": "int64",
+          "title": "关注数。"
+        },
+        "follows": {
+          "type": "string",
+          "format": "int64",
+          "title": "粉丝数。"
+        }
+      },
+      "title": "用户详情信息（比 User 精简实体更完整）。"
+    },
+    "v1UserEvent": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "format": "int64",
+          "title": "动态 ID。"
+        },
+        "userId": {
+          "type": "string",
+          "format": "int64",
+          "title": "发布者用户 ID。"
+        },
+        "type": {
+          "type": "integer",
+          "format": "int32",
+          "title": "动态类型。"
+        },
+        "jsonContent": {
+          "type": "string",
+          "title": "动态 JSON 内容（网易云原始结构，字段因类型而异）。"
+        },
+        "eventTime": {
+          "type": "string",
+          "format": "int64",
+          "title": "发布时间（毫秒时间戳）。"
+        }
+      },
+      "title": "用户动态。"
+    },
+    "v1UserLevel": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前等级。"
+        },
+        "now": {
+          "type": "string",
+          "format": "int64",
+          "title": "当前经验。"
+        },
+        "next": {
+          "type": "string",
+          "format": "int64",
+          "title": "升级所需经验。"
+        }
+      },
+      "title": "用户等级信息。"
+    },
+    "v1UserPlaylistResponse": {
+      "type": "object",
+      "properties": {
+        "playlists": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Playlist"
+          },
+          "title": "歌单列表。"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数。"
+        }
+      },
+      "title": "UserPlaylist 响应（复用 playlist.proto 的完整 Playlist，含 creator 供 filter 判断）。"
+    },
+    "v1UserSubCount": {
+      "type": "object",
+      "properties": {
+        "playlistCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "创建的歌单数。"
+        },
+        "djRadioCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "创建的 DJ 电台数。"
+        },
+        "mvCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "收藏的 MV 数。"
+        },
+        "artistCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "收藏的歌手数。"
+        },
+        "newAlbumCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "收藏的专辑数。"
+        }
+      },
+      "title": "用户数量统计。"
+    },
+    "v1WordLyric": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WordLyricLine"
+          },
+          "title": "逐行逐字歌词。"
+        },
+        "translatedLines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WordLyricLine"
+          },
+          "title": "逐字翻译歌词（与 lines 一一对应，可空）。"
+        },
+        "romanizedLines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WordLyricLine"
+          },
+          "title": "逐字音译歌词（与 lines 一一对应，可空）。"
+        }
+      },
+      "title": "逐字歌词。"
+    },
+    "v1WordLyricLine": {
+      "type": "object",
+      "properties": {
+        "startMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "该行开始时间（毫秒）。"
+        },
+        "durationMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "该行持续时长（毫秒）。"
+        },
+        "words": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WordLyricWord"
+          },
+          "title": "该行的逐字内容。"
+        },
+        "content": {
+          "type": "string",
+          "title": "该行原文（翻译/音译在独立字段，逐字主体用原文）。"
+        }
+      },
+      "title": "逐字歌词单行。"
+    },
+    "v1WordLyricWord": {
+      "type": "object",
+      "properties": {
+        "startMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "该字开始时间（毫秒）。"
+        },
+        "durationMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "该字持续时长（毫秒）。"
+        },
+        "content": {
+          "type": "string",
+          "title": "字内容。"
+        }
+      },
+      "title": "逐字歌词单字。"
+    }
+  }
+}
