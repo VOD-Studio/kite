@@ -13,7 +13,7 @@ require (
 	github.com/go-flac/go-flac v1.0.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	github.com/lmittmann/tint v1.2.0
-	github.com/mattn/go-runewidth v0.0.24
+	github.com/mattn/go-runewidth v0.0.27
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.21.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
@@ -26,7 +26,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0
 	golang.org/x/term v0.45.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa
-	google.golang.org/grpc v1.82.0
+	google.golang.org/grpc v1.82.1
 	google.golang.org/protobuf v1.36.11
 )
 
