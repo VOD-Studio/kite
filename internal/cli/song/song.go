@@ -103,7 +103,7 @@ func newURL(k *kit.Kit) *cobra.Command {
 		},
 	}
 	c.Flags().Int64Var(&id, "id", 0, "歌曲 ID")
-	c.Flags().IntVar(&level, "level", 1, "音质: 1=standard 2=exhigh 3=lossless 4=hires")
+	c.Flags().IntVar(&level, "level", k.Config.Level, "音质: 1=standard 2=exhigh 3=lossless 4=hires")
 	return c
 }
 

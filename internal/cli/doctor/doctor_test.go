@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -188,4 +189,34 @@ func TestStatusIcon(t *testing.T) {
 	require.Equal(t, "✓", StatusPass.icon())
 	require.Equal(t, "✗", StatusFail.icon())
 	require.Equal(t, "!", StatusWarn.icon())
+}
+
+// TestConfigChecker 三态:坏文件 fail(与命令侧硬错误一致)/ 不存在 pass / 可解析 pass。
+func TestConfigChecker(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		probe   func() (string, bool, error)
+		want    Status
+		wantSub string // Detail 应包含的线索
+	}{
+		{"坏文件 fail", func() (string, bool, error) {
+			return "/x/config.toml", true, fmt.Errorf("配置 level 的值 9 越界")
+		}, StatusFail, "level"},
+		{"不存在 pass(正常态)", func() (string, bool, error) {
+			return "/x/config.toml", false, nil
+		}, StatusPass, "未创建"},
+		{"可解析 pass 带路径", func() (string, bool, error) {
+			return "/x/config.toml", true, nil
+		}, StatusPass, "/x/config.toml"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			r := ConfigChecker(tc.probe).Check()
+			require.Equal(t, tc.want, r.Status)
+			require.Contains(t, r.Detail, tc.wantSub)
+		})
+	}
 }

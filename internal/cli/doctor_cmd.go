@@ -47,6 +47,7 @@ func runDoctor(k *kit.Kit, cmd *cobra.Command) error {
 			},
 		),
 		doctor.CompletionChecker(os.Getenv("SHELL"), probeCompletionInstalled),
+		doctor.ConfigChecker(probeConfigState),
 	}
 	results := doctor.Run(checkers)
 
@@ -127,4 +128,18 @@ func probeCompletionInstalled(shell string) (path string, ok bool) {
 		}
 	}
 	return "", false
+}
+
+// probeConfigState 探测 config.toml 状态供 doctor 检查:
+// 返回(路径, 是否存在, 加载错误)。加载错误即 LoadConfig 的硬错误(坏文件);
+// doctor 豁免于 root 的坏配置拦截(PersistentPreRunE),坏文件下正是此检查项
+// 给出定位信息的场景。
+func probeConfigState() (string, bool, error) {
+	path, err := kit.ConfigPath()
+	if err != nil {
+		return "", false, err
+	}
+	_, statErr := os.Stat(path)
+	_, loadErr := kit.LoadConfig()
+	return path, statErr == nil, loadErr
 }

@@ -83,6 +83,30 @@ func CompletionChecker(shell string, installedProbe func(shell string) (path str
 	})
 }
 
+// ConfigChecker 检查 config.toml 状态(PRD-0017)。
+//
+// probe 返回(路径, 是否存在, 加载错误)。加载错误 = 文件存在但解析失败/key 越界
+// (LoadConfig 的硬错误语义)。三种态:
+//   - 加载错误 → fail(与命令侧硬错误一致:静默回退会掩盖用户设置)
+//   - 不存在 → pass(全新用户正常态,全部内置默认)
+//   - 存在且可解析 → pass(显示路径)
+//
+// probe 注入使测试用 fake(不碰真实配置目录)。
+func ConfigChecker(probe func() (path string, exists bool, loadErr error)) Checker {
+	return CheckerFunc(func() Result {
+		path, exists, err := probe()
+		if err != nil {
+			return Result{Name: "配置", Status: StatusFail,
+				Detail: fmt.Sprintf("config.toml 不可用: %v", err),
+				FixHint: fmt.Sprintf("修正 %s 后重试,或删除该文件后用 kite config set 重建", path)}
+		}
+		if !exists {
+			return Result{Name: "配置", Status: StatusPass, Detail: "未创建(全部用内置默认)"}
+		}
+		return Result{Name: "配置", Status: StatusPass, Detail: path}
+	})
+}
+
 // ShellName 从 $SHELL 路径提取 shell 名(zsh/bash/fish/powershell),未知返回空。
 //
 // 跨平台处理路径分隔符:Unix 用 /、Windows 用 \。$SHELL 在 Windows 上可能是
