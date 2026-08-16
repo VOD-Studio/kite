@@ -117,14 +117,23 @@ func ProxyChecker(probe func() (flagVal, cfgVal, envVal string)) Checker {
 		flagVal, cfgVal, envVal := probe()
 		switch {
 		case flagVal != "":
-			return Result{Name: "代理", Status: StatusPass,
-				Detail: fmt.Sprintf("--proxy 覆盖: %s", flagVal)}
+			return Result{
+				Name:   "代理",
+				Status: StatusPass,
+				Detail: fmt.Sprintf("--proxy 覆盖: %s", flagVal),
+			}
 		case cfgVal != "":
-			return Result{Name: "代理", Status: StatusPass,
-				Detail: fmt.Sprintf("config: %s(压过环境变量)", cfgVal)}
+			return Result{
+				Name:   "代理",
+				Status: StatusPass,
+				Detail: fmt.Sprintf("config: %s(压过环境变量)", cfgVal),
+			}
 		case envVal != "":
-			return Result{Name: "代理", Status: StatusPass,
-				Detail: fmt.Sprintf("环境变量: %s", envVal)}
+			return Result{
+				Name:   "代理",
+				Status: StatusPass,
+				Detail: fmt.Sprintf("环境变量: %s", envVal),
+			}
 		}
 		return Result{Name: "代理", Status: StatusPass, Detail: "直连"}
 	})
