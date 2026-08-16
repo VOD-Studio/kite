@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/cli/kit"
 )
 
 // SongFilename 测试(从 internal/cli/song/metadata_test.go 迁入,行为不变)。
@@ -232,4 +233,22 @@ func TestSongFilename_DelegatesToDefault(t *testing.T) {
 	s := &mmpb.Song{Id: 1, Name: "晴天", Artists: []*mmpb.Artist{{Name: "周杰伦"}}}
 	// SongFilename 应等于 FormatFilename(默认模板 + 空值兜底)。
 	require.Equal(t, SongFilename(s, "mp3"), FormatFilename(applyDefaultEmptyFallback(s), s, "mp3"))
+}
+
+// TestFormatFilename_CoversConfigPlaceholders 守护:kit 的 config schema 白名单
+// (kit.FilenameTemplatePlaceholders)与 FormatFilename 执行侧保持同步——
+// config 新接纳的占位符,执行侧必须真的替换。跨包真相防漂移(评审指出的同步风险)。
+func TestFormatFilename_CoversConfigPlaceholders(t *testing.T) {
+	t.Parallel()
+
+	s := &mmpb.Song{
+		Id:      7,
+		Name:    "T",
+		Artists: []*mmpb.Artist{{Name: "A"}},
+		Album:   &mmpb.Album{Name: "L"},
+	}
+	for _, ph := range kit.FilenameTemplatePlaceholders() {
+		got := FormatFilename(ph, s, "mp3")
+		require.NotEqual(t, ph, got, "占位符 %s 应被实际值替换", ph)
+	}
 }

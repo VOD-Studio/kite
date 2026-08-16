@@ -28,7 +28,7 @@
 | config 优先级 | `--json` > 非TTY自动JSON > config.toml > 内置默认;管道 JSON 契约**不被 config 覆盖**(config 是机器本地偏好,契约是全局的) | 2026-08-16 | (无需 ADR,Phase A 脚本契约的自然延伸) |
 | config get 输出 | 单 key 裸打**生效值**(不带格式,可在脚本中使用,gh/jj/git 惯例);无参列表带「来源」列;未知 key 报错退非零(key 是固定枚举,拼错要早暴露) | 2026-08-16 | (无需 ADR,业界惯例) |
 | config 校验原则 | 所有校验在 `set` 写盘前完成;`workers` 上限 5(与 `--workers` flag 契约一致);`download_dir` 只存不校验存在性 | 2026-08-16 | (无需 ADR) |
-| config 文件机制 | tmp+rename 原子写、0600/0700、不保留注释(整文件重写);文件不存在=正常态;**坏文件(解析失败/key 越界)=硬错误**拒绝执行(静默回退会掩盖用户设置);读取侧复用 set 同一套校验函数 | 2026-08-16 | (无需 ADR,git 同款行为) |
+| config 文件机制 | 原子写;文件不存在=正常态;**坏文件=硬错误**拒绝执行(静默回退会掩盖用户设置,doctor 与 config path 豁免保修复闭环);读取侧复用 set 同一套校验 | 2026-08-16 | (无需 ADR,git 同款行为;机制细节见 PRD-0017) |
 | config 周边集成 | doctor 加 config 检查项;config 命令组进 help「工具」分组;**不进 onboarding 场景推送**(带问题来找的功能,主动推是噪音) | 2026-08-16 | (无需 ADR) |
 | 治理文件 | 本次含 SECURITY.md + CONTRIBUTING.md(原 P3 提前) | 2026-07-27 | (无需 ADR) |
 

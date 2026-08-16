@@ -107,7 +107,7 @@ func parseConfig(path string, data []byte) (Config, map[string]bool, error) {
 // 坏文件在手时同样报错——不允许绕过校验覆盖写。
 func SetConfigKey(key, value string) error {
 	if !isKnownKey(key) {
-		return fmt.Errorf("未知配置项 %q(可用: %v)", key, configKeyNames())
+		return fmt.Errorf("未知配置项 %q(可用: %s)", key, strings.Join(ConfigKeys(), " "))
 	}
 	cfg, set, err := LoadConfigWithSet()
 	if err != nil {
@@ -205,7 +205,7 @@ func applyConfigKey(cfg *Config, key string, val any) error {
 		}
 		cfg.Workers = n
 	default:
-		return fmt.Errorf("是未知配置项(可用: %v)", configKeyNames())
+		return fmt.Errorf("是未知配置项(可用: %s)", strings.Join(ConfigKeys(), " "))
 	}
 	return nil
 }
@@ -223,10 +223,12 @@ func isKnownKey(key string) bool {
 	return false
 }
 
-// configKeyNames 返回合法 key 列表(报错提示用,防御性拷贝)。
-func configKeyNames() []string {
-	return append([]string(nil), configKeys...)
-}// toInt 把 set 侧 string / 文件侧 int64 / int 统一转 int。
+// FilenameTemplatePlaceholders 返回 filename_template 的合法占位符(config schema 的
+// 单一真相)。songdl 的执行侧(songdl.FormatFilename)与这里由
+// songdl 包的守护测试保持同步——公共层只定义 schema,不夹带下载领域逻辑。
+func FilenameTemplatePlaceholders() []string {
+	return []string{"{artist}", "{title}", "{album}", "{id}"}
+} // toInt 把 set 侧 string / 文件侧 int64 / int 统一转 int。
 func toInt(val any) (int, error) {
 	switch v := val.(type) {
 	case string:
@@ -244,11 +246,11 @@ func toInt(val any) (int, error) {
 	}
 }
 
-// validateFilenameTemplate 校验模板占位符只含白名单({artist}/{title}/{album}/{id})。
+// validateFilenameTemplate 校验模板占位符只含白名单(见 FilenameTemplatePlaceholders)。
 // 未知占位符报错(拼错早暴露,同未知 key 逻辑)。
 func validateFilenameTemplate(s string) error {
 	if s == "" {
-		return nil // 空 = 用默认模板 {artist} - {title}
+		return nil // 空 = 用默认模板(songdl.DefaultFilenameTemplate)
 	}
 	rest := s
 	for {
@@ -264,7 +266,7 @@ func validateFilenameTemplate(s string) error {
 		switch name {
 		case "artist", "title", "album", "id":
 		default:
-			return fmt.Errorf("模板 %q 的占位符 {%s} 未知(可用: {artist}/{title}/{album}/{id})", s, name)
+			return fmt.Errorf("模板 %q 的占位符 {%s} 未知(可用: %s)", s, name, strings.Join(FilenameTemplatePlaceholders(), "/"))
 		}
 		rest = rest[end+1:]
 	}

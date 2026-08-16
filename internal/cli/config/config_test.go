@@ -22,7 +22,6 @@ func fakeDeps(cfg kit.Config, set map[string]bool, setErr error) (deps, *[]strin
 			*calls = append(*calls, key+"="+value)
 			return setErr
 		},
-		isKnown: kit.IsKnownConfigKey,
 	}, calls
 }
 
@@ -108,6 +107,19 @@ func TestConfigGet_NoArgs_JSONMode(t *testing.T) {
 	d, _ := fakeDeps(cfg, map[string]bool{"level": true}, nil)
 	k := kit.New()
 	k.JSON = true
+
+	out, err := runConfig(t, d, k, "get")
+	require.NoError(t, err)
+	require.Contains(t, out, `"key"`)
+	require.Contains(t, out, `"source"`)
+}
+
+// TestConfigGet_NoArgs_ConfigOutputJSON 守护优先级链延伸:config output=json 时
+// 无参列表也走结构化(与 Render 同链,config 偏好作用于一切人类可读输出)。
+func TestConfigGet_NoArgs_ConfigOutputJSON(t *testing.T) {
+	d, _ := fakeDeps(kit.DefaultConfig(), map[string]bool{}, nil)
+	k := kit.New()
+	k.Config.Output = "json"
 
 	out, err := runConfig(t, d, k, "get")
 	require.NoError(t, err)

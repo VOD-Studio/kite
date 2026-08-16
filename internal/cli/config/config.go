@@ -9,26 +9,26 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/songdl"
 )
 
 // deps 注入 kit 函数,测试替身用(song download 的 downloadDeps 同款模式)。
 type deps struct {
-	path    func() (string, error)                      // config.toml 路径
-	load    func() (kit.Config, map[string]bool, error) // 生效值 + 文件里显式设置的 key 集
-	set     func(key, value string) error               // 校验并写入
-	isKnown func(key string) bool                       // key 是否在五项枚举内
+	path func() (string, error)                      // config.toml 路径
+	load func() (kit.Config, map[string]bool, error) // 生效值 + 文件里显式设置的 key 集
+	set  func(key, value string) error               // 校验并写入
 }
 
 func defaultDeps() deps {
 	return deps{
-		path:    kit.ConfigPath,
-		load:    kit.LoadConfigWithSet,
-		set:     kit.SetConfigKey,
-		isKnown: kit.IsKnownConfigKey,
+		path: kit.ConfigPath,
+		load: kit.LoadConfigWithSet,
+		set:  kit.SetConfigKey,
 	}
 }
 
@@ -88,13 +88,14 @@ func newGetCommand(k *kit.Kit, d deps) *cobra.Command {
 			out := cmd.OutOrStdout()
 			if len(args) == 1 {
 				key := args[0]
-				if !d.isKnown(key) {
-					return fmt.Errorf("未知配置项 %q(可用: level output download_dir filename_template workers)", key)
+				if !kit.IsKnownConfigKey(key) {
+					return fmt.Errorf("未知配置项 %q(可用: %s)", key, strings.Join(kit.ConfigKeys(), " "))
 				}
 				fmt.Fprintln(out, displayValue(key, cfg))
 				return nil
 			}
-			// 无参:全量列表。--json 出结构化,否则对齐表格。
+			// 无参:全量列表。--json 或 config output=json 出结构化,否则对齐表格
+			// (与 Render 优先级链对齐:config 偏好作用于一切人类可读输出)。
 			rows := []entry{}
 			for _, key := range kit.ConfigKeys() {
 				source := "默认"
@@ -103,7 +104,7 @@ func newGetCommand(k *kit.Kit, d deps) *cobra.Command {
 				}
 				rows = append(rows, entry{Key: key, Value: displayValue(key, cfg), Source: source})
 			}
-			if k.JSON {
+			if k.JSON || k.Config.Output == "json" {
 				b, err := json.MarshalIndent(rows, "", "  ")
 				if err != nil {
 					return fmt.Errorf("序列化配置列表失败: %w", err)
@@ -155,7 +156,7 @@ func displayValue(key string, cfg kit.Config) string {
 		return strconv.Itoa(cfg.Workers)
 	case "filename_template":
 		if cfg.FilenameTemplate == "" {
-			return "{artist} - {title}"
+			return songdl.DefaultFilenameTemplate
 		}
 		return cfg.FilenameTemplate
 	case "output":
