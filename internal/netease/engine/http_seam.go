@@ -10,7 +10,8 @@ import (
 )
 
 // NewNeteaseRequest 构造一个带网易云伪装头(Referer / User-Agent / Cookie)的 HTTP 请求,
-// 供流式下载或播放使用——调用方拿到 *http.Request 后自行 http.DefaultClient.Do(req),
+// 供流式下载或播放使用——调用方拿到 *http.Request 后自行 client.Do(req)
+// (client 应取 kit.HTTPClient():显式代理时与 engine 同一决策派生,PRD-0018),
 // 从 resp.Body 流式读取音频(io.ReadCloser),不必经 engine 的 RawDo(后者返回完整 JSON)。
 //
 // cookie 处理与 engine 内部 setCommonHeaders 完全一致:
