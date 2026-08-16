@@ -54,6 +54,26 @@ func (t *transport) withBaseURL(base string) *transport {
 	return &transport{client: t.client, baseURL: base}
 }
 
+// NewProxyTransport 返回挂了代理的默认 transport 副本(连接池/超时/HTTP2 等
+// 默认全保留,只替换代理决策)。engine 的 API 路径与 CLI 下载路径共用本构造
+// ——代理决策单一来源,防「接口走代理、CDN 直连」分裂(PRD-0018)。
+func NewProxyTransport(u *url.URL) *http.Transport {
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.Proxy = http.ProxyURL(u)
+	return tr
+}
+
+// withProxy 返回挂了代理的 transport 副本(u 为 nil 原样返回,保留
+// ProxyFromEnvironment 环境变量层默认)。
+func (t *transport) withProxy(u *url.URL) *transport {
+	if u == nil {
+		return t
+	}
+	c := *t.client
+	c.Transport = NewProxyTransport(u)
+	return &transport{client: &c, baseURL: t.baseURL}
+}
+
 // weapiPost 发送 weapi 加密 POST 请求。
 //
 // urlPath 是网易云端点路径（如 /weapi/song/enhance/player/url/v1），

@@ -110,6 +110,38 @@ func ConfigChecker(probe func() (path string, exists bool, loadErr error)) Check
 	})
 }
 
+// ProxyChecker 显示代理解析链(PRD-0018)。恒 pass 信息行——不做连通性探活:
+// 「会话」检查已实际走一遍完整链路,独立探活受境内外网络差异影响易误报。
+//
+// probe 返回(flag 值, config 值, 环境变量值),空串 = 该层未设置。
+// 展示优先级与生效优先级一致:--proxy > config > 环境变量 > 直连。
+func ProxyChecker(probe func() (flagVal, cfgVal, envVal string)) Checker {
+	return CheckerFunc(func() Result {
+		flagVal, cfgVal, envVal := probe()
+		switch {
+		case flagVal != "":
+			return Result{
+				Name:   "代理",
+				Status: StatusPass,
+				Detail: fmt.Sprintf("--proxy 覆盖: %s", flagVal),
+			}
+		case cfgVal != "":
+			return Result{
+				Name:   "代理",
+				Status: StatusPass,
+				Detail: fmt.Sprintf("config: %s(压过环境变量)", cfgVal),
+			}
+		case envVal != "":
+			return Result{
+				Name:   "代理",
+				Status: StatusPass,
+				Detail: fmt.Sprintf("环境变量: %s", envVal),
+			}
+		}
+		return Result{Name: "代理", Status: StatusPass, Detail: "直连"}
+	})
+}
+
 // ShellName 从 $SHELL 路径提取 shell 名(zsh/bash/fish/powershell),未知返回空。
 //
 // 跨平台处理路径分隔符:Unix 用 /、Windows 用 \。$SHELL 在 Windows 上可能是

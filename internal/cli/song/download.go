@@ -111,7 +111,7 @@ func defaultDownloadDeps(k *kit.Kit) downloadDeps {
 			return songdl.DownloadToFile(ctx, k, url, total, path, label)
 		},
 		writeMeta: func(path string, song *mmpb.Song) error {
-			return songdl.WriteSongMetadata(path, song)
+			return songdl.WriteSongMetadata(path, song, k.HTTPClient())
 		},
 	}
 }

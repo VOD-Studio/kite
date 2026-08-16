@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 
 	"golang.org/x/term"
@@ -38,6 +40,14 @@ type Kit struct {
 	// 用 LoadConfig() 的结果覆盖(坏文件在 root 层硬错误)。Output 参与
 	// Render 三态:优先级链 --json > 非TTY自动JSON > config > 内置默认。
 	Config Config
+
+	// ProxyURL 是当前生效的显式代理(nil = 未注入,环境变量层自然生效);
+	// ProxySource 记录来源("flag" / "config" / "")供 doctor 展示解析链(PRD-0018)。
+	ProxyURL    *url.URL
+	ProxySource string
+
+	// httpClient 是显式代理生效后的下载用 client(与 engine 同一代理决策派生)。
+	httpClient *http.Client
 	// Out 结果输出 writer,默认 os.Stdout(测试可替换)。
 	Out io.Writer
 	// Err 警告/进度输出 writer,默认 os.Stderr(测试可替换)。
@@ -59,6 +69,26 @@ func New() *Kit {
 		Config: DefaultConfig(),
 		pool:   recall.NewPool(HistoryPath),
 	}
+}
+
+// UseProxy 注入显式代理:engine 的 API 路径与下载路径同时生效(PRD-0018 的
+// 双路径不变式)。source 记录来源供 doctor 展示。调用方(root)已保证
+// flag > config 解析出唯一 URL——决策单一来源。
+func (k *Kit) UseProxy(u *url.URL, source string) {
+	k.ProxyURL = u
+	k.ProxySource = source
+	k.eng.Apply(engine.WithProxyURL(u))
+	k.httpClient = &http.Client{Transport: engine.NewProxyTransport(u)}
+}
+
+// HTTPClient 返回直连类路径(音频下载等)应使用的 client:显式代理时
+// 与 engine 同一代理决策派生;未注入时退回 http.DefaultClient(其默认
+// transport 保留 ProxyFromEnvironment 环境变量行为)。
+func (k *Kit) HTTPClient() *http.Client {
+	if k.httpClient != nil {
+		return k.httpClient
+	}
+	return http.DefaultClient
 }
 
 // out 返回输出 writer(未设置时回退 os.Stdout)。

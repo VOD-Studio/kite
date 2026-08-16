@@ -30,6 +30,8 @@
 | config 校验原则 | 所有校验在 `set` 写盘前完成;`workers` 上限 5(与 `--workers` flag 契约一致);`download_dir` 只存不校验存在性 | 2026-08-16 | (无需 ADR) |
 | config 文件机制 | 原子写;文件不存在=正常态;**坏文件=硬错误**拒绝执行(静默回退会掩盖用户设置,doctor 与 config path 豁免保修复闭环);读取侧复用 set 同一套校验 | 2026-08-16 | (无需 ADR,git 同款行为;机制细节见 PRD-0017) |
 | config 周边集成 | doctor 加 config 检查项;config 命令组进 help「工具」分组;**不进 onboarding 场景推送**(带问题来找的功能,主动推是噪音) | 2026-08-16 | (无需 ADR) |
+| proxy 优先级链 | `--proxy` > config `proxy` > 环境变量 > 直连;显式设置**整体替换**环境变量层(不混合态);不做显式禁用哨兵(禁用在 shell 层 `env -u` 解决) | 2026-08-16 | (无需 ADR,git `http.proxy` 同款覆盖语义;详见 PRD-0018) |
+| proxy 范围与防坑 | 协议白名单 http/https/socks5,scheme 必须显式;`config set proxy ""` = **清除 key**(空值有真实语义,区别于 download_dir);**API 与音频下载必须同走一个代理决策**(下载不经 engine,只改一侧必分裂) | 2026-08-16 | (无需 ADR;机制见 PRD-0018) |
 | 治理文件 | 本次含 SECURITY.md + CONTRIBUTING.md(原 P3 提前) | 2026-07-27 | (无需 ADR) |
 
 ## 暂缓项(后续 phase)
@@ -37,5 +39,4 @@
 | 议题 | 决定 | 原因 |
 |---|---|---|
 | Homebrew tap | 暂缓 | CLI 还在 v0.1,等稳定再上 brew;需单独建 tap 仓库 |
-| HTTP 代理(proxy) | config v1 之后单独排期 | 需改造 engine HTTP client,是独立 feature(`--proxy` flag + config key + engine 三处联动),不裹进 config 第一版「纯默认值」边界 |
 | distroless 替换现有 Dockerfile | 现有 Dockerfile 保留给本地开发,只新增发布用 Dockerfile | 不破坏现有 `docker build` 工作流 |

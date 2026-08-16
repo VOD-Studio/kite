@@ -86,7 +86,7 @@ func NewDeps(k *kit.Kit, opts ...DepsOption) Deps {
 			return DownloadToFile(ctx, k, url, total, path, label)
 		},
 		writeMeta: func(path string, song *mmpb.Song) error {
-			return WriteSongMetadata(path, song)
+			return WriteSongMetadata(path, song, k.HTTPClient())
 		},
 	}
 	for _, o := range opts {
@@ -135,12 +135,12 @@ func DownloadOne(ctx context.Context, song *mmpb.Song, songURL *mmpb.SongURL, op
 	filename, path, skipped := resolvePath(song, songURL.Format, opts.Out, opts.FilenameTmpl, opts.Force)
 	if skipped {
 		return Outcome{
-			Status:  StatusSkipped,
-			SongID:  song.Id,
-			Reason:  "已存在(用 --force 覆盖)",
-			Path:    filepath.Join(absOut, filename),
+			Status:   StatusSkipped,
+			SongID:   song.Id,
+			Reason:   "已存在(用 --force 覆盖)",
+			Path:     filepath.Join(absOut, filename),
 			Filename: filename,
-			Dir:     absOut,
+			Dir:      absOut,
 		}
 	}
 
@@ -218,7 +218,9 @@ func DownloadToFile(ctx context.Context, k *kit.Kit, url string, total int64, pa
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
 		rangeRequested = true
 	}
-	resp, err := http.DefaultClient.Do(req)
+	// 经 kit 的 client:显式代理时与 engine 同一决策派生(PRD-0018 双路径不变式),
+	// 未注入时 kit.HTTPClient() 退回 http.DefaultClient(环境变量层默认保留)。
+	resp, err := k.HTTPClient().Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("下载失败(网络): %v", err)
 	}
@@ -234,7 +236,7 @@ func DownloadToFile(ctx context.Context, k *kit.Kit, url string, total int64, pa
 		openMode |= os.O_APPEND // 续传:追加到现有 .part 末尾
 	} else {
 		openMode |= os.O_TRUNC // 新下或 Range 被忽略:覆盖 .part
-		offset = 0              // 重置 offset(进度条从 0 算)
+		offset = 0             // 重置 offset(进度条从 0 算)
 	}
 	f, err := os.OpenFile(partPath, openMode, 0o644)
 	if err != nil {
@@ -278,8 +280,8 @@ func fileSize(path string) (int64, error) {
 }
 
 // WriteSongMetadata 构造 Metadata 并写入。失败返回 error(调用方按非阻塞 Warnf 处理)。
-func WriteSongMetadata(path string, song *mmpb.Song) error {
-	cover := FetchCover(picURLOf(song))
+func WriteSongMetadata(path string, song *mmpb.Song, client *http.Client) error {
+	cover := FetchCover(picURLOf(song), client)
 	artist := ""
 	if len(song.Artists) > 0 {
 		artist = song.Artists[0].Name
@@ -297,12 +299,17 @@ func WriteSongMetadata(path string, song *mmpb.Song) error {
 }
 
 // FetchCover HTTP GET 取封面字节,失败返回 nil(不阻塞主流程)。
-// 封面 CDN 通常无 Referer 检查,用普通请求即可。
-func FetchCover(picURL string) []byte {
+// 封面 CDN 通常无 Referer 检查,用普通请求即可。client 为 nil 时用 DefaultClient;
+// 显式代理时调用方传 k.HTTPClient()——封面也是直连 HTTP 路径,须与音频下载
+// 同一代理决策(PRD-0018 双路径不变式)。
+func FetchCover(picURL string, client *http.Client) []byte {
 	if picURL == "" {
 		return nil
 	}
-	resp, err := http.Get(picURL)
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Get(picURL)
 	if err != nil {
 		return nil
 	}

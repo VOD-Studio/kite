@@ -15,8 +15,9 @@ kite doctor [flags]
 ### Options inherited from parent commands
 
 ```
-      --json   以 JSON 输出(管道/重定向时自动启用)
-      --yes    写操作跳过 y/N 确认(脚本场景)
+      --json           以 JSON 输出(管道/重定向时自动启用)
+      --proxy string   HTTP/SOCKS5 代理(如 http://127.0.0.1:7890);压过 config 与环境变量
+      --yes            写操作跳过 y/N 确认(脚本场景)
 ```
 
 ### SEE ALSO

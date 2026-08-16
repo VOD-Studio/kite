@@ -79,6 +79,22 @@ func WithBaseURL(base string) Option {
 	return func(e *Engine) { e.transport = e.transport.withBaseURL(base) }
 }
 
+// WithProxyURL 让全部 API 请求经指定代理:显式设置整体替换环境变量层
+// (ProxyFromEnvironment 不再参与,无混合态);u 为 nil 时不注入,保留默认
+// (环境变量 HTTPS_PROXY/HTTP_PROXY 照常生效)。flag 与 config 解析出同一
+// URL 后注入——决策单一来源(PRD-0018)。
+func WithProxyURL(u *url.URL) Option {
+	return func(e *Engine) { e.transport = e.transport.withProxy(u) }
+}
+
+// Apply 装配期应用/覆写 option(root 在 flag 解析后才拿到 --proxy 值,
+// 经此注入;Option 语义与 New 一致)。
+func (e *Engine) Apply(opts ...Option) {
+	for _, opt := range opts {
+		opt(e)
+	}
+}
+
 // WithSessions 注入 SessionStore。
 func WithSessions(s session.SessionStore) Option {
 	return func(e *Engine) { e.sessions = s }
@@ -96,9 +112,7 @@ func New(opts ...Option) *Engine {
 		retry:     defaultRetryPolicy,
 		breaker:   newCircuitBreaker(5, 30*time.Second),
 	}
-	for _, opt := range opts {
-		opt(e)
-	}
+	e.Apply(opts...)
 	return e
 }
 

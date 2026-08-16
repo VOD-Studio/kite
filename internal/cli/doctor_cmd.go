@@ -48,6 +48,7 @@ func runDoctor(k *kit.Kit, cmd *cobra.Command) error {
 		),
 		doctor.CompletionChecker(os.Getenv("SHELL"), probeCompletionInstalled),
 		doctor.ConfigChecker(probeConfigState),
+		doctor.ProxyChecker(probeProxyState(k)),
 	}
 	results := doctor.Run(checkers)
 
@@ -142,4 +143,28 @@ func probeConfigState() (string, bool, error) {
 	_, statErr := os.Stat(path)
 	_, loadErr := kit.LoadConfig()
 	return path, statErr == nil, loadErr
+}
+
+// probeProxyState 探测代理解析链供 doctor 展示(PRD-0018):
+// kit 已在 PersistentPreRunE 解析好 flag > config 并注入(ProxySource 记录来源),
+// 这里补环境变量层。环境变量取值顺序对齐 ProxyFromEnvironment 惯例
+// (https 请求优先 HTTPS_PROXY,大写小写都认)。
+func probeProxyState(k *kit.Kit) func() (flagVal, cfgVal, envVal string) {
+	return func() (string, string, string) {
+		flagVal, cfgVal := "", ""
+		switch k.ProxySource {
+		case kit.ProxySourceFlag:
+			flagVal = k.ProxyURL.String()
+		case kit.ProxySourceConfig:
+			cfgVal = k.ProxyURL.String()
+		}
+		// 环境变量展示带变量名(自解释;https 请求只认 HTTPS_PROXY 系,
+		// HTTP_PROXY 对 http 形态的 CDN 下载直链仍生效)。
+		for _, name := range []string{"HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"} {
+			if v := os.Getenv(name); v != "" {
+				return flagVal, cfgVal, name + "=" + v
+			}
+		}
+		return flagVal, cfgVal, ""
+	}
 }

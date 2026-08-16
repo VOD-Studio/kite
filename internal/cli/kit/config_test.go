@@ -37,7 +37,9 @@ func TestDefaultConfig_BuiltinValues(t *testing.T) {
 		DownloadDir:      ".",
 		FilenameTemplate: "",
 		Workers:          3,
+		Proxy:            "",
 	}, DefaultConfig())
+	require.Contains(t, ConfigKeys(), "proxy", "proxy 是第六个 key(PRD-0018)")
 }
 
 func TestLoadConfig_ValidFile_ParsesAllKeys(t *testing.T) {
@@ -213,4 +215,37 @@ func TestRender_OutputPrecedence(t *testing.T) {
 			require.Equal(t, tc.wantHum, k.HumanOutput(), "HumanOutput 应与 Render 一致")
 		})
 	}
+}
+
+// TestConfigProxyKey proxy 第六 key 的读写与清除语义(PRD-0018)。
+func TestConfigProxyKey(t *testing.T) {
+	dir := withTestConfigDir(t)
+
+	// set 正常值 → 落盘,读回生效。
+	require.NoError(t, SetConfigKey("proxy", "socks5://127.0.0.1:7891"))
+	got, err := LoadConfig()
+	require.NoError(t, err)
+	require.Equal(t, "socks5://127.0.0.1:7891", got.Proxy)
+
+	// set 空值 = 清除该 key(回落环境变量层),文件中不再有 proxy 行。
+	require.NoError(t, SetConfigKey("proxy", ""))
+	got, err = LoadConfig()
+	require.NoError(t, err)
+	require.Equal(t, "", got.Proxy)
+	data, err := os.ReadFile(filepath.Join(dir, "config.toml"))
+	require.NoError(t, err)
+	require.NotContains(t, string(data), "proxy", "空值应移除 key 而非写空串")
+
+	// 坏值:文件侧(set 被拦)与手改侧(LoadConfig 硬错误)都拒绝。
+	require.Error(t, SetConfigKey("proxy", "127.0.0.1:7890"), "缺 scheme 应报错")
+	writeTestConfig(t, `proxy = "ftp://x"`+"\n")
+	_, err = LoadConfig()
+	require.Error(t, err, "白名单外协议必须硬错误")
+	require.Contains(t, err.Error(), "proxy")
+
+	// 文件里合法的空串(手改)按未设置处理,不炸。
+	writeTestConfig(t, `proxy = ""`+"\n")
+	got, err = LoadConfig()
+	require.NoError(t, err)
+	require.Equal(t, "", got.Proxy)
 }

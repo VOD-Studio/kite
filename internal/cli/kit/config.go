@@ -2,7 +2,7 @@
 // config.go 实现 config.toml 的加载/校验/写入(PRD-0017)。
 //
 // 设计原则(决策见 CONTEXT.md「不可逆决策」表):
-//   - config key 只收「已存在 flag 或硬编码默认值」,五项平铺;
+//   - config key 只收「已存在 flag 或硬编码默认值」(当前六项,见 configKeys);
 //   - 文件不存在 = 正常态(全部内置默认);文件存在但坏 = 硬错误,静默回退会掩盖用户设置;
 //   - set 写盘前完成全部校验,读取侧复用同一套校验(手改文件同样被拦);
 //   - tmp+rename 原子写,文件 0600、目录 0700(与 session 一致)。
@@ -21,7 +21,8 @@ import (
 // configHeader 是 set 首写时文件顶部的管理注释(此后整文件重写,不保留用户注释)。
 const configHeader = "# 本文件由 kite config 管理(kite config set);手改请遵循既有 key 与取值范围。\n"
 
-// Config 是五项用户偏好的生效值集合。零值不可直接使用(Workers=0 非法),
+// Config 是用户偏好的生效值集合(字段与 configKeys 一一对应)。
+// 零值不可直接使用(Workers=0 非法),
 // 一律经 DefaultConfig() 或 LoadConfig() 获得。
 type Config struct {
 	Level            int    // 默认音质,1=standard 2=exhigh 3=lossless 4=hires
@@ -29,6 +30,7 @@ type Config struct {
 	DownloadDir      string // 下载目录(--out)
 	FilenameTemplate string // 文件名模板,空 = {artist} - {title}
 	Workers          int    // playlist download 并发数(--workers)
+	Proxy            string // 代理地址,空 = 未设置(回落环境变量层,PRD-0018)
 }
 
 // DefaultConfig 返回内置默认值(与各 flag 的硬编码默认对齐,独立真相)。
@@ -39,6 +41,7 @@ func DefaultConfig() Config {
 		DownloadDir:      ".",
 		FilenameTemplate: "",
 		Workers:          3,
+		Proxy:            "",
 	}
 }
 
@@ -80,7 +83,7 @@ func ConfigKeys() []string {
 	return append([]string(nil), configKeys...)
 }
 
-// IsKnownConfigKey 判断 key 是否在五项枚举内(config get/set 命令层校验用)。
+// IsKnownConfigKey 判断 key 是否在 configKeys 枚举内(config get/set 命令层校验用)。
 func IsKnownConfigKey(key string) bool { return isKnownKey(key) }
 
 // parseConfig 解析并校验 config.toml 内容,附带返回显式设置的 key 集。
@@ -116,7 +119,12 @@ func SetConfigKey(key, value string) error {
 	if err := applyConfigKey(&cfg, key, value); err != nil {
 		return fmt.Errorf("配置项 %s:%w", key, err)
 	}
-	set[key] = true
+	// proxy 的空值有真实语义 = 清除该 key(回落环境变量层),不写空串行(PRD-0018)。
+	if key == "proxy" && value == "" {
+		delete(set, key)
+	} else {
+		set[key] = true
+	}
 	return writeConfigFile(cfg, set)
 }
 
@@ -146,6 +154,9 @@ func writeConfigFile(cfg Config, set map[string]bool) error {
 	}
 	if set["workers"] {
 		fmt.Fprintf(&b, "workers = %d\n", cfg.Workers)
+	}
+	if set["proxy"] {
+		fmt.Fprintf(&b, "proxy = %q\n", cfg.Proxy)
 	}
 	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, []byte(b.String()), 0o600); err != nil {
@@ -204,6 +215,16 @@ func applyConfigKey(cfg *Config, key string, val any) error {
 			return fmt.Errorf("值 %d 越界(并发 1-5,与 --workers 一致)", n)
 		}
 		cfg.Workers = n
+	case "proxy":
+		s, ok := val.(string)
+		if !ok {
+			return fmt.Errorf("值必须是代理地址字符串")
+		}
+		// 空串合法 = 未设置(清除语义);非空走与 --proxy 同一套校验。
+		if _, err := ParseProxyURL(s); err != nil {
+			return err
+		}
+		cfg.Proxy = s
 	default:
 		return fmt.Errorf("是未知配置项(可用: %s)", strings.Join(ConfigKeys(), " "))
 	}
@@ -211,9 +232,9 @@ func applyConfigKey(cfg *Config, key string, val any) error {
 }
 
 // configKeys 是合法 key 的单一真相(顺序即 config get 无参列表顺序)。
-var configKeys = []string{"level", "output", "download_dir", "filename_template", "workers"}
+var configKeys = []string{"level", "output", "download_dir", "filename_template", "workers", "proxy"}
 
-// isKnownKey 判断 key 是否在五项枚举内。
+// isKnownKey 判断 key 是否在 configKeys 枚举内。
 func isKnownKey(key string) bool {
 	for _, k := range configKeys {
 		if k == key {
@@ -228,7 +249,9 @@ func isKnownKey(key string) bool {
 // songdl 包的守护测试保持同步——公共层只定义 schema,不夹带下载领域逻辑。
 func FilenameTemplatePlaceholders() []string {
 	return []string{"{artist}", "{title}", "{album}", "{id}"}
-} // toInt 把 set 侧 string / 文件侧 int64 / int 统一转 int。
+}
+
+// toInt 把 set 侧 string / 文件侧 int64 / int 统一转 int。
 func toInt(val any) (int, error) {
 	switch v := val.(type) {
 	case string:
@@ -244,6 +267,17 @@ func toInt(val any) (int, error) {
 	default:
 		return 0, fmt.Errorf("%v 不是整数", v)
 	}
+}
+
+// isKnownPlaceholder 判断裸占位符名(无花括号)是否在白名单内。
+// 白名单唯一真相是 FilenameTemplatePlaceholders,此处派生判断,不另维护名单。
+func isKnownPlaceholder(name string) bool {
+	for _, ph := range FilenameTemplatePlaceholders() {
+		if strings.TrimSuffix(strings.TrimPrefix(ph, "{"), "}") == name {
+			return true
+		}
+	}
+	return false
 }
 
 // validateFilenameTemplate 校验模板占位符只含白名单(见 FilenameTemplatePlaceholders)。
@@ -263,9 +297,7 @@ func validateFilenameTemplate(s string) error {
 			return fmt.Errorf("模板 %q 有未闭合的 {", s)
 		}
 		name := rest[open+1 : end]
-		switch name {
-		case "artist", "title", "album", "id":
-		default:
+		if !isKnownPlaceholder(name) {
 			return fmt.Errorf("模板 %q 的占位符 {%s} 未知(可用: %s)", s, name, strings.Join(FilenameTemplatePlaceholders(), "/"))
 		}
 		rest = rest[end+1:]

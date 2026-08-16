@@ -220,3 +220,31 @@ func TestConfigChecker(t *testing.T) {
 		})
 	}
 }
+
+// TestProxyChecker 解析链四态展示,恒 pass(PRD-0018)。
+func TestProxyChecker(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		flagVal string
+		cfgVal  string
+		envVal  string
+		wantSub string
+	}{
+		{"flag 覆盖", "socks5://x:1", "http://y:2", "http://z:3", "--proxy 覆盖: socks5://x:1"},
+		{"config 压过环境变量", "", "http://y:2", "http://z:3", "config: http://y:2"},
+		{"环境变量层", "", "", "http://z:3", "环境变量: http://z:3"},
+		{"直连", "", "", "", "直连"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			r := ProxyChecker(func() (string, string, string) {
+				return tc.flagVal, tc.cfgVal, tc.envVal
+			}).Check()
+			require.Equal(t, StatusPass, r.Status, "信息行恒 pass")
+			require.Contains(t, r.Detail, tc.wantSub)
+		})
+	}
+}
