@@ -24,19 +24,21 @@ func stdinIsTTY() bool { return isTerminal(int(os.Stdin.Fd())) }
 // stderrIsTTY 错误/进度输出是否是终端(决定进度条是否渲染)。
 func stderrIsTTY() bool { return isTerminal(int(os.Stderr.Fd())) }
 
-// Render 按三态规则输出响应:--json 或管道 → protojson;TTY → 人类可读(表格/键值对)。
+// Render 按优先级链输出响应(PRD-0017):
+// --json 或管道 → protojson;TTY 且 config output=json → protojson;其余 TTY → 人类可读。
+// 管道 JSON 契约优先于 config(机器本地偏好不覆盖全局脚本契约)。
 func (k *Kit) Render(msg proto.Message) error {
-	if k.JSON || !stdoutIsTTY() {
+	if k.JSON || !stdoutIsTTY() || k.Config.Output == "json" {
 		return printJSONTo(k.out(), msg)
 	}
 	fmt.Fprint(k.out(), RenderHuman(msg))
 	return nil
 }
 
-// HumanOutput 当前是否走人类可读渲染(TTY 且未强制 --json)。
-// 命令需要按输出形态调整内容时用(如 login-status 脱敏)。
+// HumanOutput 当前是否走人类可读渲染(TTY 且未强制 --json 且 config 非 json)。
+// 命令需要按输出形态调整内容时用(如 login-status 脱敏),与 Render 同源。
 func (k *Kit) HumanOutput() bool {
-	return !k.JSON && stdoutIsTTY()
+	return !k.JSON && stdoutIsTTY() && k.Config.Output != "json"
 }
 
 // MaskCookie 把 cookie 各段的值脱敏:保留首尾各 8 字符,中间省略;
