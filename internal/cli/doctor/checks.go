@@ -40,7 +40,7 @@ func SessionChecker(cookieProbe func() string, netProbe func(ctx context.Context
 		}
 		if err := netProbe(context.Background(), cookie); err != nil {
 			return Result{Name: "会话", Status: StatusFail,
-				Detail: "cookie 失效或网络不可达",
+				Detail:  "cookie 失效或网络不可达",
 				FixHint: fmt.Sprintf("重新运行 login,或检查网络。详情: %v", err)}
 		}
 		return Result{Name: "会话", Status: StatusPass, Detail: "已登录,cookie 有效"}
@@ -63,7 +63,7 @@ func CompletionChecker(shell string, installedProbe func(shell string) (path str
 		sh := ShellName(shell)
 		if sh == "" {
 			return Result{Name: "补全", Status: StatusWarn,
-				Detail: "无法识别当前 shell($SHELL 未设)",
+				Detail:  "无法识别当前 shell($SHELL 未设)",
 				FixHint: "手动跑 kite completion <shell> 并按 shell 文档 source"}
 		}
 		path, ok := installedProbe(sh)
@@ -78,7 +78,7 @@ func CompletionChecker(shell string, installedProbe func(shell string) (path str
 			return r
 		}
 		return Result{Name: "补全", Status: StatusWarn,
-			Detail: fmt.Sprintf("%s 补全未安装(Tab 将列文件而非 kite 命令)", sh),
+			Detail:  fmt.Sprintf("%s 补全未安装(Tab 将列文件而非 kite 命令)", sh),
 			FixHint: completionInstallHint(sh)}
 	})
 }
@@ -96,9 +96,12 @@ func ConfigChecker(probe func() (path string, exists bool, loadErr error)) Check
 	return CheckerFunc(func() Result {
 		path, exists, err := probe()
 		if err != nil {
-			return Result{Name: "配置", Status: StatusFail,
-				Detail: fmt.Sprintf("config.toml 不可用: %v", err),
-				FixHint: fmt.Sprintf("修正 %s 后重试,或删除该文件后用 kite config set 重建", path)}
+			return Result{
+				Name:    "配置",
+				Status:  StatusFail,
+				Detail:  fmt.Sprintf("config.toml 不可用: %v", err),
+				FixHint: fmt.Sprintf("修正 %s 后重试,或删除该文件后用 kite config set 重建", path),
+			}
 		}
 		if !exists {
 			return Result{Name: "配置", Status: StatusPass, Detail: "未创建(全部用内置默认)"}
