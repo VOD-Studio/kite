@@ -82,6 +82,9 @@ func NewRootCommand() *cobra.Command {
 	// 全局 flag:输出形态与写操作确认,绑定到 kit 实例,所有子命令生效。
 	root.PersistentFlags().BoolVar(&k.JSON, "json", false, "以 JSON 输出(管道/重定向时自动启用)")
 	root.PersistentFlags().BoolVar(&k.Yes, "yes", false, "写操作跳过 y/N 确认(脚本场景)")
+	var proxyFlag string
+	root.PersistentFlags().StringVar(&proxyFlag, "proxy", "",
+		"HTTP/SOCKS5 代理(如 http://127.0.0.1:7890);压过 config 与环境变量")
 
 	// flag 解析失败统一包 ErrUsage,Execute 映射退出码 2。
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
@@ -91,17 +94,30 @@ func NewRootCommand() *cobra.Command {
 	// 坏 config.toml:除诊断类命令(doctor / config path)外,任何命令执行前拦截
 	// (退出码 1,通用错误)。doctor 是诊断工具;config path 不读配置,是用户定位
 	// 坏文件修复的入口,两者豁免才有闭环。
+	// 随后做代理解析(PRD-0018):flag > config,一次解析注入 engine 与下载双路径;
+	// 坏 --proxy 值包 ErrUsage(参数拼写错误,退 2)。都不设置时不注入任何东西,
+	// 环境变量层(Go 默认 ProxyFromEnvironment)自然生效。
 	root.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
-		if cfgErr == nil {
-			return nil
+		if cfgErr != nil {
+			switch {
+			case cmd.Name() == "doctor":
+			case cmd.Parent() != nil && cmd.Parent().Name() == "config" && cmd.Name() == "path":
+			default:
+				return fmt.Errorf("配置不可用,已拒绝执行: %w", cfgErr)
+			}
 		}
-		if cmd.Name() == "doctor" {
-			return nil
+		raw, source := proxyFlag, kit.ProxySourceFlag
+		if raw == "" {
+			raw, source = k.Config.Proxy, kit.ProxySourceConfig
 		}
-		if cmd.Parent() != nil && cmd.Parent().Name() == "config" && cmd.Name() == "path" {
-			return nil
+		if raw != "" {
+			u, err := kit.ParseProxyURL(raw)
+			if err != nil {
+				return errors.Join(kit.ErrUsage, err)
+			}
+			k.UseProxy(u, source)
 		}
-		return fmt.Errorf("配置不可用,已拒绝执行: %w", cfgErr)
+		return nil
 	}
 
 	root.AddGroup(

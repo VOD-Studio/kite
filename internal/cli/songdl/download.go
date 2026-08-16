@@ -218,7 +218,9 @@ func DownloadToFile(ctx context.Context, k *kit.Kit, url string, total int64, pa
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
 		rangeRequested = true
 	}
-	resp, err := http.DefaultClient.Do(req)
+	// 经 kit 的 client:显式代理时与 engine 同一决策派生(PRD-0018 双路径不变式),
+	// 未注入时 kit.HTTPClient() 退回 http.DefaultClient(环境变量层默认保留)。
+	resp, err := k.HTTPClient().Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("下载失败(网络): %v", err)
 	}

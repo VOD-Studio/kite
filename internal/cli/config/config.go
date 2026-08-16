@@ -74,7 +74,7 @@ func newPathCommand(d deps) *cobra.Command {
 }
 
 // newGetCommand 实现 config get:单 key 裸打生效值(不带格式,脚本可用,gh/jj 惯例);
-// 无参列出全部五项:key、生效值、来源(config / 默认)。
+// 无参列出全部 key:生效值、来源(config / 默认)。
 func newGetCommand(k *kit.Kit, d deps) *cobra.Command {
 	return &cobra.Command{
 		Use:   "get [key]",
@@ -163,6 +163,9 @@ func displayValue(key string, cfg kit.Config) string {
 		return cfg.Output
 	case "download_dir":
 		return cfg.DownloadDir
+	case "proxy":
+		// 空=config 层未设置(回落环境变量,由 doctor 呈现完整解析链);裸值保持脚本可判。
+		return cfg.Proxy
 	default:
 		return ""
 	}

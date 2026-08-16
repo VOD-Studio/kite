@@ -40,7 +40,7 @@ func SessionChecker(cookieProbe func() string, netProbe func(ctx context.Context
 		}
 		if err := netProbe(context.Background(), cookie); err != nil {
 			return Result{Name: "会话", Status: StatusFail,
-				Detail: "cookie 失效或网络不可达",
+				Detail:  "cookie 失效或网络不可达",
 				FixHint: fmt.Sprintf("重新运行 login,或检查网络。详情: %v", err)}
 		}
 		return Result{Name: "会话", Status: StatusPass, Detail: "已登录,cookie 有效"}
@@ -63,7 +63,7 @@ func CompletionChecker(shell string, installedProbe func(shell string) (path str
 		sh := ShellName(shell)
 		if sh == "" {
 			return Result{Name: "补全", Status: StatusWarn,
-				Detail: "无法识别当前 shell($SHELL 未设)",
+				Detail:  "无法识别当前 shell($SHELL 未设)",
 				FixHint: "手动跑 kite completion <shell> 并按 shell 文档 source"}
 		}
 		path, ok := installedProbe(sh)
@@ -78,7 +78,7 @@ func CompletionChecker(shell string, installedProbe func(shell string) (path str
 			return r
 		}
 		return Result{Name: "补全", Status: StatusWarn,
-			Detail: fmt.Sprintf("%s 补全未安装(Tab 将列文件而非 kite 命令)", sh),
+			Detail:  fmt.Sprintf("%s 补全未安装(Tab 将列文件而非 kite 命令)", sh),
 			FixHint: completionInstallHint(sh)}
 	})
 }
@@ -97,13 +97,36 @@ func ConfigChecker(probe func() (path string, exists bool, loadErr error)) Check
 		path, exists, err := probe()
 		if err != nil {
 			return Result{Name: "配置", Status: StatusFail,
-				Detail: fmt.Sprintf("config.toml 不可用: %v", err),
+				Detail:  fmt.Sprintf("config.toml 不可用: %v", err),
 				FixHint: fmt.Sprintf("修正 %s 后重试,或删除该文件后用 kite config set 重建", path)}
 		}
 		if !exists {
 			return Result{Name: "配置", Status: StatusPass, Detail: "未创建(全部用内置默认)"}
 		}
 		return Result{Name: "配置", Status: StatusPass, Detail: path}
+	})
+}
+
+// ProxyChecker 显示代理解析链(PRD-0018)。恒 pass 信息行——不做连通性探活:
+// 「会话」检查已实际走一遍完整链路,独立探活受境内外网络差异影响易误报。
+//
+// probe 返回(flag 值, config 值, 环境变量值),空串 = 该层未设置。
+// 展示优先级与生效优先级一致:--proxy > config > 环境变量 > 直连。
+func ProxyChecker(probe func() (flagVal, cfgVal, envVal string)) Checker {
+	return CheckerFunc(func() Result {
+		flagVal, cfgVal, envVal := probe()
+		switch {
+		case flagVal != "":
+			return Result{Name: "代理", Status: StatusPass,
+				Detail: fmt.Sprintf("--proxy 覆盖: %s", flagVal)}
+		case cfgVal != "":
+			return Result{Name: "代理", Status: StatusPass,
+				Detail: fmt.Sprintf("config: %s(压过环境变量)", cfgVal)}
+		case envVal != "":
+			return Result{Name: "代理", Status: StatusPass,
+				Detail: fmt.Sprintf("环境变量: %s", envVal)}
+		}
+		return Result{Name: "代理", Status: StatusPass, Detail: "直连"}
 	})
 }
 
