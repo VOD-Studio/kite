@@ -7,6 +7,14 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## [0.2.0](https://github.com/VOD-Studio/kite/compare/v0.1.0...v0.2.0) (2026-08-16)
+
+
+### Features
+
+* **cli:** Phase B 配置——config.toml 与 config 命令组(PRD-0017) ([#23](https://github.com/VOD-Studio/kite/issues/23)) ([ce0771a](https://github.com/VOD-Studio/kite/commit/ce0771ada571727cba64e13ef70f5095275717cb))
+* **netease:** 代理支持——engine/CLI 双路径与 --proxy flag(PRD-0018) ([#24](https://github.com/VOD-Studio/kite/issues/24)) ([6de0c38](https://github.com/VOD-Studio/kite/commit/6de0c38465152ed13c7da4ebd177b8ebd8d2be5c))
+
 ## [Unreleased]
 
 后续版本由 release-please 从 Conventional Commits 自动维护。
