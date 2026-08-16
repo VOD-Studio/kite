@@ -96,9 +96,12 @@ func ConfigChecker(probe func() (path string, exists bool, loadErr error)) Check
 	return CheckerFunc(func() Result {
 		path, exists, err := probe()
 		if err != nil {
-			return Result{Name: "配置", Status: StatusFail,
+			return Result{
+				Name:    "配置",
+				Status:  StatusFail,
 				Detail:  fmt.Sprintf("config.toml 不可用: %v", err),
-				FixHint: fmt.Sprintf("修正 %s 后重试,或删除该文件后用 kite config set 重建", path)}
+				FixHint: fmt.Sprintf("修正 %s 后重试,或删除该文件后用 kite config set 重建", path),
+			}
 		}
 		if !exists {
 			return Result{Name: "配置", Status: StatusPass, Detail: "未创建(全部用内置默认)"}

@@ -84,14 +84,14 @@ func request_RecommendService_RecommendPlaylists_0(ctx context.Context, marshale
 		protoReq RecommendPlaylistsRequest
 		metadata runtime.ServerMetadata
 	)
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_RecommendService_RecommendPlaylists_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.RecommendPlaylists(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -119,14 +119,14 @@ func request_RecommendService_RecommendNewSongs_0(ctx context.Context, marshaler
 		protoReq RecommendNewSongsRequest
 		metadata runtime.ServerMetadata
 	)
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_RecommendService_RecommendNewSongs_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.RecommendNewSongs(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err

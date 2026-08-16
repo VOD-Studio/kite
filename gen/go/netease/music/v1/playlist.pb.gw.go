@@ -41,9 +41,6 @@ func request_PlaylistService_GetPlaylist_0(ctx context.Context, marshaler runtim
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	val, ok := pathParams["playlist_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "playlist_id")
@@ -51,6 +48,9 @@ func request_PlaylistService_GetPlaylist_0(ctx context.Context, marshaler runtim
 	protoReq.PlaylistId, err = runtime.Int64(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "playlist_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.GetPlaylist(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -81,14 +81,14 @@ func request_PlaylistService_HighQuality_0(ctx context.Context, marshaler runtim
 		protoReq HighQualityRequest
 		metadata runtime.ServerMetadata
 	)
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_PlaylistService_HighQuality_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.HighQuality(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -158,14 +158,14 @@ func request_PlaylistService_BrowseHot_0(ctx context.Context, marshaler runtime.
 		protoReq BrowseHotRequest
 		metadata runtime.ServerMetadata
 	)
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_PlaylistService_BrowseHot_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.BrowseHot(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -194,9 +194,6 @@ func request_PlaylistService_Subscribers_0(ctx context.Context, marshaler runtim
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	val, ok := pathParams["playlist_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "playlist_id")
@@ -210,6 +207,9 @@ func request_PlaylistService_Subscribers_0(ctx context.Context, marshaler runtim
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_PlaylistService_Subscribers_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.Subscribers(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -247,9 +247,6 @@ func request_PlaylistService_AllTracks_0(ctx context.Context, marshaler runtime.
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	val, ok := pathParams["playlist_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "playlist_id")
@@ -263,6 +260,9 @@ func request_PlaylistService_AllTracks_0(ctx context.Context, marshaler runtime.
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_PlaylistService_AllTracks_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.AllTracks(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -301,9 +301,6 @@ func request_PlaylistService_Subscribe_0(ctx context.Context, marshaler runtime.
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	val, ok := pathParams["playlist_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "playlist_id")
@@ -311,6 +308,9 @@ func request_PlaylistService_Subscribe_0(ctx context.Context, marshaler runtime.
 	protoReq.PlaylistId, err = runtime.Int64(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "playlist_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.Subscribe(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -370,9 +370,6 @@ func request_PlaylistService_Delete_0(ctx context.Context, marshaler runtime.Mar
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	val, ok := pathParams["playlist_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "playlist_id")
@@ -380,6 +377,9 @@ func request_PlaylistService_Delete_0(ctx context.Context, marshaler runtime.Mar
 	protoReq.PlaylistId, err = runtime.Int64(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "playlist_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.Delete(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -412,9 +412,6 @@ func request_PlaylistService_UpdateName_0(ctx context.Context, marshaler runtime
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	val, ok := pathParams["playlist_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "playlist_id")
@@ -422,6 +419,9 @@ func request_PlaylistService_UpdateName_0(ctx context.Context, marshaler runtime
 	protoReq.PlaylistId, err = runtime.Int64(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "playlist_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.UpdateName(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -457,9 +457,6 @@ func request_PlaylistService_UpdateDesc_0(ctx context.Context, marshaler runtime
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	val, ok := pathParams["playlist_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "playlist_id")
@@ -467,6 +464,9 @@ func request_PlaylistService_UpdateDesc_0(ctx context.Context, marshaler runtime
 	protoReq.PlaylistId, err = runtime.Int64(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "playlist_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.UpdateDesc(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -502,9 +502,6 @@ func request_PlaylistService_UpdateTags_0(ctx context.Context, marshaler runtime
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	val, ok := pathParams["playlist_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "playlist_id")
@@ -512,6 +509,9 @@ func request_PlaylistService_UpdateTags_0(ctx context.Context, marshaler runtime
 	protoReq.PlaylistId, err = runtime.Int64(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "playlist_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.UpdateTags(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -547,9 +547,6 @@ func request_PlaylistService_UpdateTracks_0(ctx context.Context, marshaler runti
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	val, ok := pathParams["playlist_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "playlist_id")
@@ -557,6 +554,9 @@ func request_PlaylistService_UpdateTracks_0(ctx context.Context, marshaler runti
 	protoReq.PlaylistId, err = runtime.Int64(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "playlist_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.UpdateTracks(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -591,9 +591,6 @@ func request_PlaylistService_SimilarPlaylists_0(ctx context.Context, marshaler r
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	val, ok := pathParams["song_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "song_id")
@@ -607,6 +604,9 @@ func request_PlaylistService_SimilarPlaylists_0(ctx context.Context, marshaler r
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_PlaylistService_SimilarPlaylists_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.SimilarPlaylists(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -642,9 +642,6 @@ func request_PlaylistService_RelatedPlaylistRecommend_0(ctx context.Context, mar
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
 	val, ok := pathParams["playlist_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "playlist_id")
@@ -652,6 +649,9 @@ func request_PlaylistService_RelatedPlaylistRecommend_0(ctx context.Context, mar
 	protoReq.PlaylistId, err = runtime.Int64(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "playlist_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.RelatedPlaylistRecommend(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err

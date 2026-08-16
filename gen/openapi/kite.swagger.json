@@ -6,31 +6,40 @@
   },
   "tags": [
     {
-      "name": "SongService"
+      "name": "SongService",
+      "description": "SongService 提供歌曲相关查询能力。"
     },
     {
-      "name": "AlbumService"
+      "name": "AlbumService",
+      "description": "AlbumService 提供专辑查询能力。"
     },
     {
-      "name": "ArtistService"
+      "name": "ArtistService",
+      "description": "ArtistService 提供歌手查询、列表浏览与收藏管理能力。"
     },
     {
-      "name": "AuthService"
+      "name": "AuthService",
+      "description": "AuthService 提供登录认证能力。"
     },
     {
-      "name": "FMService"
+      "name": "FMService",
+      "description": "FMService 提供私人电台能力（需登录态）。"
     },
     {
-      "name": "SearchService"
+      "name": "SearchService",
+      "description": "SearchService 提供搜索能力。支持多类型搜索 + 搜索辅助（建议/热搜/默认词）。"
     },
     {
-      "name": "PlaylistService"
+      "name": "PlaylistService",
+      "description": "PlaylistService 提供歌单查询与浏览能力。"
     },
     {
-      "name": "RecommendService"
+      "name": "RecommendService",
+      "description": "RecommendService 提供推荐能力（需登录态）。"
     },
     {
-      "name": "UserService"
+      "name": "UserService",
+      "description": "UserService 提供用户查询能力。\n\n用户是网易云中心实体，歌单管理、收藏、动态都依赖用户 UID。\n大部分查他人接口用匿名可用，Account 查自己需登录态。"
     }
   ],
   "consumes": [
