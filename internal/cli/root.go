@@ -14,6 +14,7 @@ import (
 	"github.com/VOD-Studio/kite/internal/cli/album"
 	"github.com/VOD-Studio/kite/internal/cli/artist"
 	"github.com/VOD-Studio/kite/internal/cli/auth"
+	"github.com/VOD-Studio/kite/internal/cli/config"
 	"github.com/VOD-Studio/kite/internal/cli/fm"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
 	"github.com/VOD-Studio/kite/internal/cli/playlist"
@@ -34,6 +35,14 @@ import (
 //    Linux ~/.config/kite/、Windows %AppData%\kite\)。
 func NewRootCommand() *cobra.Command {
 	k := kit.New()
+
+	// config.toml 装配(PRD-0017):构造期加载一次,flag 默认值与 Render 消费。
+	// 坏文件(解析失败/key 越界)= 硬错误:所有命令拒绝执行,静默回退会掩盖用户设置。
+	// 此时命令树仍按内置默认构造(flag 注册需要值),PersistentPreRunE 兜底拦截执行。
+	cfg, cfgErr := kit.LoadConfig()
+	if cfgErr == nil {
+		k.Config = cfg
+	}
 
 	root := &cobra.Command{
 		Use:   "kite",
@@ -78,6 +87,22 @@ func NewRootCommand() *cobra.Command {
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
 		return errors.Join(kit.ErrUsage, err)
 	})
+
+	// 坏 config.toml:除诊断类命令(doctor / config path)外,任何命令执行前拦截
+	// (退出码 1,通用错误)。doctor 是诊断工具;config path 不读配置,是用户定位
+	// 坏文件修复的入口,两者豁免才有闭环。
+	root.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
+		if cfgErr == nil {
+			return nil
+		}
+		if cmd.Name() == "doctor" {
+			return nil
+		}
+		if cmd.Parent() != nil && cmd.Parent().Name() == "config" && cmd.Name() == "path" {
+			return nil
+		}
+		return fmt.Errorf("配置不可用,已拒绝执行: %w", cfgErr)
+	}
 
 	root.AddGroup(
 		&cobra.Group{ID: "quickstart", Title: "快速上手:"},
@@ -135,6 +160,9 @@ func NewRootCommand() *cobra.Command {
 	doctorCmd := newDoctorCommand(k)
 	doctorCmd.GroupID = "tools"
 	root.AddCommand(doctorCmd)
+	configCmd := config.NewCommand(k)
+	configCmd.GroupID = "tools"
+	root.AddCommand(configCmd)
 	installCompCmd := newInstallCompletionCommand()
 	installCompCmd.GroupID = "tools"
 	root.AddCommand(installCompCmd)

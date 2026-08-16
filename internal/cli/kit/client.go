@@ -34,6 +34,10 @@ type Kit struct {
 	JSON bool
 	// Yes 为 true 时写操作跳过交互确认(全局 --yes)。
 	Yes bool
+	// Config 是生效的用户偏好(PRD-0017)。New() 填内置默认;root 装配时
+	// 用 LoadConfig() 的结果覆盖(坏文件在 root 层硬错误)。Output 参与
+	// Render 三态:优先级链 --json > 非TTY自动JSON > config > 内置默认。
+	Config Config
 	// Out 结果输出 writer,默认 os.Stdout(测试可替换)。
 	Out io.Writer
 	// Err 警告/进度输出 writer,默认 os.Stderr(测试可替换)。
@@ -50,9 +54,10 @@ type Kit struct {
 // 召回池默认指向 kit.HistoryPath()(PRD-0015 #44 可注入路径)。
 func New() *Kit {
 	return &Kit{
-		eng:  engine.New(engine.WithCache(cache.Noop{})),
-		Out:  os.Stdout,
-		pool: recall.NewPool(HistoryPath),
+		eng:    engine.New(engine.WithCache(cache.Noop{})),
+		Out:    os.Stdout,
+		Config: DefaultConfig(),
+		pool:   recall.NewPool(HistoryPath),
 	}
 }
 

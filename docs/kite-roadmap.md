@@ -59,10 +59,12 @@
 验收:任意目录 `kite song play --id 347230` 出声;弱网下不卡顿(缓冲水位生效);
 `--level 3`(flac)可播;`playlist download` 整单落盘带元数据。
 
-## Phase B — 配置
+## Phase B — 配置 📋 待实现(PRD-0017)
 
-- 配置目录 `os.UserConfigDir()/kite/`:`config.toml`(默认音质 `level`、默认输出 `output = "table"|"json"`、下载目录)
-- 会话文件从 `~/.kite/session.json` 迁至配置目录,**读时兼容旧位置**(旧位置存在则继续使用并提示可 `kite config migrate`)
+> **进度更新(2026-08-16)**:配置目录与 session.json 迁移(读时兼容旧位置)已在 `internal/cli/kit/paths.go` 落地。剩余范围(`config.toml` 五项默认值 + `config` 命令组)由 [PRD-0017](../prd/0017-kite-配置.md) 接管。
+
+- 配置目录 `os.UserConfigDir()/kite/`:`config.toml`(默认音质 `level`、默认输出 `output = "table"|"json"`、下载目录、文件名模板、并发数)
+- 会话文件从 `~/.kite/session.json` 迁至配置目录,**读时兼容旧位置**(旧位置存在则继续使用并提示可 `kite config migrate`)✅ 已完成(惰性迁移,无需 migrate 命令)
 - 新增 `config` 命令组:`config path` / `config get` / `config set key value`
 
 ## Phase E — 工程化与可发现性 📋 待实现(PRD-0014)

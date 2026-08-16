@@ -58,9 +58,9 @@ func newDownload(k *kit.Kit) *cobra.Command {
 		},
 	}
 	c.Flags().Int64Var(&id, "id", 0, "歌单 ID")
-	c.Flags().IntVar(&level, "level", 1, "音质: 1=standard 2=exhigh 3=lossless 4=hires")
-	c.Flags().StringVar(&out, "out", ".", "下载目录(自动 mkdir -p)")
-	c.Flags().IntVar(&workers, "workers", 3, "并发数 1-5")
+	c.Flags().IntVar(&level, "level", k.Config.Level, "音质: 1=standard 2=exhigh 3=lossless 4=hires")
+	c.Flags().StringVar(&out, "out", k.Config.DownloadDir, "下载目录(自动 mkdir -p)")
+	c.Flags().IntVar(&workers, "workers", k.Config.Workers, "并发数 1-5")
 	c.Flags().BoolVar(&force, "force", false, "覆盖已存在文件")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "只打印曲目清单 + 预估总量,不落盘")
 	c.Flags().BoolVar(&noMetadata, "no-metadata", false, "跳过元数据写入(批量生效)")
