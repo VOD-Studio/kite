@@ -249,7 +249,9 @@ func isKnownKey(key string) bool {
 // songdl 包的守护测试保持同步——公共层只定义 schema,不夹带下载领域逻辑。
 func FilenameTemplatePlaceholders() []string {
 	return []string{"{artist}", "{title}", "{album}", "{id}"}
-} // toInt 把 set 侧 string / 文件侧 int64 / int 统一转 int。
+}
+
+// toInt 把 set 侧 string / 文件侧 int64 / int 统一转 int。
 func toInt(val any) (int, error) {
 	switch v := val.(type) {
 	case string:
@@ -265,6 +267,17 @@ func toInt(val any) (int, error) {
 	default:
 		return 0, fmt.Errorf("%v 不是整数", v)
 	}
+}
+
+// isKnownPlaceholder 判断裸占位符名(无花括号)是否在白名单内。
+// 白名单唯一真相是 FilenameTemplatePlaceholders,此处派生判断,不另维护名单。
+func isKnownPlaceholder(name string) bool {
+	for _, ph := range FilenameTemplatePlaceholders() {
+		if strings.TrimSuffix(strings.TrimPrefix(ph, "{"), "}") == name {
+			return true
+		}
+	}
+	return false
 }
 
 // validateFilenameTemplate 校验模板占位符只含白名单(见 FilenameTemplatePlaceholders)。
@@ -284,9 +297,7 @@ func validateFilenameTemplate(s string) error {
 			return fmt.Errorf("模板 %q 有未闭合的 {", s)
 		}
 		name := rest[open+1 : end]
-		switch name {
-		case "artist", "title", "album", "id":
-		default:
+		if !isKnownPlaceholder(name) {
 			return fmt.Errorf("模板 %q 的占位符 {%s} 未知(可用: %s)", s, name, strings.Join(FilenameTemplatePlaceholders(), "/"))
 		}
 		rest = rest[end+1:]

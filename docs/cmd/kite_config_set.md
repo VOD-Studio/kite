@@ -1,6 +1,6 @@
 ## kite config set
 
-写入配置项(校验通过后原子落盘)
+写入配置项(校验后原子落盘)
 
 ```
 kite config set <key> <value> [flags]

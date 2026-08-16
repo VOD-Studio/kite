@@ -19,22 +19,39 @@ import (
 
 // deps 注入 kit 函数,测试替身用(song download 的 downloadDeps 同款模式)。
 type deps struct {
-	path func() (string, error)                      // config.toml 路径
-	load func() (kit.Config, map[string]bool, error) // 生效值 + 文件里显式设置的 key 集
-	set  func(key, value string) error               // 校验并写入
+	path     func() (string, error)                      // config.toml 路径
+	load     func() (kit.Config, map[string]bool, error) // 生效值 + 文件里显式设置的 key 集
+	set      func(key, value string) error               // 校验并写入
+	wantJSON func() bool                                 // 输出形态(kit.WantJSON 同链,测试可替身)
 }
 
-func defaultDeps() deps {
+func defaultDeps(k *kit.Kit) deps {
 	return deps{
-		path: kit.ConfigPath,
-		load: kit.LoadConfigWithSet,
-		set:  kit.SetConfigKey,
+		path:     kit.ConfigPath,
+		load:     kit.LoadConfigWithSet,
+		set:      kit.SetConfigKey,
+		wantJSON: k.WantJSON,
 	}
+}
+
+// completeConfigKeys 是 config get/set 第一个位置参数(key)的补全:
+// key 枚举前缀过滤,禁止文件名补全(PRD-0018「进补全枚举」)。
+func completeConfigKeys(_ *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	if len(args) != 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	var out []cobra.Completion
+	for _, key := range kit.ConfigKeys() {
+		if strings.HasPrefix(key, toComplete) {
+			out = append(out, key)
+		}
+	}
+	return out, cobra.ShellCompDirectiveNoFileComp
 }
 
 // NewCommand 创建 config 命令组(容器,生产装配)。
 func NewCommand(k *kit.Kit) *cobra.Command {
-	return newConfigCommand(k, defaultDeps())
+	return newConfigCommand(k, defaultDeps(k))
 }
 
 // newConfigCommand 用注入 deps 构造(测试替身入口)。
@@ -46,7 +63,7 @@ func newConfigCommand(k *kit.Kit, d deps) *cobra.Command {
 	}
 	c.AddCommand(
 		newPathCommand(d),
-		newGetCommand(k, d),
+		newGetCommand(d),
 		newSetCommand(d),
 	)
 	// 本地命令(无 rpc),三个叶子各自打空标(rpc 守护要求叶子显式审视)。
@@ -75,11 +92,12 @@ func newPathCommand(d deps) *cobra.Command {
 
 // newGetCommand 实现 config get:单 key 裸打生效值(不带格式,脚本可用,gh/jj 惯例);
 // 无参列出全部 key:生效值、来源(config / 默认)。
-func newGetCommand(k *kit.Kit, d deps) *cobra.Command {
+func newGetCommand(d deps) *cobra.Command {
 	return &cobra.Command{
-		Use:   "get [key]",
-		Short: "查看配置生效值(单 key 裸值输出,可在脚本中使用)",
-		Args:  cobra.MaximumNArgs(1),
+		Use:               "get [key]",
+		Short:             "查看配置生效值(单 key 裸值输出,可在脚本中使用)",
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completeConfigKeys,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, set, err := d.load()
 			if err != nil {
@@ -94,8 +112,8 @@ func newGetCommand(k *kit.Kit, d deps) *cobra.Command {
 				fmt.Fprintln(out, displayValue(key, cfg))
 				return nil
 			}
-			// 无参:全量列表。--json 或 config output=json 出结构化,否则对齐表格
-			// (与 Render 优先级链对齐:config 偏好作用于一切人类可读输出)。
+			// 无参:全量列表。输出形态走 kit.WantJSON 同一条优先级链
+			// (--json > 非TTY自动JSON > config > 默认),config get | jq 直接可用。
 			rows := []entry{}
 			for _, key := range kit.ConfigKeys() {
 				source := "默认"
@@ -104,7 +122,7 @@ func newGetCommand(k *kit.Kit, d deps) *cobra.Command {
 				}
 				rows = append(rows, entry{Key: key, Value: displayValue(key, cfg), Source: source})
 			}
-			if k.JSON || k.Config.Output == "json" {
+			if d.wantJSON != nil && d.wantJSON() {
 				b, err := json.MarshalIndent(rows, "", "  ")
 				if err != nil {
 					return fmt.Errorf("序列化配置列表失败: %w", err)
@@ -121,9 +139,10 @@ func newGetCommand(k *kit.Kit, d deps) *cobra.Command {
 // newSetCommand 实现 config set:校验通过原子写盘,stdout 一行确认。
 func newSetCommand(d deps) *cobra.Command {
 	return &cobra.Command{
-		Use:   "set <key> <value>",
-		Short: "写入配置项(校验通过后原子落盘)",
-		Args:  cobra.ExactArgs(2),
+		Use:               "set <key> <value>",
+		Short:             "写入配置项(校验后原子落盘)",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: completeConfigKeys,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key, value := args[0], args[1]
 			if err := d.set(key, value); err != nil {
