@@ -1,9 +1,23 @@
+# CI 流水线
+#
+# PR 和 push 到 main 时触发,并行跑 lint / test / gen 漂移校验 / 依赖漏洞扫描 /
+# Dockerfile 构建验证。任一 job 失败则 PR 检查失败,阻止合并。
+#
+# 设计借鉴 violet CI(实战教训驱动):每个非显然决策带 why 注释。
+# 单侧 Go module,无需 violet 的 paths-filter 按侧裁剪(那是 api/web 双侧
+# monorepo 的需求)。
+
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+
+# 同一 PR 多次 push 时取消旧的运行(violet 模式:省 runner,避免排队假象)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -13,6 +27,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -28,12 +43,16 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
+      # build 前置到 vet/test 之前:纯编译错误最快暴露,fail fast(violet 模式)
+      - name: Go build
+        run: go build ./...
       - name: Go vet
         run: go vet ./...
       - name: Test with race detector
@@ -46,6 +65,7 @@ jobs:
   verify-gen:
     name: Verify gen/ no drift
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -60,3 +80,89 @@ jobs:
         run: |
           make proto
           git diff --exit-code -- gen/
+
+  # 依赖漏洞扫描(移植自 violet security job 的 Go 侧):
+  # govulncheck 做 reachability 分析;有修复版本的漏洞阻断 CI,Fixed-in-N/A 的
+  # (上游未发版)降级为 warning。
+  # 非零退出分流:输出无漏洞报告特征 = 工具自身执行错误(编译失败/网络等),必须红
+  # ——吞成绿色 warning 会让扫描形同虚设(violet #138 教训)。
+  security:
+    name: Dependency Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install govulncheck
+        # pin 版本:@latest 行为漂移可能突然 break CI;升级走 dependabot 或人工
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
+      - name: govulncheck
+        env:
+          GOPATH: /home/runner/go
+        run: |
+          set +e
+          output=$(${GOPATH}/bin/govulncheck ./... 2>&1)
+          code=$?
+          echo "$output"
+          set -e
+          [ "$code" -eq 0 ] && exit 0
+          if ! echo "$output" | grep -qE "Vulnerability #[0-9]|Fixed in:"; then
+            echo "::error::govulncheck 执行失败(exit ${code}),输出无漏洞报告特征,疑为工具自身错误"
+            exit 1
+          fi
+          # 提取有修复版本的漏洞(Fixed in: 非 N/A)
+          fixable=$(echo "$output" | grep "Fixed in:" | grep -v "N/A" || true)
+          if [ -n "$fixable" ]; then
+            # fix 版本可能尚未进入 setup-go 清单(Go 刚发布/即将发布的窗口期):
+            # govulncheck DB 从 release dashboard prepared 态就提前标记 fix 版本,
+            # 但 runner 装不到,升级无门。fix 版本严格高于当前 toolchain 时
+            # 降级 warning;setup-go 清单同步后 toolchain 升级,漏洞自动消失。
+            CURRENT_GO=$(go version | grep -oE 'go[0-9]+\.[0-9]+\.[0-9]+' || true)
+            if [ -z "${CURRENT_GO}" ]; then
+              # 解析失败(rc/devel 等非三段版本号)时跳过降级、保持 error:
+              # 窗口期降级的 fail-safe 方向是宁可误报,不可漏报可修复漏洞
+              echo "::warning::无法解析当前 Go 版本,跳过窗口期降级(保持 error 语义)"
+            else
+              for FIX_VER in $(echo "$fixable" | grep -oE 'go[0-9]+\.[0-9]+\.[0-9]+' | sort -u); do
+                if [ "$(printf '%s\n%s\n' "$CURRENT_GO" "$FIX_VER" | sort -V | tail -1)" = "$FIX_VER" ] && [ "$CURRENT_GO" != "$FIX_VER" ]; then
+                  echo "::warning::${FIX_VER} 尚未进入 setup-go 清单(当前 ${CURRENT_GO}),相关漏洞降级为 advisory"
+                  # @ 锚定行尾:govulncheck 格式为 "Fixed in: module@version",
+                  # 避免子串误删(go1.26.6 误删 go1.26.60 的行)
+                  fixable=$(echo "$fixable" | grep -v "@${FIX_VER}\$" || true)
+                fi
+              done
+            fi
+          fi
+          if [ -n "$fixable" ]; then
+            echo "::error::发现可修复的漏洞,请升级依赖:"
+            echo "$fixable"
+            exit 1
+          fi
+          echo "::warning::所有漏洞均为 Fixed-in-N/A 或 fix 版本尚未进入 toolchain 清单,降级为 advisory"
+
+  # 根 Dockerfile(本地开发/自部署多阶段构建)的构建验证:
+  # COPY 引用失效、基础镜像 tag 漂移等问题在此拦截,避免使用者构建时才暴露
+  # (violet 模式:镜像构建验证进 CI)。Dockerfile.release 由 goreleaser 在
+  # release 时自然构建验证,不在此重复。
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: write   # buildx type=gha 缓存读写;workflow 级仅 contents:read 会把 actions 收为 none
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v3
+      - name: Dockerfile 构建验证
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: kite-server:ci
+          # 仅主干 push 写缓存:PR 分支命中率低,不写
+          cache-from: type=gha,scope=kite-server
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=kite-server' || '' }}

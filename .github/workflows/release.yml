@@ -12,9 +12,52 @@ permissions:
   attestations: write   # GitHub artifact attestations
 
 jobs:
+  # ── verify-ci: 发布前校验 tag commit 的主干 CI 全绿(移植 violet deploy 门禁)
+  # 合并 release PR 即打 tag 即发布,与主干 CI 并发执行;本 job 轮询等待 CI 完成
+  # 并校验结论,拦截「CI 未跑完或失败时被发布」(ruleset required checks 之外的
+  # 发布侧兜底,覆盖 admin bypass 强合路径)。
+  verify-ci:
+    name: Verify main CI green
+    runs-on: ubuntu-latest
+    # 等待窗口对齐 CI 最长 job timeout(20 分钟):冷缓存时 CI 可能跑满
+    timeout-minutes: 25
+    permissions:
+      checks: read   # 查询 check-runs
+    steps:
+      - name: 等待并校验主干 CI 全绿
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -e
+          # 白名单只列 ci.yml 的 job:本 workflow 自身的 check 同样挂在该 commit
+          # 上,必须排除。job 改名或增减时需同步本清单。
+          for i in $(seq 1 40); do
+            # gh api 瞬断(网络抖动)不等于 CI 失败:跳过当轮继续等
+            STATE=$(gh api "repos/${GH_REPO}/commits/${GITHUB_SHA}/check-runs?per_page=100" \
+              --jq '[.check_runs[] | select(.name == "Lint" or .name == "Test" or .name == "Verify gen/ no drift" or .name == "Dependency Security" or .name == "Docker Build") | {status, conclusion: (.conclusion // "pending")}]' || echo '[]')
+            TOTAL=$(echo "${STATE}" | jq 'length')
+            PENDING=$(echo "${STATE}" | jq '[.[] | select(.status != "completed")] | length')
+            echo "[${i}/40] CI checks: ${TOTAL}/5 已注册, ${PENDING} 进行中"
+            if [ "${TOTAL}" -ge 5 ] && [ "${PENDING}" -eq 0 ]; then
+              BAD=$(echo "${STATE}" | jq -r '[.[] | select(.conclusion != "success" and .conclusion != "skipped")] | map(.conclusion) | join(", ")')
+              if [ -z "${BAD}" ]; then
+                echo "主干 CI 全绿,放行发布"
+                exit 0
+              fi
+              echo "::error::主干 CI 未通过(${BAD}),中止发布;修复后重发版"
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "::error::等待主干 CI 超时(20 分钟)。若 CI job 有重命名或增减,需同步本 job 的白名单"
+          exit 1
+
   goreleaser:
     name: GoReleaser
     runs-on: ubuntu-latest
+    needs: verify-ci
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
