@@ -1,0 +1,61 @@
+# AI 代码评审(移植自 violet ai-review.yml)
+#
+# PR 打开或更新时触发 VOD-Studio/inori 自动评审 diff,评审意见以 review 评论
+# 形式出现在 PR 的 File changes 页面。辅助人工 review,不构成合并门禁。
+#
+# provider / llm_model / language / ignore 规则等在 .github/inori.yml 集中维护,
+# 本 workflow 只声明触发条件与凭据。inori 优先级:workflow inputs > .github/
+# inori.yml > inori 内置默认。
+#
+# 凭据:GLM Coding Plan 订阅的 API key(sk-cp- 类)在仓库 Settings → Secrets
+# 添加为 GLM_API_KEY。未配置时 workflow 自动跳过,不影响 PR 检查。
+#
+# 合规注记:GLM Coding Plan 等订阅方案的 ToS 将 key 限定为指定编程工具使用,
+# 自动化 CI 调用存在账号风险(可能被封 key),由仓库所有者知情选择。
+#
+# 排除:
+#   - release-please 自动生成的 release PR(job 级 if 提前退出,不占 runner;
+#     inori 的 ignore_bots 会兜底跳过其余 bot PR,如 dependabot)
+#   - 纯 CI/workflow 改动(评审 workflow 配置无代码语义,白耗额度)
+#   - 纯 ci:/docs:/chore: commit 前缀的 PR(在 inori.yml 中声明)
+
+name: AI Review
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches: [main]
+    paths-ignore:
+      - ".github/workflows/**"
+      - ".github/inori.yml"
+
+# 同一 PR 多次 push 时取消旧评审,避免并发产生重复评论
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write   # 提交 review 评论
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
+    env:
+      GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: 检查 API key
+        if: env.GLM_API_KEY == ''
+        run: echo "::warning::GLM_API_KEY 未配置,AI 评审跳过。在 Settings → Secrets 添加后生效"
+
+      - name: AI 评审
+        if: env.GLM_API_KEY != ''
+        uses: VOD-Studio/inori@v0
+        with:
+          # provider / llm_model 等评审配置由 .github/inori.yml 提供,这里只
+          # 传凭据。评审模型默认 glm-5.3-flash(GLM Coding Plan)。
+          llm_api_key: ${{ secrets.GLM_API_KEY }}
