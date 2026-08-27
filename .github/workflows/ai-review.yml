@@ -1,0 +1,59 @@
+# AI 代码评审(移植自 violet ai-review.yml)
+#
+# PR 打开或更新时,用配置的 LLM(当前 MiniMax)自动评审 diff,评审意见以
+# review 评论形式出现在 PR 的 File changes 页面。辅助人工 review,不构成合并门禁。
+#
+# 评审逻辑由独立的 GitHub Action VOD-Studio/inori 提供,支持任意 OpenAI 兼容接口。
+# 首次使用前在仓库 Settings → Secrets and variables 添加 MINIMAX_API_KEY
+# (platform.minimaxi.com 订阅 Token Plan 的 sk-cp- key)。未配置时本 workflow
+# 跳过,不影响 PR 检查。
+#
+# 合规注记:MiniMax ToS 将 Token Plan 限定为指定编程工具使用,自动化 CI
+# 调用存在账号风险(可能被封 key),由仓库所有者知情选择。
+#
+# 排除:
+#   - release-please 自动生成的 release PR(job 级 if 提前退出,不占 runner;
+#     inori 的 ignore_bots 会兜底跳过其余 bot PR,如 dependabot)
+#   - 纯 CI/workflow 改动(评审 workflow 配置无代码语义,白耗额度)
+
+name: AI Review
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches: [main]
+    paths-ignore:
+      - ".github/workflows/**"
+
+# 同一 PR 多次 push 时取消旧评审,避免并发产生重复评论
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write   # 提交 review 评论
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
+    env:
+      MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: 检查 API key
+        if: env.MINIMAX_API_KEY == ''
+        run: echo "::warning::MINIMAX_API_KEY 未配置,AI 评审跳过。在 Settings → Secrets 添加后生效"
+
+      - name: AI 评审
+        if: env.MINIMAX_API_KEY != ''
+        uses: VOD-Studio/inori@v0
+        with:
+          provider: minimax-token
+          # M3 为当前旗舰(1M ctx + MSA 稀疏注意力,prefill/decode 显著快于 M2 代);
+          # 求更快可换 MiniMax-M2.7-highspeed(同订阅额度,速度优先档)
+          llm_model: MiniMax-M3
+          llm_api_key: ${{ secrets.MINIMAX_API_KEY }}
