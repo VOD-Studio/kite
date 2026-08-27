@@ -59,16 +59,18 @@
 验收:任意目录 `kite song play --id 347230` 出声;弱网下不卡顿(缓冲水位生效);
 `--level 3`(flac)可播;`playlist download` 整单落盘带元数据。
 
-## Phase B — 配置 📋 待实现(PRD-0017)
+## Phase B — 配置 ✅ 已完成(2026-08-16,PRD-0017 + PRD-0018)
 
-> **进度更新(2026-08-16)**:配置目录与 session.json 迁移(读时兼容旧位置)已在 `internal/cli/kit/paths.go` 落地。剩余范围(`config.toml` 五项默认值 + `config` 命令组)由 [PRD-0017](../prd/0017-kite-配置.md) 接管。
+> **2026-08-16 完成**:`config.toml` 六项默认值(level/output/download_dir/filename_template/workers/proxy)+ `config` 命令组 + doctor 检查项落地(PRD-0017);代理支持(engine/CLI 双路径 + `--proxy`)同批完成(PRD-0018,issue #22),随 0.2.0 发布。
 
 - 配置目录 `os.UserConfigDir()/kite/`:`config.toml`(默认音质 `level`、默认输出 `output = "table"|"json"`、下载目录、文件名模板、并发数)
 - 会话文件从 `~/.kite/session.json` 迁至配置目录,**读时兼容旧位置**(旧位置存在则继续使用并提示可 `kite config migrate`)✅ 已完成(惰性迁移,无需 migrate 命令)
 - 新增 `config` 命令组:`config path` / `config get` / `config set key value`
 
-## Phase E — 工程化与可发现性 📋 待实现(PRD-0014)
+## Phase E — 工程化与可发现性 ✅ 已完成(2026-08,PRD-0014)
 
+> **完成**:可发现性(补全/onboarding/别名/召回池/recent)、`kite doctor`、CLI 层守护测试(2026-07-24 集中接线);goreleaser 发布管道 + release-please(PR #15/#17)已投产,0.2.0 即由其产出。
+>
 > 可发现性(补全/onboarding/别名/召回池)属[双轨道 ADR](../../docs/adr/mimo-music-dual-track-orchestration.md)第三类——纯 CLI 工程化,不消费 rpc,与 goreleaser/测试/文档同类。不单列 Phase F,并入此节。
 
 ### 工程化(原有)
@@ -104,6 +106,10 @@
 - ~~单曲播放屏独立产物~~ —— 升级为 TUI 客户端的 playscreen 子包
 
 ---
+
+## 接口覆盖(78/357)
+
+proto 已建模 78 RPC 并全部接入 CLI;上游蓝图约 357。剩余域(评论 / MV / 排行榜 / 电台 / 云盘 / 签到)由 issue #34 统一追踪,各域独立 issue(#28–#33),开工走「grilling → PRD → 分支」流程。接口增长受 `rpc_guard_test.go` 守护:新增 rpc 必须接 CLI 或显式登记。
 
 ## 不做清单(明确排除)
 
