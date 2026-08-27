@@ -30,7 +30,7 @@ Go 实现的网易云能力服务 + 命令行工具(单体仓库)。
 
 - **proto 是 RPC 契约的唯一真相**。`proto/netease/music/v1/` 定义全部 RPC;改 RPC 必须先改 proto 再 `make proto` 重新生成。不要在 Go 代码里手写与 proto 冲突的类型。
 - **CLI 与 TUI 平行不耦合**。两者都调 `internal/service/`,不互相直接调用。新域接入顺序是「先 CLI 后 TUI」——CLI 验证接口稳了再补 TUI 视图(见 `docs/adr/tui-client-architecture.md`)。
-- **proto 未覆盖的能力走 CLI 直连**。评论 / MV / 排行榜 / 电台 / 网盘 / 签到等尚未在 proto 建模,但已通过 endpoint 声明接入 CLI。补 proto 时按「先 CLI 验证 → 再 proto 建模 → 最后 TUI」的节奏。
+- **接口覆盖现状**。proto 建模 78 RPC(上游蓝图约 357)。评论 / MV / 排行榜 / 电台 / 网盘 / 签到等域尚未建模也未接入,统一由 issue #34 追踪。新域接入节奏:endpoint 声明 + CLI 直连验证 → proto 建模 → TUI 视图。
 
 ## 开发流与命令 (Makefile)
 
