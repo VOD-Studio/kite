@@ -1,0 +1,30 @@
+# Inori 评审默认配置(评审规则与评审模型的项目级默认值)
+#
+# 任何 workflow 调用 VOD-Studio/inori 时,workflow inputs(`with:`)优先于本文件;
+# 未在 inputs 声明的 provider/llm_model/language 等字段,落到本文件。
+#
+# 默认评审模型选型理由:
+#   - 当前选 GLM Coding Plan(provider: glm-coding)的 glm-5.3-flash,作为代码评审
+#     评审速度与质量兼顾的兜底模型
+#   - GLM Coding Plan 是订阅制(单独 endpoint & key,与 pay-as-you-go 不通用),
+#     详见 inori README「Subscription-plan presets」段;keys 限指定编程工具使用,
+#     CI 自动化调用存在 ToS 风险,由仓库所有者知情选择
+
+provider: glm-coding
+llm_model: glm-5.3-flash
+language: zh
+on_update: resolve   # 重审时自动 resolve 旧评论线程(replace 默认会删除,resolve 保留历史)
+skip_draft: true
+ignore_bots: true
+
+# review 行为兜底(workflow 已在 paths-ignore 排除 .github/workflows/,
+# 这里兜底 inori.yml 自身被改/被引用时的场景)
+paths_ignore:
+  - ".github/inori.yml"
+  - ".github/workflows/**"
+
+# Conventional Commits:纯 ci/docs/chore PR 无代码语义,跳过评审(白耗额度)
+ignore_commit_prefixes:
+  - "ci:"
+  - "docs:"
+  - "chore:"
