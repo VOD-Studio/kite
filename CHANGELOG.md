@@ -7,6 +7,13 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## [0.2.2](https://github.com/VOD-Studio/kite/compare/v0.2.1...v0.2.2) (2026-10-02)
+
+
+### Bug Fixes
+
+* **cli:** TestDocsFreshness 归一化 cobra 生成日期页脚 ([#41](https://github.com/VOD-Studio/kite/issues/41)) ([d2d1708](https://github.com/VOD-Studio/kite/commit/d2d17085b0a7c5c2b797bd01a1de048027e6a812))
+
 ## [0.2.1](https://github.com/VOD-Studio/kite/compare/v0.2.0...v0.2.1) (2026-08-27)
 
 
