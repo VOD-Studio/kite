@@ -7,6 +7,13 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## [0.2.1](https://github.com/VOD-Studio/kite/compare/v0.2.0...v0.2.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* **ci:** 弃用 MiniMax,默认评审模型改 glm5.3 flash(GLM Coding Plan) ([d1f01b7](https://github.com/VOD-Studio/kite/commit/d1f01b7a2befc6b4ae067e604e26abb938d17349))
+
 ## [0.2.0](https://github.com/VOD-Studio/kite/compare/v0.1.0...v0.2.0) (2026-08-16)
 
 
