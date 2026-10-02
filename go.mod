@@ -2,6 +2,8 @@ module github.com/VOD-Studio/kite
 
 go 1.26.0
 
+toolchain go1.26.6
+
 require (
 	charm.land/bubbletea/v2 v2.0.9
 	charm.land/lipgloss/v2 v2.0.6
@@ -27,7 +29,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.46.0
 	golang.org/x/term v0.46.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688
-	google.golang.org/grpc v1.83.1
+	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
 )
 

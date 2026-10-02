@@ -1,5 +1,5 @@
 # 阶段1: 依赖下载
-FROM golang:1.25-alpine AS deps
+FROM golang:1.26-alpine AS deps
 
 ENV GOPROXY=https://goproxy.cn,direct
 
@@ -9,7 +9,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # 阶段2: 构建
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 ENV GOPROXY=https://goproxy.cn,direct
 
