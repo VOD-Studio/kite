@@ -1,14 +1,24 @@
-.PHONY: all help install-tools install-cli fmt vet test lint build build-server build-cli run dev \
-        proto proto-lint proto-deps docs check clean
+.PHONY: all help install-tools install-cli fmt fmt-check tidy-check vet test lint vuln build build-server \
+        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs check ci-env clean
 
 # 工具探测:优先 PATH,回退 $GOPATH/bin(GOBIN 也在 PATH 时无所谓)
 BUF           ?= $(shell command -v buf 2>/dev/null           || echo $$(go env GOPATH)/bin/buf)
 GOLANGCI_LINT ?= $(shell command -v golangci-lint 2>/dev/null || echo $$(go env GOPATH)/bin/golangci-lint)
 AIR           ?= $(shell command -v air 2>/dev/null           || echo $$(go env GOPATH)/bin/air)
 
-# 与 .github/workflows/ci.yml 对齐的版本,本地 / CI 一致避免「我这能过」
-GOLANGCI_LINT_VERSION := v2.12   # 锁 patch,不用 latest,避免某天升级导致本地红
+# ── 工具版本:唯一来源 ─────────────────────────────────────────────
+# CI 通过 `make -s ci-env` 读取这里的值(不再在 workflow 里重复写),本地 install-tools
+# 与 CI 因此天然一致。升级工具只改这一处。
+# golangci-lint 锁到 minor.patch 之外的 minor(v2.12 = 该 minor 的最新 patch),不用 latest。
+GOLANGCI_LINT_VERSION := v2.12
+BUF_VERSION           := 1.71.0
+GOVULNCHECK_VERSION   := v1.6.0
+# 仅本地热重载用,不影响 CI。
 AIR_VERSION           := latest
+
+# proto breaking 检查的对照基线:本地 .git 里 origin/main 的远端跟踪引用(PR 对比 main)。
+# 用 buf 文档明确支持的 ref= 语法;CI 需 fetch-depth: 0 才有该引用。
+PROTO_BREAKING_BASE ?= ../.git\#ref=refs/remotes/origin/main,subdir=proto
 
 ## all: 默认 —— 等同 help(裸 make 不应触发有副作用的生成)
 all: help
@@ -17,13 +27,15 @@ all: help
 help:
 	@awk '/^## [a-zA-Z_-]+:/ { line=$$0; sub(/^## /,"",line); n=index(line,":"); printf "  \033[36m%-18s\033[0m %s\n", substr(line,1,n-1), substr(line,n+2) }' $(MAKEFILE_LIST)
 
-## install-tools: 装 buf / golangci-lint / air(proto + lint + 热重载三件套)
-## 用 go install 装到 $GOPATH/bin,版本与 CI 对齐。前置:PATH 含 $(go env GOPATH)/bin
+## install-tools: 装 buf / golangci-lint / govulncheck / air,版本与 CI 一致(见文件顶部版本表)
+## 用 go install 装到 $GOPATH/bin。前置:PATH 含 $(go env GOPATH)/bin
 install-tools:
-	@echo "→ 安装 buf(go install,buffet/buf 最新稳定版)..."
-	go install github.com/bufbuild/buf/cmd/buf@latest
-	@echo "→ 安装 golangci-lint($(GOLANGCI_LINT_VERSION),与 CI 对齐)..."
+	@echo "→ 安装 buf $(BUF_VERSION)..."
+	go install github.com/bufbuild/buf/cmd/buf@v$(BUF_VERSION)
+	@echo "→ 安装 golangci-lint $(GOLANGCI_LINT_VERSION)..."
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@echo "→ 安装 govulncheck $(GOVULNCHECK_VERSION)..."
+	go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 	@echo "→ 安装 air(热重载,$(AIR_VERSION))..."
 	go install github.com/air-verse/air@$(AIR_VERSION)
 	@echo "✓ 工具已装到 $$(go env GOPATH)/bin,确认该目录在 PATH 中"
@@ -39,6 +51,16 @@ fmt:
 	@command -v goimports >/dev/null 2>&1 || go install golang.org/x/tools/cmd/goimports@latest
 	goimports -w .
 
+## fmt-check: 检查全仓库 gofmt(排除 gen/),有未格式化文件则失败(不改文件)
+fmt-check:
+	@out="$$(git ls-files '*.go' | grep -v '^gen/' | xargs gofmt -l)"; \
+	if [ -n "$$out" ]; then echo "以下文件未 gofmt(跑 make fmt):"; echo "$$out"; exit 1; fi
+
+## tidy-check: go mod tidy 后 go.mod / go.sum 不应有变化
+tidy-check:
+	go mod tidy
+	git diff --exit-code -- go.mod go.sum
+
 ## vet: go vet ./...(轻量静态检查)
 vet:
 	go vet ./...
@@ -52,6 +74,10 @@ lint:
 	@command -v $(GOLANGCI_LINT) >/dev/null 2>&1 || { \
 		echo "✗ 未找到 golangci-lint,跑 'make install-tools' 安装"; exit 1; }
 	$(GOLANGCI_LINT) run --timeout 5m ./...
+
+## vuln: govulncheck 门禁(有可修复漏洞则失败;判定逻辑见 scripts/govulncheck-gate.sh)
+vuln:
+	scripts/govulncheck-gate.sh
 
 ## build: 编译全部产物到 bin/(server + cli)
 build: build-server build-cli
@@ -84,6 +110,15 @@ proto-lint:
 	cd proto && $(BUF) lint
 	@echo "proto lint 通过"
 
+## proto-breaking: 对比 main 检查 proto 破坏性变更(gen/ 已提交且 REST/gRPC 对外,契约不能悄悄破)
+proto-breaking:
+	cd proto && $(BUF) breaking --against '$(PROTO_BREAKING_BASE)'
+	@echo "proto 无破坏性变更"
+
+## verify-gen: 重新生成后 gen/ 不应有漂移(CI 同款)
+verify-gen: proto
+	git diff --exit-code -- gen/
+
 ## proto-deps: 拉取 buf BSR 依赖（googleapis）
 proto-deps:
 	cd proto && $(BUF) dep update
@@ -95,9 +130,15 @@ docs:
 	go run cmd/kite-docs/main.go docs/cmd
 	@echo "命令参考已刷新(若 docs/cmd/ 有变化记得提交)"
 
-## check: push 前一键自检 = vet + test + lint(镜像 CI 跑的内容)
-check: vet test lint
-	@echo "✓ vet + test + lint 全通过,可以 push"
+## check: push 前一键自检(镜像 CI 的主要检查;vuln / verify-gen 依赖网络,按需单独跑)
+check: fmt-check tidy-check vet test lint proto-lint
+	@echo "✓ fmt + tidy + vet + test + lint + proto-lint 全通过,可以 push"
+
+## ci-env: 打印工具版本为 KEY=VALUE,供 CI 写入 $GITHUB_ENV(`make -s ci-env >> "$GITHUB_ENV"`)
+ci-env:
+	@echo "GOLANGCI_LINT_VERSION=$(GOLANGCI_LINT_VERSION)"
+	@echo "BUF_VERSION=$(BUF_VERSION)"
+	@echo "GOVULNCHECK_VERSION=$(GOVULNCHECK_VERSION)"
 
 ## clean: 清除本地构建产物(tmp/、bin/)。不清 gen/——已进版本控制。
 clean:

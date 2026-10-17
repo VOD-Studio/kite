@@ -28,3 +28,6 @@ history.jsonl
 # IDE
 .idea/
 .vscode/
+
+# GoReleaser 产物
+dist/

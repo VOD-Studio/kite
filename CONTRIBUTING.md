@@ -18,6 +18,14 @@ go test ./...             # 测试
 go vet ./...              # 检查
 ```
 
+## CI 约定
+
+- **本地自检**:`make check`(gofmt + go mod tidy + vet + test + lint + proto-lint)。`make vuln`、`make proto-breaking`、`make verify-gen` 依赖网络或 git 基线,按需单独跑。
+- **门禁只有一个**:`CI OK`(聚合 job)。新增 / 重命名 CI job 时在 `.github/workflows/ci.yml` 同步它的 `needs`;发布流程与 ruleset 的 required check 都只认这个名字。
+- **工具版本的唯一来源是 `Makefile` 顶部**(golangci-lint / buf / govulncheck),不要在 workflow 里重复写。
+- **门禁不依赖会自行变化的外部状态**:漏洞库、未固定版本的插件或 runner,都会让「没改代码」的 PR 变红。依赖漏洞只在 PR 改动 `go.mod` / `go.sum` 时才拦,全量扫描由 `scheduled.yml` 每日跑并开 issue。
+- **发布**:release PR 合并后,`release-please.yml` 在同一 workflow 内直接调用 `release.yml`(release-please 用 `GITHUB_TOKEN` 打的 tag 不会触发 `on: push: tags`)。手动补发某个 tag 的产物:Actions → `Release` → Run workflow。
+
 ## 工作流(分支与提交)
 
 ### 分支命名
@@ -30,7 +38,7 @@ go vet ./...              # 检查
 
 格式:**`<type>/<scope>-<简述>`**
 
-- **type** 对齐 Conventional Commits:`feat` / `fix` / `chore` / `docs` / `refactor` / `style` / `test` / `perf` / `hotfix`。
+- **type** 对齐 Conventional Commits:`feat` / `fix` / `chore` / `docs` / `refactor` / `style` / `test` / `perf` / `build` / `ci` / `revert` / `hotfix`。PR 标题同样必须符合(CI 的 PR Title 检查):squash merge 后它就是 `main` 上的 commit message,release-please 靠它生成版本号与 CHANGELOG。
 - **scope** 指向最内层模块(`netease` / `cli` / `server` / `proto` / `tui`)或文件 / 区域名(`readme` / `ci` / `deps`)。可省略(scope 难以定位单模块时)。
 - 全小写,`/` 分段,`-` 连词。无空格、无大写、无特殊字符。
 - 简述用英文或拼音,短而清晰。

@@ -68,7 +68,10 @@ cmd/*
 go build ./cmd/server/ ./cmd/kite/
 go test ./...
 go vet ./...
+make check    # push 前自检:gofmt + go mod tidy + vet + test + lint + proto-lint
 ```
+
+CI 的约定(唯一门禁 `CI OK`、工具版本来源、发布流程)见 [`CONTRIBUTING.md`](CONTRIBUTING.md)「CI 约定」。
 
 ### 环境
 
