@@ -1,67 +1,102 @@
 name: Release
 
-# tag 触发:release-please 合并 release PR 后自动打 tag,此 workflow 负责构建产物。
+# 构建并发布产物(GoReleaser)。两种入口:
+#   - workflow_call:release-please.yml 在 release PR 合并后调用(日常路径);
+#   - workflow_dispatch:手动补发 / 重发指定 tag 的产物(例如修复流水线后补发历史版本)。
+#
+# 不监听 push tags:release-please 用 GITHUB_TOKEN 打的 tag 不会触发其它 workflow,
+# 见 release-please.yml 顶部说明。
+
 on:
-  push:
-    tags: ["v*"]
+  workflow_call:
+    inputs:
+      tag:
+        description: 要发布的 tag(如 v0.2.1)
+        required: true
+        type: string
+      skip_verify:
+        description: 跳过「主干 CI 全绿」校验
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 要发布的 tag(如 v0.2.1)
+        required: true
+        type: string
+      skip_verify:
+        description: 跳过「主干 CI 全绿」校验。仅补发历史版本时使用(当时的 CI 尚无 CI OK 门禁 job)
+        required: false
+        type: boolean
+        default: false
+
+# 同一 tag 不并发发布;已在跑的不取消(发布到一半被取消比排队更糟)
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
 
 permissions:
   contents: write       # 上传 GitHub Release 产物
   packages: write       # 推 ghcr.io 镜像
   id-token: write       # cosign keyless 签名(OIDC)
   attestations: write   # GitHub artifact attestations
+  checks: read          # 查询 check-runs
 
 jobs:
-  # ── verify-ci: 发布前校验 tag commit 的主干 CI 全绿(移植 violet deploy 门禁)
-  # 合并 release PR 即打 tag 即发布,与主干 CI 并发执行;本 job 轮询等待 CI 完成
-  # 并校验结论,拦截「CI 未跑完或失败时被发布」(ruleset required checks 之外的
-  # 发布侧兜底,覆盖 admin bypass 强合路径)。
+  # verify-ci: 发布前校验 tag 所指 commit 的主干 CI 全绿。
+  # 合并 release PR 即打 tag 即发布,与主干 CI 并发执行;本 job 轮询等待聚合门禁
+  # 「CI OK」完成并校验结论(ruleset required checks 之外的发布侧兜底)。
+  # 只认聚合 job 一个名字:ci.yml 增减 / 重命名其它 job 不需要同步这里。
   verify-ci:
     name: Verify main CI green
-    runs-on: ubuntu-latest
-    # 等待窗口对齐 CI 最长 job timeout(20 分钟):冷缓存时 CI 可能跑满
-    timeout-minutes: 25
-    permissions:
-      checks: read   # 查询 check-runs
+    if: ${{ !inputs.skip_verify }}
+    runs-on: ubuntu-24.04
+    # 等待窗口对齐 CI 最长 job timeout(冷缓存时 CI 可能跑满)
+    timeout-minutes: 30
     steps:
       - name: 等待并校验主干 CI 全绿
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
         run: |
           set -e
-          # 白名单只列 ci.yml 的 job:本 workflow 自身的 check 同样挂在该 commit
-          # 上,必须排除。job 改名或增减时需同步本清单。
-          for i in $(seq 1 40); do
+          sha=$(gh api "repos/${GH_REPO}/commits/${TAG}" --jq .sha)
+          echo "tag ${TAG} → ${sha}"
+          for i in $(seq 1 50); do
             # gh api 瞬断(网络抖动)不等于 CI 失败:跳过当轮继续等
-            STATE=$(gh api "repos/${GH_REPO}/commits/${GITHUB_SHA}/check-runs?per_page=100" \
-              --jq '[.check_runs[] | select(.name == "Lint" or .name == "Test" or .name == "Verify gen/ no drift" or .name == "Dependency Security" or .name == "Docker Build") | {status, conclusion: (.conclusion // "pending")}]' || echo '[]')
-            TOTAL=$(echo "${STATE}" | jq 'length')
-            PENDING=$(echo "${STATE}" | jq '[.[] | select(.status != "completed")] | length')
-            echo "[${i}/40] CI checks: ${TOTAL}/5 已注册, ${PENDING} 进行中"
-            if [ "${TOTAL}" -ge 5 ] && [ "${PENDING}" -eq 0 ]; then
-              BAD=$(echo "${STATE}" | jq -r '[.[] | select(.conclusion != "success" and .conclusion != "skipped")] | map(.conclusion) | join(", ")')
-              if [ -z "${BAD}" ]; then
+            state=$(gh api "repos/${GH_REPO}/commits/${sha}/check-runs?per_page=100" \
+              --jq '[.check_runs[] | select(.name == "CI OK")] | sort_by(.started_at) | last | if . == null then "none" else "\(.status) \(.conclusion // "pending")" end' \
+              || echo "none")
+            echo "[${i}/50] CI OK: ${state}"
+            case "${state}" in
+              "completed success")
                 echo "主干 CI 全绿,放行发布"
                 exit 0
-              fi
-              echo "::error::主干 CI 未通过(${BAD}),中止发布;修复后重发版"
-              exit 1
-            fi
+                ;;
+              completed*)
+                echo "::error::主干 CI 未通过(${state}),中止发布;修复后重发版"
+                exit 1
+                ;;
+            esac
             sleep 30
           done
-          echo "::error::等待主干 CI 超时(20 分钟)。若 CI job 有重命名或增减,需同步本 job 的白名单"
+          echo "::error::等待主干 CI 超时(25 分钟)"
           exit 1
 
   goreleaser:
     name: GoReleaser
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: verify-ci
+    # verify-ci 被跳过时(skip_verify)也要继续;被取消或失败时不继续
+    if: ${{ !cancelled() && (needs.verify-ci.result == 'success' || needs.verify-ci.result == 'skipped') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0   # GoReleaser 需要完整历史生成 changelog
+          ref: ${{ inputs.tag }}   # 构建 tag 指向的代码(而不是触发 workflow 的 ref)
+          fetch-depth: 0           # GoReleaser 需要完整历史生成 changelog
 
       - uses: actions/setup-go@v7
         with:

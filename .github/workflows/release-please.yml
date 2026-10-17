@@ -2,7 +2,12 @@ name: Release Please
 
 # release-please 从 Conventional Commits 自动推导版本号 + 维护 CHANGELOG.md + 打 tag。
 # 工作流:push 到 main → release-please 开「release PR」(含待发 changelog)→
-# 维护者 review 后合并 → 自动打 tag → 触发 release.yml(GoReleaser 构建产物)。
+# 维护者 review 后合并 → 自动打 tag → 本 workflow 内直接调用 release.yml 构建产物。
+#
+# 为什么在同一个 workflow 里调用,而不是靠 tag 事件触发 release.yml:
+# release-please 用 GITHUB_TOKEN 打 tag,GitHub 规定 GITHUB_TOKEN 触发的事件不会再触发
+# 其它 workflow,`on: push: tags` 因此永远收不到(v0.2.0 / v0.2.1 的产物数为 0 即由此而来)。
+# 用 outputs.release_created 串联既不需要 PAT,也不依赖 tag 事件。
 #
 # v0.x 阶段:BREAKING CHANGE 只 bump minor(semver 0.x 规则)。
 
@@ -16,9 +21,13 @@ permissions:
 
 jobs:
   release-please:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
     steps:
-      - uses: googleapis/release-please-action@v5
+      - id: rp
+        uses: googleapis/release-please-action@v5
         with:
           release-type: go
           # 仓库已存在 CHANGELOG.md(v0.1.0 段),release-please 会接续维护而非覆盖
@@ -34,3 +43,18 @@ jobs:
               {"type":"chore","section":"Miscellaneous","hidden":true},
               {"type":"test","section":"Tests","hidden":true}
             ]
+
+  # 仅在本次运行真的创建了 release(即 release PR 被合并)时才发布产物。
+  # caller 需授予被调用 workflow 所需权限的超集。
+  release:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      checks: read
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
