@@ -8,24 +8,27 @@ managed:
   disable:
     - file_option: go_package
       module: buf.build/googleapis/googleapis
+# 插件版本全部固定:remote 插件不写版本会跟随 BSR 最新版,上游一更新 gen/ 就漂移,
+# 导致 CI 的 verify-gen 在无关 PR 上变红。gateway / openapiv2 与 go.mod 的
+# grpc-gateway runtime 版本对齐;升级时与 go.mod 一起改并 make proto。
 plugins:
   # Go message + gRPC service stub
-  - remote: buf.build/protocolbuffers/go
+  - remote: buf.build/protocolbuffers/go:v1.36.12
     out: ../gen/go
     opt:
       - paths=source_relative
-  - remote: buf.build/grpc/go
+  - remote: buf.build/grpc/go:v1.6.2
     out: ../gen/go
     opt:
       - paths=source_relative
       - require_unimplemented_servers=false
   # grpc-gateway: 从 google.api.http annotation 生成 REST reverse proxy
-  - remote: buf.build/grpc-ecosystem/gateway
+  - remote: buf.build/grpc-ecosystem/gateway:v2.30.0
     out: ../gen/go
     opt:
       - paths=source_relative
   # OpenAPI v2: 从 proto + annotation 生成 OpenAPI spec
-  - remote: buf.build/grpc-ecosystem/openapiv2
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.30.0
     out: ../gen/openapi
     opt:
       - logtostderr=true
