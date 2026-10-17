@@ -5,6 +5,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -29,10 +30,21 @@ type Config struct {
 	OTel OTelConfig
 }
 
-// ServerConfig 是 HTTP 服务相关配置。
+// ServerConfig 是 gRPC + gateway 服务相关配置。
 type ServerConfig struct {
-	// Port 是 HTTP 服务监听端口。
-	Port int
+	// GRPCAddr 是 gRPC 监听地址(host:port)。默认只绑本机回环,见 docs/server-security.md。
+	GRPCAddr string
+
+	// HTTPAddr 是 grpc-gateway REST 监听地址(host:port)。默认只绑本机回环。
+	HTTPAddr string
+
+	// AuthToken 是调用方访问本服务必须携带的 bearer token(与上游网易云 cookie 无关)。
+	// 与 AuthTokenFile 互斥;都为空表示不启用鉴权,此时只允许绑回环地址。
+	AuthToken string
+
+	// AuthTokenFile 是存放 token 的文件路径(Docker secret / k8s secret 的惯用方式),
+	// 内容首尾空白会被去掉。
+	AuthTokenFile string
 
 	// Env 是运行环境（dev / prod）。
 	//
@@ -98,8 +110,9 @@ type OTelConfig struct {
 func Default() Config {
 	return Config{
 		Server: ServerConfig{
-			Port: 3721,
-			Env:  "dev",
+			GRPCAddr: "127.0.0.1:3722",
+			HTTPAddr: "127.0.0.1:3721",
+			Env:      "dev",
 		},
 		Provider: ProviderConfig{
 			UpstreamTimeout: 10,
@@ -123,6 +136,27 @@ func Default() Config {
 	}
 }
 
+// ResolveAuthToken 返回最终生效的访问令牌:AuthToken 或 AuthTokenFile 的内容(去掉首尾空白)。
+// 两者同时设置视为配置歧义,返回错误;都不设返回空串(不启用鉴权)。
+func (s ServerConfig) ResolveAuthToken() (string, error) {
+	if s.AuthToken != "" && s.AuthTokenFile != "" {
+		return "", errors.New("KITE_SERVER_AUTH_TOKEN 与 KITE_SERVER_AUTH_TOKEN_FILE 只能设置一个")
+	}
+	if s.AuthTokenFile == "" {
+		return s.AuthToken, nil
+	}
+	b, err := os.ReadFile(s.AuthTokenFile)
+	if err != nil {
+		return "", fmt.Errorf("读取 token 文件: %w", err)
+	}
+	token := strings.TrimSpace(string(b))
+	if token == "" {
+		// 文件存在但为空:静默当作「未配置」会让服务在以为有鉴权时裸奔。
+		return "", fmt.Errorf("token 文件 %s 为空", s.AuthTokenFile)
+	}
+	return token, nil
+}
+
 // Addr 返回 Redis 地址（host:port 格式）。
 func (r RedisConfig) Addr() string {
 	return fmt.Sprintf("%s:%d", r.Host, r.Port)
@@ -135,7 +169,10 @@ func (r RedisConfig) Addr() string {
 func Load() Config {
 	cfg := Default()
 
-	cfg.Server.Port = envInt("KITE_SERVER_PORT", cfg.Server.Port)
+	cfg.Server.GRPCAddr = envStr("KITE_SERVER_GRPC_ADDR", cfg.Server.GRPCAddr)
+	cfg.Server.HTTPAddr = envStr("KITE_SERVER_HTTP_ADDR", cfg.Server.HTTPAddr)
+	cfg.Server.AuthToken = envStr("KITE_SERVER_AUTH_TOKEN", cfg.Server.AuthToken)
+	cfg.Server.AuthTokenFile = envStr("KITE_SERVER_AUTH_TOKEN_FILE", cfg.Server.AuthTokenFile)
 	cfg.Server.Env = envStr("KITE_SERVER_ENV", cfg.Server.Env)
 	cfg.Provider.UpstreamTimeout = envInt("KITE_PROVIDER_UPSTREAM_TIMEOUT", cfg.Provider.UpstreamTimeout)
 	cfg.Provider.MaxRetries = envInt("KITE_PROVIDER_MAX_RETRIES", cfg.Provider.MaxRetries)
@@ -157,7 +194,7 @@ func Load() Config {
 
 // String 返回配置摘要，用于启动日志。
 func (c Config) String() string {
-	return fmt.Sprintf("env=%s port=%d redis=%s db=%d otel=%s", c.Server.Env, c.Server.Port, c.Redis.Addr(), c.Redis.DB, c.OTel.Exporter)
+	return fmt.Sprintf("env=%s grpc=%s http=%s redis=%s db=%d otel=%s", c.Server.Env, c.Server.GRPCAddr, c.Server.HTTPAddr, c.Redis.Addr(), c.Redis.DB, c.OTel.Exporter)
 }
 
 func envStr(key, fallback string) string {

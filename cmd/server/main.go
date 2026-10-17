@@ -4,7 +4,10 @@
 // 收到 SIGINT/SIGTERM 时优雅关闭。
 //
 // 地基阶段：engine + session 池用 noop/cache 初始化（不接 Redis），
-// 真实 Redis 接入在后续。gRPC 端口 :3722，gateway HTTP 端口 :3721。
+// 真实 Redis 接入在后续。
+//
+// 配置走环境变量(见 config.Load):默认只监听 127.0.0.1:3722(gRPC)与 127.0.0.1:3721(REST);
+// 对外监听必须配置 KITE_SERVER_AUTH_TOKEN,否则拒绝启动。
 package main
 
 import (
@@ -15,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/VOD-Studio/kite/config"
 	"github.com/VOD-Studio/kite/internal/cache"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 	"github.com/VOD-Studio/kite/internal/netease/session"
@@ -32,11 +36,26 @@ func main() {
 	)
 	sessions := session.NoopStore{}
 
-	app, err := server.NewApp(":3722", ":3721", eng, sessions)
+	cfg := config.Load()
+	token, err := cfg.Server.ResolveAuthToken()
+	if err != nil {
+		slog.ErrorContext(startupCtx, "load auth token failed", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	app, err := server.NewApp(server.Options{
+		GRPCAddr:  cfg.Server.GRPCAddr,
+		HTTPAddr:  cfg.Server.HTTPAddr,
+		AuthToken: token,
+	}, eng, sessions)
 	if err != nil {
 		slog.ErrorContext(startupCtx, "init server failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
+	slog.InfoContext(startupCtx, "server ready",
+		slog.String("grpc", app.GRPCAddr()), slog.String("http", app.HTTPAddr()),
+		slog.Bool("auth", token != ""))
 
 	// 优雅关闭：监听信号，收到后给 5 秒处理残余请求。
 	quit := make(chan os.Signal, 1)

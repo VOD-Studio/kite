@@ -21,11 +21,13 @@ kite 的 gRPC 服务面向多种语言的客户端(Rust、Go、TypeScript……)
 | `INTERNAL` | `INTERNAL` | 500 | 未分类的内部错误(`message` 固定为「内部错误」,细节只在服务端日志) | 放弃或上报 |
 | `CANCELED` | `CANCELED` | 499 | 调用方取消了请求 | — |
 | `DEADLINE_EXCEEDED` | `DEADLINE_EXCEEDED` | 504 | 请求超时 | 按需重试 |
+| `SERVER_AUTH_FAILED` | `UNAUTHENTICATED` | 401 | 缺少或错误的**服务访问令牌**(与上游登录无关,见 [服务部署与访问控制](server-security.md)) | 检查令牌配置;**不要**重试,更不要去重新登录网易云 |
 
 `ErrorInfo` 的其它字段:
 
 - `domain`:恒为 `kite.music`。`reason` 只在该 domain 内唯一。
 - `metadata["provider"]`:出错的音乐源(当前恒为 `netease`;接入更多源后用它区分是哪个源出的错)。
+  与具体音乐源无关的错误(如 `SERVER_AUTH_FAILED`)没有该字段。
 
 `reason` 与 `domain` 是**对外契约**:新增取值是兼容变更,改名或删除是破坏性变更。
 
@@ -56,6 +58,9 @@ grpc-gateway 把 status 序列化为 JSON,`details` 里就是 `ErrorInfo`:
 - REST:请求头 `Grpc-Metadata-X-Netease-Cookie`
 
 缺失或失效时返回 `LOGIN_REQUIRED`。
+
+这与调用本服务所需的访问令牌(`authorization: Bearer ...`)是两回事:令牌决定「谁能调用 kite」,
+cookie 决定「以哪个网易云账号执行」。两者的错误分别是 `SERVER_AUTH_FAILED` 与 `LOGIN_REQUIRED`。
 
 ## Rust(tonic)示例
 

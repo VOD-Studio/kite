@@ -38,6 +38,7 @@ const (
 	ReasonInternal                = "INTERNAL"                  // 未分类的内部错误
 	ReasonCanceled                = "CANCELED"                  // 调用方取消了请求
 	ReasonDeadlineExceeded        = "DEADLINE_EXCEEDED"         // 请求超时
+	ReasonServerAuthFailed        = "SERVER_AUTH_FAILED"        // 缺少或错误的服务访问令牌(与上游登录无关)
 )
 
 // 当前只有网易云一个 provider。多源改造(P2)后由 provider 注册信息提供。
@@ -95,12 +96,18 @@ func toStatusError(ctx context.Context, method string, err error) error {
 		}
 	}
 
+	return statusError(code, reason, msg, map[string]string{"provider": currentProvider})
+}
+
+// statusError 构造携带 ErrorInfo 的 gRPC status error。所有对外错误都经此出口,
+// 保证 domain 恒定、details 结构一致。
+func statusError(code codes.Code, reason, msg string, metadata map[string]string) error {
 	st := status.New(code, msg)
-	if withInfo, derr := st.WithDetails(&errdetails.ErrorInfo{
+	if withInfo, err := st.WithDetails(&errdetails.ErrorInfo{
 		Reason:   reason,
 		Domain:   ErrorDomain,
-		Metadata: map[string]string{"provider": currentProvider},
-	}); derr == nil {
+		Metadata: metadata,
+	}); err == nil {
 		st = withInfo
 	}
 	return st.Err()
