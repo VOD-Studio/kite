@@ -56,15 +56,40 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Install golangci-lint
         run: go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}"
-      - name: 全量 lint 汇总(只报告,不失败)
+      - name: 全量 lint 汇总(只报告历史债,不因存量问题失败)
         run: |
           set +e
           out=$("$(go env GOPATH)/bin/golangci-lint" run --timeout 5m ./... 2>&1)
+          code=$?
+          set -e
           {
             echo "## 全量 lint 历史债"
             echo
-            echo '```'
-            grep -E '^\* ' <<<"${out}" || echo "无问题"
-            echo '```'
+            case "${code}" in
+              0)
+                echo "无问题"
+                ;;
+              1)
+                # exit 1 = 发现问题:先给按 linter 的计数,再附详细诊断
+                echo '```'
+                grep -E '^\* ' <<<"${out}" || true
+                echo '```'
+                echo
+                echo "<details><summary>详细诊断(前 300 行)</summary>"
+                echo
+                echo '```'
+                head -300 <<<"${out}"
+                echo '```'
+                echo "</details>"
+                ;;
+              *)
+                # 其它退出码 = 工具自身失败(配置错误 / 编译失败等),不能当成「无问题」
+                echo "**golangci-lint 执行失败(exit ${code})**"
+                echo '```'
+                tail -50 <<<"${out}"
+                echo '```'
+                ;;
+            esac
           } >> "$GITHUB_STEP_SUMMARY"
-          exit 0
+          # 存量问题不让任务失败;工具自身失败必须失败,否则这个汇总会静默失效
+          [ "${code}" -le 1 ] || exit "${code}"
