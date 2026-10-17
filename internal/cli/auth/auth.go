@@ -14,6 +14,7 @@ import (
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cli/auth/qrtui"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/localstate"
 	authendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/auth"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 	"github.com/VOD-Studio/kite/internal/netease/model"
@@ -132,7 +133,7 @@ func persistLogin(k *kit.Kit, raw json.RawMessage, setCookie string) error {
 	if setCookie == "" {
 		return fmt.Errorf("登录成功但未拿到 cookie")
 	}
-	sess := kit.Session{
+	sess := localstate.Session{
 		Cookie:  setCookie,
 		SavedAt: time.Now().Format(time.RFC3339),
 	}
@@ -143,7 +144,7 @@ func persistLogin(k *kit.Kit, raw json.RawMessage, setCookie string) error {
 	if err := k.SaveSession(sess); err != nil {
 		return fmt.Errorf("登录成功但保存会话失败: %w", err)
 	}
-	p, _ := kit.SessionPath()
+	p, _ := localstate.SessionPath()
 	fmt.Println("已登录")
 	if sess.UserID != 0 {
 		fmt.Printf("用户 ID: %d\n", sess.UserID)

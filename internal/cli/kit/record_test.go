@@ -1,6 +1,7 @@
 package kit
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,7 +17,7 @@ func newKitWithTestPool(t *testing.T) (*Kit, string) {
 	pool := recall.NewPool(func() (string, error) { return path, nil })
 	k := &Kit{pool: pool}
 	// 注入 capturing stderr 让 Warnf 可断言。
-	var buf capturingWriter
+	var buf bytes.Buffer
 	k.Err = &buf
 	return k, path
 }

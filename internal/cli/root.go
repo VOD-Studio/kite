@@ -17,6 +17,7 @@ import (
 	"github.com/VOD-Studio/kite/internal/cli/config"
 	"github.com/VOD-Studio/kite/internal/cli/fm"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/localstate"
 	"github.com/VOD-Studio/kite/internal/cli/playlist"
 	"github.com/VOD-Studio/kite/internal/cli/recent"
 	"github.com/VOD-Studio/kite/internal/cli/recommend"
@@ -39,7 +40,7 @@ func NewRootCommand() *cobra.Command {
 	// config.toml 装配(PRD-0017):构造期加载一次,flag 默认值与 Render 消费。
 	// 坏文件(解析失败/key 越界)= 硬错误:所有命令拒绝执行,静默回退会掩盖用户设置。
 	// 此时命令树仍按内置默认构造(flag 注册需要值),PersistentPreRunE 兜底拦截执行。
-	cfg, cfgErr := kit.LoadConfig()
+	cfg, cfgErr := localstate.LoadConfig()
 	if cfgErr == nil {
 		k.Config = cfg
 	}
@@ -106,12 +107,12 @@ func NewRootCommand() *cobra.Command {
 				return fmt.Errorf("配置不可用,已拒绝执行: %w", cfgErr)
 			}
 		}
-		raw, source := proxyFlag, kit.ProxySourceFlag
+		raw, source := proxyFlag, localstate.ProxySourceFlag
 		if raw == "" {
-			raw, source = k.Config.Proxy, kit.ProxySourceConfig
+			raw, source = k.Config.Proxy, localstate.ProxySourceConfig
 		}
 		if raw != "" {
-			u, err := kit.ParseProxyURL(raw)
+			u, err := localstate.ParseProxyURL(raw)
 			if err != nil {
 				return errors.Join(kit.ErrUsage, err)
 			}

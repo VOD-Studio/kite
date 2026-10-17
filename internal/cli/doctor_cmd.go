@@ -11,6 +11,7 @@ import (
 
 	"github.com/VOD-Studio/kite/internal/cli/doctor"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/localstate"
 	mmauth "github.com/VOD-Studio/kite/internal/netease/endpoint/auth"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
@@ -136,12 +137,12 @@ func probeCompletionInstalled(shell string) (path string, ok bool) {
 // doctor 豁免于 root 的坏配置拦截(PersistentPreRunE),坏文件下正是此检查项
 // 给出定位信息的场景。
 func probeConfigState() (string, bool, error) {
-	path, err := kit.ConfigPath()
+	path, err := localstate.ConfigPath()
 	if err != nil {
 		return "", false, err
 	}
 	_, statErr := os.Stat(path)
-	_, loadErr := kit.LoadConfig()
+	_, loadErr := localstate.LoadConfig()
 	return path, statErr == nil, loadErr
 }
 
@@ -153,9 +154,9 @@ func probeProxyState(k *kit.Kit) func() (flagVal, cfgVal, envVal string) {
 	return func() (string, string, string) {
 		flagVal, cfgVal := "", ""
 		switch k.ProxySource {
-		case kit.ProxySourceFlag:
+		case localstate.ProxySourceFlag:
 			flagVal = k.ProxyURL.String()
-		case kit.ProxySourceConfig:
+		case localstate.ProxySourceConfig:
 			cfgVal = k.ProxyURL.String()
 		}
 		// 环境变量展示带变量名(自解释;https 请求只认 HTTPS_PROXY 系,

@@ -5,7 +5,7 @@
 // 区分,不拆三文件;容量 1000 行 drop oldest(FIFO),打分与裁剪解耦。
 //
 // 这是 PRD-0014 G 片段:本包只建池子(写 + 内存读 + frecency 排序),
-// recent(#H)与补全挂载(#I)消费它。路径经 kit.HistoryPath()(PRD-0015 #44
+// recent(#H)与补全挂载(#I)消费它。路径经 localstate.HistoryPath()(PRD-0015 #44
 // 已建可注入 seam),测试覆写 userConfigDir 即可重定向到临时目录。
 package recall
 
