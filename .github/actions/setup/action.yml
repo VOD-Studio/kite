@@ -1,0 +1,15 @@
+name: Setup Go and tool versions
+description: >-
+  安装 go.mod 指定的 Go,并把 Makefile 里的工具版本(GOLANGCI_LINT_VERSION 等)写入 GITHUB_ENV。
+  调用前须先 actions/checkout。版本唯一来源是 Makefile,workflow 里不得再写死。
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@v7
+      with:
+        go-version-file: go.mod
+        cache: true
+    - name: Load tool versions from Makefile
+      shell: bash
+      run: make -s ci-env >> "$GITHUB_ENV"
