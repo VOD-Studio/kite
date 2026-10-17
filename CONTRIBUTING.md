@@ -25,6 +25,7 @@ go vet ./...              # 检查
 - **工具版本的唯一来源是 `Makefile` 顶部**(golangci-lint / buf / govulncheck),不要在 workflow 里重复写。
 - **门禁不依赖会自行变化的外部状态**:漏洞库、未固定版本的插件或 runner,都会让「没改代码」的 PR 变红。依赖漏洞只在 PR 改动 `go.mod` / `go.sum` 时才拦,全量扫描由 `scheduled.yml` 每日跑并开 issue。
 - **release PR 的 CI**:release PR 由 `github-actions[bot]` 创建,`GITHUB_TOKEN` 触发的事件有两个坑——仓库的「首次贡献者需批准」策略会让它的 pull_request CI 停在 `action_required`(此时 required check `CI OK` 视为未满足、PR 保持 BLOCKED),且按 GitHub 规则这类事件原则上不会触发其它 workflow。`release-please.yml` 每次运行后调用 `scripts/release-pr-ci.sh`:有等待批准的运行就批准(这个 PR 由我们自己的 workflow 生成,批准是安全的,无需放宽仓库策略);轮询约 1 分钟仍没有任何 pull_request 运行,则回退为在 release 分支上 `workflow_dispatch` 一次 CI。逻辑有假 `gh` 的单元测试(`make scripts-check`)。若 release PR 仍是 BLOCKED,在 Actions 页手动重跑 `Release Please`。
+- **镜像冒烟**:`Docker Build` job 在构建后跑 `scripts/docker-smoke.sh`(无令牌拒绝启动、`/healthz`、REST 鉴权),不访问外网。镜像的监听地址 / 令牌策略见 [`docs/server-security.md`](docs/server-security.md);`Dockerfile` 与 `Dockerfile.release` 的 `KITE_SERVER_*` 必须一致(有测试守护)。
 - **发布**:release PR 合并后,`release-please.yml` 在同一 workflow 内直接调用 `release.yml`(release-please 用 `GITHUB_TOKEN` 打的 tag 不会触发 `on: push: tags`)。手动补发某个 tag 的产物:Actions → `Release` → Run workflow。
 
 ## 工作流(分支与提交)
