@@ -14,6 +14,7 @@ name: Release Please
 on:
   push:
     branches: [main]
+  workflow_dispatch:   # 手动重跑(例如排查 release PR 上的检查状态)
 
 permissions:
   contents: write       # 创建 release PR + 打 tag
@@ -25,7 +26,7 @@ jobs:
     permissions:
       contents: write       # 创建 release PR + 打 tag
       pull-requests: write  # 开/合并 release PR
-      actions: write        # 为 release PR 分支触发 CI(workflow_dispatch)
+      actions: write        # 批准 release PR 上等待批准的运行 / 回退时 dispatch CI
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
       tag_name: ${{ steps.rp.outputs.tag_name }}
@@ -48,16 +49,24 @@ jobs:
               {"type":"test","section":"Tests","hidden":true}
             ]
 
-      # release PR 被创建 / 更新后,在其分支上跑一次 CI(见 ci.yml 里 workflow_dispatch 的说明)。
-      # 分支名优先取 outputs.pr.headBranchName;取不到时回落 release-please 的固定默认分支名。
-      # 先判空再 fromJSON:没有 PR 时 outputs.pr 为空串,fromJSON('') 会报错。
-      - name: 为 release PR 触发 CI
-        if: steps.rp.outputs.prs_created == 'true'
+      # 保证 release PR 头部提交上有一个会完成的 CI 运行,使 required check CI OK 能被满足。
+      #
+      # 两种情况(都在这里处理,幂等,每次运行都执行,不依赖 prs_created):
+      #   1. 已有 pull_request 运行:release PR 由 github-actions[bot] 创建 / 更新,仓库「首次贡献者需批准」
+      #      的策略把它当首次贡献者,运行会停在 action_required;实测只要 PR 上还挂着等待批准的运行,
+      #      required check 就视为未满足(即使另外 dispatch 出一个成功的 CI OK,PR 仍 BLOCKED)。
+      #      这个 PR 是我们自己的 workflow 生成的,批准它是安全的(不放宽仓库的批准策略)。
+      #   2. 轮询约 1 分钟仍没有任何 pull_request 运行:GitHub 规定 GITHUB_TOKEN 触发的事件不会再触发其它
+      #      workflow(workflow_dispatch 除外),此时回退到在 release 分支上 workflow_dispatch 一次 CI,
+      #      其 check-run 挂在分支 HEAD 上即满足 required check。
+      # 逻辑在 scripts/release-pr-ci.sh,带假 gh 的单元测试(scripts/release-pr-ci_test.sh)。
+      - uses: actions/checkout@v7
+      - name: 保证 release PR 上有会完成的 CI 运行
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           BRANCH: ${{ (steps.rp.outputs.pr && fromJSON(steps.rp.outputs.pr).headBranchName) || 'release-please--branches--main' }}
-        run: gh workflow run ci.yml --ref "${BRANCH}"
+        run: scripts/release-pr-ci.sh
 
   # 仅在本次运行真的创建了 release(即 release PR 被合并)时才发布产物。
   # caller 需授予被调用 workflow 所需权限的超集。

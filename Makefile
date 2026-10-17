@@ -1,5 +1,5 @@
 .PHONY: all help install-tools install-cli fmt fmt-check tidy-check vet test lint vuln build build-server \
-        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs check ci-env clean
+        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check check ci-env clean
 
 # 工具探测:优先 PATH,回退 $GOPATH/bin(GOBIN 也在 PATH 时无所谓)
 BUF           ?= $(shell command -v buf 2>/dev/null           || echo $$(go env GOPATH)/bin/buf)
@@ -130,9 +130,14 @@ docs:
 	go run cmd/kite-docs/main.go docs/cmd
 	@echo "命令参考已刷新(若 docs/cmd/ 有变化记得提交)"
 
+## scripts-check: scripts/*.sh 的 shellcheck 与单元测试(release PR 的 CI 保障逻辑等)
+scripts-check:
+	@if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh; else echo "(未安装 shellcheck,跳过静态检查)"; fi
+	scripts/release-pr-ci_test.sh
+
 ## check: push 前一键自检(镜像 CI 的主要检查;vuln / verify-gen 依赖网络,按需单独跑)
-check: fmt-check tidy-check vet test lint proto-lint
-	@echo "✓ fmt + tidy + vet + test + lint + proto-lint 全通过,可以 push"
+check: fmt-check tidy-check scripts-check vet test lint proto-lint
+	@echo "✓ fmt + tidy + scripts + vet + test + lint + proto-lint 全通过,可以 push"
 
 ## ci-env: 打印工具版本为 KEY=VALUE,供 CI 写入 $GITHUB_ENV(`make -s ci-env >> "$GITHUB_ENV"`)
 ci-env:
