@@ -18,7 +18,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/VOD-Studio/kite/internal/cache"
-	"github.com/VOD-Studio/kite/internal/cli/recall"
+	"github.com/VOD-Studio/kite/internal/recall"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
