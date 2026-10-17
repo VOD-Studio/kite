@@ -243,11 +243,11 @@ func (e *Engine) doOnce(ctx context.Context, meta Meta, params map[string]any) (
 			cookie = c
 		} else {
 			if e.sessions == nil {
-				return nil, "", merrors.ErrUnauthorized
+				return nil, "", notSent(merrors.ErrUnauthorized)
 			}
 			sess, err := e.sessions.GetAvailable(ctx, meta.Auth)
 			if err != nil {
-				return nil, "", err
+				return nil, "", notSent(err)
 			}
 			cookie = sess.Cookie
 			pooled = sess

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	merrors "github.com/VOD-Studio/kite/errors"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 // TestRecordResult 熔断器只为「上游不健康」计失败;上游正常应答的业务错误按成功处理;
@@ -69,5 +70,41 @@ func TestRecordResult_UpstreamFailuresStillOpen(t *testing.T) {
 	}
 	if cb.State() != stateOpen {
 		t.Fatal("连续 3 次上游不可用应打开熔断器")
+	}
+}
+
+// 本地凭据缺失(从未请求上游)返回的 ErrUnauthorized 不能当作「上游正常应答」:
+// 否则无凭据的请求会清零已累计的上游失败,甚至在半开状态下无探测地关闭熔断器。
+func TestRawDo_LocalCredentialErrorDoesNotTouchBreaker(t *testing.T) {
+	e := New() // 无 session 池
+	for i := 0; i < 4; i++ {
+		e.breaker.recordFailure()
+	}
+
+	_, err := e.RawDo(context.Background(), Meta{Path: "/x", Method: "POST", Auth: session.AuthLoggedIn}, nil)
+	if !errors.Is(err, merrors.ErrUnauthorized) {
+		t.Fatalf("err = %v, 期望 ErrUnauthorized", err)
+	}
+
+	e.breaker.mu.Lock()
+	got := e.breaker.failures
+	e.breaker.mu.Unlock()
+	if got != 4 {
+		t.Fatalf("failures = %d, 期望保持 4:本地凭据错误不应清零上游失败计数", got)
+	}
+}
+
+// 半开状态下,没发出请求的本地错误不能让熔断器误关闭。
+func TestRawDo_LocalCredentialErrorDoesNotCloseHalfOpen(t *testing.T) {
+	e := New()
+	e.breaker.mu.Lock()
+	e.breaker.state = stateHalfOpen
+	e.breaker.failures = 5
+	e.breaker.mu.Unlock()
+
+	_, _ = e.RawDo(context.Background(), Meta{Path: "/x", Method: "POST", Auth: session.AuthLoggedIn}, nil)
+
+	if e.breaker.State() != stateHalfOpen {
+		t.Fatalf("state = %v, 期望仍为半开(没有真实探测)", e.breaker.State())
 	}
 }
