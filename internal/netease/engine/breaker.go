@@ -5,9 +5,12 @@
 package engine
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
+
+	merrors "github.com/VOD-Studio/kite/errors"
 )
 
 // ErrCircuitOpen 是熔断器打开时的错误。
@@ -94,4 +97,29 @@ func (cb *circuitBreaker) State() circuitState {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	return cb.state
+}
+
+// recordResult 把一次调用结果记入熔断器。
+//
+// 熔断器衡量的是「上游是否健康」,所以只有上游不可用 / 被限流才算失败。未登录、资源不存在、
+// 响应格式无效说明上游正常应答了,按成功处理——否则连续几次「未登录」就会让长驻进程(server /
+// TUI)里全部接口被短路。调用方主动取消、本地序列化 / 加密失败从未到达上游,既不说明健康也不说明
+// 故障,忽略。
+//
+// 取消通过 ctx.Err() 判断:transport 用 %v 包装底层错误,errors.Is(err, context.Canceled) 已失效。
+func (cb *circuitBreaker) recordResult(ctx context.Context, err error) {
+	switch {
+	case err == nil:
+		cb.recordSuccess()
+	case errors.Is(err, context.Canceled) || ctx.Err() != nil:
+		// 调用方取消:不计。
+	case isRetryable(err):
+		cb.recordFailure()
+	case errors.Is(err, merrors.ErrUnauthorized),
+		errors.Is(err, merrors.ErrNotFound),
+		errors.Is(err, merrors.ErrInvalidResponse):
+		cb.recordSuccess() // 上游正常应答的业务错误
+	default:
+		// 本地错误(序列化 / 加密 / 构造请求):不计。
+	}
 }

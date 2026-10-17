@@ -142,11 +142,10 @@ func (e *Engine) RawDoWithCookieAndInput(ctx context.Context, meta Meta, params 
 	)
 	err := withRetry(ctx, e.retry, func() error {
 		r, sc, callErr := e.doOnceWithCookie(ctx, meta, params, cookie)
+		e.breaker.recordResult(ctx, callErr)
 		if callErr != nil {
-			e.breaker.recordFailure()
 			return callErr
 		}
-		e.breaker.recordSuccess()
 		raw = r
 		setCookie = sc
 		return nil
@@ -216,11 +215,10 @@ func (e *Engine) rawDoWithResult(ctx context.Context, meta Meta, params map[stri
 	)
 	err := withRetry(ctx, e.retry, func() error {
 		r, sc, callErr := e.doOnce(ctx, meta, params)
+		e.breaker.recordResult(ctx, callErr)
 		if callErr != nil {
-			e.breaker.recordFailure()
 			return callErr
 		}
-		e.breaker.recordSuccess()
 		raw = r
 		setCookie = sc
 		return nil
