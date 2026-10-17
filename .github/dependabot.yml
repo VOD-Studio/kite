@@ -35,3 +35,12 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "chore(deps)"
+
+  # Dockerfile 基础镜像(golang / distroless),避免 tag 漂移或停更后才被发现
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps)"
