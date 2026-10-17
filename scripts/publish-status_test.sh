@@ -98,7 +98,7 @@ class H(BaseHTTPRequestHandler):
             log({"call": "update_post", "args": args})
             if fail_update:
                 return self.rpc(msg["id"], {"isError": True, "content": [{"type": "text", "text": "boom"}]})
-            for k in ("title", "excerpt", "tags", "content_md", "cover_image", "show_signature"):
+            for k in ("title", "slug", "excerpt", "tags", "content_md", "cover_image", "show_signature"):
                 if k in args:
                     state["post"][k] = args[k]
             return self.rpc(msg["id"], text(state["post"]))
@@ -147,7 +147,7 @@ updates() { grep -c '"call": "update_post"' "$tmp/log" || true; }
 # 线上与本地完全一致的文章
 same_post() {
   jq -nc --rawfile md "$tmp/progress.md" \
-    '{id:"post-1", title:"标题", excerpt:"摘要", tags:["developer-tools"], content_md:$md, cover_image:"https://x/c.png", show_signature:true, status:"published"}'
+    '{id:"post-1", slug:"kite-progress", title:"标题", excerpt:"摘要", tags:["developer-tools"], content_md:$md, cover_image:"https://x/c.png", show_signature:true, status:"published"}'
 }
 
 # 1. 内容一致 → 不更新(幂等)
@@ -171,6 +171,12 @@ start_mock "$(same_post | jq -c '.title = "旧标题"')"
 run || fail "标题不同应更新: $(cat "$tmp/out")"
 [ "$(updates)" = "1" ] || fail "标题不同却没更新"
 ok "仅标题不同 → 更新"
+
+# 3b. 仅 slug 不同也要更新(slug 决定文章 URL,幂等比较不能漏)
+start_mock "$(same_post | jq -c '.slug = "old-slug"')"
+run || fail "slug 不同应更新: $(cat "$tmp/out")"
+[ "$(updates)" = "1" ] || fail "仅 slug 不同却没更新"
+ok "仅 slug 不同 → 更新"
 
 # 4. --dry-run:不写入
 start_mock "$(same_post | jq -c '.content_md = "旧内容\n"')"

@@ -10,7 +10,7 @@
 #
 # 行为:
 #   - 文章 ID 取自 docs/status/status.json 的 post.id。首次创建 / 发布由人工完成,脚本只更新已存在的文章;
-#   - 正文、标题、摘要、标签与线上完全一致则什么也不做(幂等,重复运行不产生新版本);
+#   - 正文、标题、链接 slug、摘要、标签与线上完全一致则什么也不做(幂等,重复运行不产生新版本);
 #   - 更新是整篇覆盖语义:未改动的字段(封面、署名开关)从线上原值带回,不会被清空。
 #
 # 依赖:curl、jq。令牌只经 0600 临时文件交给 curl,不出现在进程参数里。
@@ -97,8 +97,8 @@ mcp '{"jsonrpc":"2.0","method":"notifications/initialized"}' || true
 current=$(tool get_post "$(jq -nc --arg id "$post_id" '{id:$id}')")
 jq -e --arg id "$post_id" '.id == $id' >/dev/null <<<"$current" || { echo "取回的文章与 post.id 不符" >&2; exit 1; }
 
-same=$(jq --rawfile md "$body_md" --arg title "$title" --arg excerpt "$excerpt" --argjson tags "$tags" \
-  '(.content_md == $md) and (.title == $title) and (.excerpt == $excerpt) and ((.tags // []) == $tags)' <<<"$current")
+same=$(jq --rawfile md "$body_md" --arg title "$title" --arg slug "$slug" --arg excerpt "$excerpt" --argjson tags "$tags" \
+  '(.content_md == $md) and (.title == $title) and (.slug == $slug) and (.excerpt == $excerpt) and ((.tags // []) == $tags)' <<<"$current")
 
 if [ "$same" = "true" ] && [ -z "$force" ]; then
   echo "进度看板已是最新,无需更新(文章 $post_id)"
