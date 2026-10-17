@@ -1,9 +1,9 @@
 // Package user 的特殊接口声明（不走标准 Execute 缓存路径）。
 //
-// DetailByName/FollowEachOther 是匿名 cookie 的直接调用。DetailByName 用公开搜索实现,
-// 仍是 engine.Endpoint;FollowEachOther 需要动态 path(uid 拼进 URL)且要遍历关注列表
-// 做业务判断,改用 Meta 函数 + Request/Parse 形式,service 层调 RawDoWithCookieAndInput
-// （第三条执行路径,见 ADR §4.5）。两者不缓存（动态/即时数据）。
+// DetailByName/FollowEachOther 是匿名 cookie 的直接调用,都是声明式 engine.Endpoint,
+// service 层走 ctx cookie 路径(engine.ExecuteWithCookie)。DetailByName 用公开搜索实现;
+// FollowEachOther 需要动态 path(uid 拼进 URL,用 PathFunc)且要遍历关注列表做业务判断。
+// 两者不缓存（动态/即时数据）。
 package user
 
 import (
@@ -56,38 +56,37 @@ var DetailByName = &engine.Endpoint[*mmpb.DetailByNameRequest, *mmpb.DetailByNam
 // FollowEachOther 判断两个用户是否互相关注（查 target 的关注列表里是否含 user）。
 //
 // 网易云无直接接口，取 target 的关注列表遍历判断。path 需要把 target uid 拼进 URL
-// （/weapi/user/getfollows/{uid}），endpoint 架构暂不支持动态 path，
-// 因此用 Meta 函数 + Request/Parse 的第三条执行路径（同 auth/playlist 写接口）。
-
-// FollowEachOtherMeta 构造获取 target 关注列表的 Meta（uid 拼进 path）。
-func FollowEachOtherMeta(targetUID int64) engine.Meta {
-	return engine.Meta{
-		Path:   fmt.Sprintf("/weapi/user/getfollows/%d", targetUID),
+// （/weapi/user/getfollows/{uid}），用 PathFunc 动态生成。不缓存（即时数据）。
+var FollowEachOther = &engine.Endpoint[*mmpb.FollowEachOtherRequest, *mmpb.FollowEachOtherResponse]{
+	Meta: engine.Meta{
+		Path:   "/weapi/user/getfollows", // 占位，实际 path 由 PathFunc 生成
 		Method: "POST",
 		Crypto: engine.CryptoWeAPI,
 		Auth:   session.AuthAnonymous,
-	}
-}
-
-// FollowEachOtherRequest 构造关注列表入参（最多拉前 100 条做包含判断）。
-func FollowEachOtherRequest(_ *mmpb.FollowEachOtherRequest) map[string]any {
-	return map[string]any{"offset": 0, "limit": 100, "order": true}
-}
-
-// ParseFollowEachOther 遍历响应的 follow 数组,判断是否包含 req.UserId。
-func ParseFollowEachOther(req *mmpb.FollowEachOtherRequest, raw json.RawMessage) (*mmpb.FollowEachOtherResponse, error) {
-	var resp struct {
-		Follow []struct {
-			UserID int64 `json:"userId"` // 被关注用户ID
-		} `json:"follow"`
-	}
-	if err := json.Unmarshal(raw, &resp); err != nil {
-		return nil, fmt.Errorf("解析关注列表失败: %w", err)
-	}
-	for _, f := range resp.Follow {
-		if f.UserID == req.GetUserId() {
-			return &mmpb.FollowEachOtherResponse{FollowEachOther: true}, nil
+	},
+	PathFunc: func(req *mmpb.FollowEachOtherRequest) string {
+		return fmt.Sprintf("/weapi/user/getfollows/%d", req.GetTargetUserId())
+	},
+	NewResp: func() *mmpb.FollowEachOtherResponse { return &mmpb.FollowEachOtherResponse{} },
+	// 最多拉前 100 条做包含判断。
+	MapRequest: func(_ *mmpb.FollowEachOtherRequest) (map[string]any, error) {
+		return map[string]any{"offset": 0, "limit": 100, "order": true}, nil
+	},
+	// 遍历响应的 follow 数组,判断是否包含 req.UserId。
+	MapResponse: func(req *mmpb.FollowEachOtherRequest, raw json.RawMessage) (*mmpb.FollowEachOtherResponse, error) {
+		var resp struct {
+			Follow []struct {
+				UserID int64 `json:"userId"` // 被关注用户ID
+			} `json:"follow"`
 		}
-	}
-	return &mmpb.FollowEachOtherResponse{FollowEachOther: false}, nil
+		if err := json.Unmarshal(raw, &resp); err != nil {
+			return nil, fmt.Errorf("解析关注列表失败: %w", err)
+		}
+		for _, f := range resp.Follow {
+			if f.UserID == req.GetUserId() {
+				return &mmpb.FollowEachOtherResponse{FollowEachOther: true}, nil
+			}
+		}
+		return &mmpb.FollowEachOtherResponse{FollowEachOther: false}, nil
+	},
 }

@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 	"github.com/stretchr/testify/require"
 )
 
@@ -81,10 +83,26 @@ func TestTopArtists_MapResponse(t *testing.T) {
 	require.Equal(t, "周杰伦", resp.Artists[0].Name)
 }
 
-// TestParseSubscribeResponse 收藏响应解析。
-func TestParseSubscribeResponse(t *testing.T) {
+// TestSubscribe 收藏歌手:Meta、入参构造、响应解析。
+func TestSubscribe(t *testing.T) {
 	t.Parallel()
 
-	resp := ParseSubscribeResponse(json.RawMessage(`{"sub":true}`))
+	require.Equal(t, engine.Meta{
+		Path: "/weapi/artist/sub", Method: "POST", Crypto: engine.CryptoWeAPI, Auth: session.AuthLoggedIn,
+	}, Subscribe.Meta)
+	require.Nil(t, Subscribe.Cache, "写操作不缓存")
+
+	params, err := Subscribe.MapRequest(&mmpb.ArtistSubscribeRequest{ArtistId: 5})
+	require.NoError(t, err)
+	require.Equal(t, "5", params["artistId"])
+	require.Equal(t, "[5]", params["artistIds"])
+
+	resp, err := Subscribe.MapResponse(&mmpb.ArtistSubscribeRequest{}, json.RawMessage(`{"sub":true}`))
+	require.NoError(t, err)
 	require.True(t, resp.Subscribed)
+
+	// 宽松解析:非预期形状按零值处理。
+	resp, err = Subscribe.MapResponse(&mmpb.ArtistSubscribeRequest{}, json.RawMessage(`not json`))
+	require.NoError(t, err)
+	require.False(t, resp.Subscribed)
 }

@@ -218,11 +218,7 @@ func newSubscribe(k *kit.Kit) *cobra.Command {
 			if err := k.ConfirmFatal(fmt.Sprintf("收藏/取消收藏歌手 %d", rid)); err != nil {
 				return err
 			}
-			raw, _, err := k.RawDo(k.CookieCtx(), artistendpoint.SubscribeMeta, artistendpoint.SubscribeRequest(&mmpb.ArtistSubscribeRequest{ArtistId: rid}))
-			if err != nil {
-				return err
-			}
-			return k.Render(artistendpoint.ParseSubscribeResponse(raw))
+			return kit.RenderExec(k, artistendpoint.Subscribe, &mmpb.ArtistSubscribeRequest{ArtistId: rid})
 		},
 	}
 	withID(c, &id)

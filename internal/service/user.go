@@ -47,11 +47,7 @@ func (s *UserServer) DetailByName(ctx context.Context, req *mmpb.DetailByNameReq
 
 // FollowEachOther 判断两个用户是否互相关注（查 target 的关注列表，匿名 cookie）。
 func (s *UserServer) FollowEachOther(ctx context.Context, req *mmpb.FollowEachOtherRequest) (*mmpb.FollowEachOtherResponse, error) {
-	raw, _, err := s.eng.RawDoWithCookieAndInput(ctx, userendpoint.FollowEachOtherMeta(req.GetTargetUserId()), userendpoint.FollowEachOtherRequest(req))
-	if err != nil {
-		return nil, err
-	}
-	return userendpoint.ParseFollowEachOther(req, raw)
+	return executeOverride(s.eng, ctx, userendpoint.FollowEachOther, req)
 }
 
 // Follows 获取用户关注列表。
