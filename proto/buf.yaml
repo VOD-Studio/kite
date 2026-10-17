@@ -1,6 +1,9 @@
 version: v2
 modules:
   - path: .
+    # 发布到 Buf Schema Registry 的模块名(GitHub 组织 VOD-Studio 对应的 BSR 组织)。
+    # 推送由 .github/workflows/bsr.yml 在发布后执行,需要 BSR 上已有该组织与仓库 secret BUF_TOKEN。
+    name: buf.build/vod-studio/kite
 deps:
   - buf.build/googleapis/googleapis
 lint:

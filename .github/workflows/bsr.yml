@@ -1,0 +1,105 @@
+name: BSR
+
+# 把 proto 发布到 Buf Schema Registry(buf.build/vod-studio/kite),让 Rust 等其它语言的项目
+# 直接依赖该模块,不必拷贝 .proto 文件。两种入口:
+#   - workflow_call:release-please.yml 在产物发布成功后调用(日常路径,tag 为刚发布的版本);
+#   - workflow_dispatch:手动补推指定 tag(首次接入时补推已发布的版本,或重试失败的推送)。
+#
+# 前置(BSR 账号侧,只有 owner 能做):
+#   1. 在 buf.build 创建组织 vod-studio;
+#   2. 签发 token,存进仓库 secret BUF_TOKEN。
+# 未配置 BUF_TOKEN 时只给提示并跳过,不会让发布流程变红。
+# 模块(kite)首次推送时自动创建为公开模块——仓库本身是公开的,proto 已经是公开契约。
+#
+# 安全:BUF_TOKEN 只出现在最后的「推送」一步的环境里,job 其余步骤(含检出后执行的本地 action)拿不到它;
+# 并且只接受已发布 release 的版本 tag,不接受分支名 / SHA,不能借手动触发去运行任意 ref 的代码。
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 要发布的 tag(如 v0.3.0)
+        required: true
+        type: string
+    secrets:
+      BUF_TOKEN:
+        required: false
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 要发布的 tag(如 v0.3.0),必须是已发布 release 的版本号
+        required: true
+        type: string
+
+# 所有 BSR 推送串行(不按 tag 分组):main 标签「跟随最新版本」的判断依赖推送顺序确定
+concurrency:
+  group: bsr
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    name: 推送到 BSR
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      # 只记「是否配置」,不把令牌本身放进 job 环境
+      HAS_TOKEN: ${{ secrets.BUF_TOKEN != '' }}
+    steps:
+      - name: 校验 tag
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::tag 必须形如 v1.2.3(不接受分支名或 SHA): ${TAG}"
+            exit 1
+          fi
+          gh release view "${TAG}" >/dev/null || { echo "::error::${TAG} 不是已发布的 release"; exit 1; }
+      - name: 判断是否为最新版本
+        id: latest
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          latest=$(gh api "repos/${GH_REPO}/releases/latest" --jq .tag_name)
+          if [ "${latest}" = "${TAG}" ]; then
+            echo "is_latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_latest=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::${TAG} 不是最新版本(${latest}),不移动 main 标签"
+          fi
+      - name: 检查令牌
+        id: gate
+        run: |
+          if [ "${HAS_TOKEN}" != "true" ]; then
+            echo "::notice title=已跳过::未配置仓库 secret BUF_TOKEN,proto 没有推送到 BSR(见 CONTRIBUTING「CI 约定」)"
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.gate.outputs.skip != '1'
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+      - uses: ./.github/actions/setup
+        if: steps.gate.outputs.skip != '1'
+      - uses: bufbuild/buf-action@v1
+        if: steps.gate.outputs.skip != '1'
+        with:
+          setup_only: true
+          version: ${{ env.BUF_VERSION }}
+      # 版本 tag 标签固定到这次发布的 proto;main 标签只在这是最新 release 时才移动,
+      # 补推历史版本不会让 main 倒退。--create:模块不存在时自动创建;--create-visibility public:仓库是公开的。
+      - name: 推送
+        if: steps.gate.outputs.skip != '1'
+        env:
+          BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
+          TAG: ${{ inputs.tag }}
+          IS_LATEST: ${{ steps.latest.outputs.is_latest }}
+        run: |
+          labels=(--label "${TAG}")
+          if [ "${IS_LATEST}" = "true" ]; then labels+=(--label main); fi
+          buf push proto "${labels[@]}" --create --create-visibility public
