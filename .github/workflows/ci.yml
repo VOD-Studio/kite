@@ -18,6 +18,9 @@ on:
   push:
     branches: [main]
   pull_request:
+    # edited:改 PR 标题要重新校验(PR Title job 依赖标题)。其它 job 也会重跑,
+    # 这是刻意的——若只跑 PR Title,新的 CI OK 会覆盖同一 SHA 上先前失败的结果。
+    types: [opened, synchronize, reopened, edited]
 
 # 同一 PR 多次 push 时取消旧的运行
 concurrency:
