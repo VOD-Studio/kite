@@ -7,6 +7,22 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## [0.3.0](https://github.com/VOD-Studio/kite/compare/v0.2.2...v0.3.0) (2026-10-17)
+
+
+### Features
+
+* **server:** gRPC 错误映射为标准 status + ErrorInfo ([#55](https://github.com/VOD-Studio/kite/issues/55)) ([803391c](https://github.com/VOD-Studio/kite/commit/803391c33de7df3625ef9e9d142c646b6a81f880))
+* **server:** 访问令牌鉴权、默认绑回环、gRPC 健康检查 ([#59](https://github.com/VOD-Studio/kite/issues/59)) ([57d49f3](https://github.com/VOD-Studio/kite/commit/57d49f3de1760e0b2971181af30a22ec57da0d06))
+
+
+### Bug Fixes
+
+* **ci:** workflow_dispatch 下 Lint 改用显式基线 ([#57](https://github.com/VOD-Studio/kite/issues/57)) ([109515b](https://github.com/VOD-Studio/kite/commit/109515b79ae8dbc032144723021dc5135ce1e422))
+* **ci:** 自动批准 release PR 上等待批准的 CI 运行 ([#58](https://github.com/VOD-Studio/kite/issues/58)) ([a1dd911](https://github.com/VOD-Studio/kite/commit/a1dd9112976af1e4233d1195f36d9ef1c3265988))
+* **netease:** 私人 FM 不缓存 ([#53](https://github.com/VOD-Studio/kite/issues/53)) ([46d8b38](https://github.com/VOD-Studio/kite/commit/46d8b38579443a1053c5ec5984fc7713024e69aa))
+* **release:** 镜像签名改按 digest ([#62](https://github.com/VOD-Studio/kite/issues/62)) ([7004996](https://github.com/VOD-Studio/kite/commit/70049966f3dc088dda57dd5efcb3a3309ba57b63))
+
 ## [0.2.2](https://github.com/VOD-Studio/kite/compare/v0.2.1...v0.2.2) (2026-10-17)
 
 
