@@ -91,6 +91,18 @@ jobs:
         with:
           setup_only: true
           version: ${{ env.BUF_VERSION }}
+      # 早于 BSR 接入的历史 tag(如 v0.3.0)的 buf.yaml 里还没有模块名,buf push 会拒绝。
+      # 推送时补上同一个模块名:proto 文件本身不变,与「原生带模块名的发布」内容一致。
+      - name: 补全模块名(仅历史 tag)
+        if: steps.gate.outputs.skip != '1'
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if ! grep -qE '^[[:space:]]+name:[[:space:]]*buf\.build/' proto/buf.yaml; then
+            sed -i 's|^\([[:space:]]*\)- path: \.$|&\n\1  name: buf.build/vod-studio/kite|' proto/buf.yaml
+            echo "::notice::${TAG} 的 buf.yaml 没有模块名,已在推送时补上 buf.build/vod-studio/kite"
+          fi
+          grep -qE '^[[:space:]]+name:[[:space:]]*buf\.build/vod-studio/kite$' proto/buf.yaml
       # 版本 tag 标签固定到这次发布的 proto;main 标签只在这是最新 release 时才移动,
       # 补推历史版本不会让 main 倒退。--create:模块不存在时自动创建;--create-visibility public:仓库是公开的。
       - name: 推送
