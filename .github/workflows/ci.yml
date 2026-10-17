@@ -54,12 +54,30 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # workflow_dispatch 的显式基线 origin/main 需要完整历史
       - uses: ./.github/actions/setup
+      # 只报新增问题,历史债由 scheduled.yml 定时汇总。
+      #   PR / push:交给 action 的 only-new-issues(取 PR diff / push 前后差异)。
+      #   workflow_dispatch(release-please 分支上手动触发的 CI):没有 PR 上下文,action 会
+      #   跳过取 patch、把全部存量问题当成新增,所以改用显式基线 --new-from-rev=origin/main。
+      - name: 选择「只看新增」的方式
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "${EVENT}" = "workflow_dispatch" ]; then
+            echo "only_new=false" >> "$GITHUB_OUTPUT"
+            echo "args=--timeout 5m --new-from-rev=origin/main" >> "$GITHUB_OUTPUT"
+          else
+            echo "only_new=true" >> "$GITHUB_OUTPUT"
+            echo "args=--timeout 5m" >> "$GITHUB_OUTPUT"
+          fi
       - uses: golangci/golangci-lint-action@v9
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
-          args: --timeout 5m
-          only-new-issues: true   # 只报 PR 新增问题;历史债由 scheduled.yml 定时汇总
+          args: ${{ steps.mode.outputs.args }}
+          only-new-issues: ${{ steps.mode.outputs.only_new }}
 
   # CLI 面向 macOS / Linux 用户,终端与路径相关逻辑在两个平台都要跑真实测试
   test:
