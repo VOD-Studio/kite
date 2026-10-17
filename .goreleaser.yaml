@@ -21,13 +21,15 @@ builds:
       - -s -w   # strip 调试信息减小体积;version 走 debug.ReadBuildInfo,无需 -X
     mod_timestamp: "{{ .CommitTimestamp }}"
 
-  # ---- server:只 linux × amd64/arm64,供镜像使用 ----
+  # ---- server:linux / darwin / windows × amd64/arm64 ----
+  # 镜像只用其中的 linux 产物(dockers_v2 按 platforms 过滤);darwin / windows 二进制
+  # 供其它语言(Rust 等)的桌面应用把 server 当 sidecar 随应用分发,无需 Docker。
   - id: server
     main: ./cmd/server
     binary: server
     env:
       - CGO_ENABLED=0
-    goos: [linux]
+    goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     flags:
       - -trimpath
@@ -44,6 +46,17 @@ archives:
         formats: [zip]
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "darwin"}}macOS
+      {{- else}}{{ .Os }}{{end}}_{{ .Arch }}
+
+  - id: server
+    ids: [server]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}-server_{{ .Version }}_
       {{- if eq .Os "darwin"}}macOS
       {{- else}}{{ .Os }}{{end}}_{{ .Arch }}
 

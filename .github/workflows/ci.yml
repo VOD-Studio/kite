@@ -170,6 +170,28 @@ jobs:
           # 仅主干 push 写缓存:PR 分支命中率低,不写
           cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=kite-server' || '' }}
 
+  # 发布配置的合并前校验:goreleaser 配置错误、跨平台构建失败原本要到打 tag 才暴露。
+  # 跳过 docker / 签名 / 发布(需要 buildx、OIDC 与 registry 凭据);镜像构建由 Docker Build job 覆盖。
+  release-check:
+    name: Release Check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # goreleaser 需要完整历史与 tag
+      - uses: ./.github/actions/setup
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: check
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --clean --skip=docker,sign,sbom,publish
+
   # squash merge 用 PR 标题作为 main 上的 commit message,release-please 靠它推导版本与
   # CHANGELOG;标题不合规会让该变更静默地不进 changelog、不触发版本号变化。
   pr-title:
@@ -203,7 +225,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [hygiene, lint, test, cross-build, proto, vuln, docker, pr-title]
+    needs: [hygiene, lint, test, cross-build, proto, vuln, docker, release-check, pr-title]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
