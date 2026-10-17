@@ -7,6 +7,15 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## [0.2.2](https://github.com/VOD-Studio/kite/compare/v0.2.1...v0.2.2) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ci:** 固定 buf 插件版本并升级 x/net,消除无关 PR 的红灯 ([#46](https://github.com/VOD-Studio/kite/issues/46)) ([9d08821](https://github.com/VOD-Studio/kite/commit/9d08821c1e91d3240d3a7f231c71a160d1c9229d))
+* **cli:** TestDocsFreshness 归一化 cobra 生成日期页脚 ([#41](https://github.com/VOD-Studio/kite/issues/41)) ([d2d1708](https://github.com/VOD-Studio/kite/commit/d2d17085b0a7c5c2b797bd01a1de048027e6a812))
+* **netease:** 修复服务端登录态凭据、缓存串数据与熔断误触发 ([#51](https://github.com/VOD-Studio/kite/issues/51)) ([f7bac42](https://github.com/VOD-Studio/kite/commit/f7bac42dc1f7fd5015dc0e6c67d31448ba8fba92))
+
 ## [0.2.1](https://github.com/VOD-Studio/kite/compare/v0.2.0...v0.2.1) (2026-08-27)
 
 
