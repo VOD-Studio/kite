@@ -1,11 +1,17 @@
 # kite 配置示例
 #
-# 环境变量可覆盖字段值，格式 KITE_{MODULE}_{FIELD}。
-# 例如：KITE_SERVER_PORT=9091
+# 注意：服务目前只从环境变量加载配置，没有读取本文件的代码——这里列出各字段及其含义，
+# 对应的环境变量格式为 KITE_{MODULE}_{FIELD}（见 config/config.go 的 Load）。
+# 例如：KITE_SERVER_HTTP_ADDR=127.0.0.1:9091
 
 server:
-  # HTTP 服务监听端口
-  port: 3721
+  # gRPC / REST 监听地址。默认只绑本机回环;改成对外地址时必须同时配置访问令牌,
+  # 否则服务拒绝启动(见 docs/server-security.md)。
+  grpc_addr: "127.0.0.1:3722"
+  http_addr: "127.0.0.1:3721"
+  # 访问令牌(bearer)。与 auth_token_file 互斥;建议用文件,避免出现在进程环境里。
+  auth_token: ""
+  auth_token_file: ""
   # 运行环境：dev（彩色文本日志）/ prod（JSON 日志）
   env: dev
 

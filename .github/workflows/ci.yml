@@ -174,7 +174,8 @@ jobs:
         if: steps.deps.outputs.changed == 'true'
         run: make vuln
 
-  # 根 Dockerfile(本地开发 / 自部署)的构建验证;Dockerfile.release 由 goreleaser 在发布时构建。
+  # 根 Dockerfile(本地开发 / 自部署)的构建验证 + 冒烟(安全默认值:无令牌拒绝启动、/healthz、鉴权);
+  # Dockerfile.release 由 goreleaser 在发布时构建,ENV 与根 Dockerfile 保持一致(见 docs/server-security.md)。
   docker:
     name: Docker Build
     runs-on: ubuntu-24.04
@@ -189,10 +190,13 @@ jobs:
         with:
           context: .
           push: false
+          load: true
           tags: kite-server:ci
           cache-from: type=gha,scope=kite-server
           # 仅主干 push 写缓存:PR 分支命中率低,不写
           cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=kite-server' || '' }}
+      - name: 镜像冒烟
+        run: scripts/docker-smoke.sh kite-server:ci
 
   # 发布配置的合并前校验:goreleaser 配置错误、跨平台构建失败原本要到打 tag 才暴露。
   # 跳过 docker / 签名 / 发布(需要 buildx、OIDC 与 registry 凭据);镜像构建由 Docker Build job 覆盖。

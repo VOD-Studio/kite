@@ -8,21 +8,21 @@ Go 实现的网易云能力服务 + 命令行工具。
 
 ### 服务 (`cmd/server`)
 
-gRPC(强类型 RPC,端口 `:3722`)+ grpc-gateway(REST 暴露,端口 `:3721`)双 server,收到 SIGINT/SIGTERM 优雅关闭。
+gRPC(强类型 RPC,默认 `127.0.0.1:3722`)+ grpc-gateway(REST 暴露,默认 `127.0.0.1:3721`)双 server,收到 SIGINT/SIGTERM 优雅关闭。
+
+**默认只监听本机回环;对外监听必须配置访问令牌,否则拒绝启动。** 地址、令牌、健康检查、Docker 用法见 [服务部署与访问控制](docs/server-security.md)。
 
 出网代理:server 的 engine 走默认 transport,尊重标准环境变量 `HTTPS_PROXY` / `HTTP_PROXY`(无需额外配置,PRD-0018)。
 
 ```bash
-go run ./cmd/server      # 直接运行
+go run ./cmd/server      # 直接运行(仅本机可访问,无需令牌)
 air                      # 热重载开发(.air.toml)
-docker build -t kite .   # 容器镜像(仅 Dockerfile,无 compose)
+docker build -t kite .   # 容器镜像(仅 Dockerfile,无 compose);运行时必须设置 KITE_SERVER_AUTH_TOKEN
 ```
 
-环境变量 `KITE_SERVER_PORT` 覆盖 HTTP 端口;完整配置见 `config.example.yaml`。
-
 ```bash
-curl localhost:3721/health
-# {"code":0,"data":{"status":"ok"},"message":""}
+curl localhost:3721/healthz
+# {"status":"SERVING"}
 ```
 
 ### CLI (`cmd/kite`)

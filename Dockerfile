@@ -26,6 +26,11 @@ FROM gcr.io/distroless/static-debian12:nonroot
 
 COPY --from=builder /server /usr/local/bin/server
 
+# 容器内必须监听全部网卡,端口映射才通。因此镜像不带令牌启动会被拒绝(这是有意的):
+# 运行时必须设置 KITE_SERVER_AUTH_TOKEN 或 KITE_SERVER_AUTH_TOKEN_FILE。见 docs/server-security.md。
+ENV KITE_SERVER_GRPC_ADDR=0.0.0.0:3722 \
+    KITE_SERVER_HTTP_ADDR=0.0.0.0:3721
+
 EXPOSE 3721 3722
 
 ENTRYPOINT ["/usr/local/bin/server"]
