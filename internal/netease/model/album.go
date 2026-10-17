@@ -44,12 +44,18 @@ func MapAlbum(a rawAlbum) *mmpb.Album {
 	}
 }
 
+// neteaseZone 是网易云日期时间戳对齐的时区。发行日的零点是北京时间零点
+// (如 747504000000 = UTC 1993-09-08 16:00 = 北京 1993-09-09 00:00)。
+// 必须固定时区:用进程本地时区,UTC 以西的主机会把发行日显示成前一天,同一个 RPC 的返回值随服务器所在时区而变;
+// 转 UTC 同样不对(同样差一天)。用 FixedZone 而不是 LoadLocation,避免依赖运行环境里有 tzdata(distroless 镜像等)。
+var neteaseZone = time.FixedZone("CST", 8*60*60)
+
 // formatPublishTime 把网易云毫秒级 Unix 时间戳转成可读日期；0 / 负数表示未知，返回空串。
 func formatPublishTime(ms int64) string {
 	if ms <= 0 {
 		return ""
 	}
-	return time.UnixMilli(ms).Format("2006-01-02")
+	return time.UnixMilli(ms).In(neteaseZone).Format("2006-01-02")
 }
 
 // MapAlbums 把网易云原始专辑数组转成 proto Album 列表。
