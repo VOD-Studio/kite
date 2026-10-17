@@ -35,15 +35,15 @@ func NewCommand(k *kit.Kit) *cobra.Command {
 // endpoint 变量名 ≠ rpc method 名(Subscribe↔SubscribeAlbum、Unsubscribe↔UnsubscribeAlbum)。
 func annotateAlbumRpcs(c *cobra.Command) {
 	rpcs := map[string][]string{
-		"shelf":         {"AlbumService/NewAlbumShelf"},
-		"newest":        {"AlbumService/NewestAlbums"},
-		"all":           {"AlbumService/AllNewAlbums"},
-		"detail":        {"AlbumService/GetAlbum"},
-		"dynamic":       {"AlbumService/AlbumDynamic"},
-		"song-quality":  {"AlbumService/AlbumSongQuality"},
-		"subscribe":     {"AlbumService/SubscribeAlbum"},
-		"unsubscribe":   {"AlbumService/UnsubscribeAlbum"},
-		"subscribed":    {"AlbumService/SubscribedAlbums"},
+		"shelf":        {"AlbumService/NewAlbumShelf"},
+		"newest":       {"AlbumService/NewestAlbums"},
+		"all":          {"AlbumService/AllNewAlbums"},
+		"detail":       {"AlbumService/GetAlbum"},
+		"dynamic":      {"AlbumService/AlbumDynamic"},
+		"song-quality": {"AlbumService/AlbumSongQuality"},
+		"subscribe":    {"AlbumService/SubscribeAlbum"},
+		"unsubscribe":  {"AlbumService/UnsubscribeAlbum"},
+		"subscribed":   {"AlbumService/SubscribedAlbums"},
 	}
 	for _, sub := range c.Commands() {
 		if v, ok := rpcs[sub.Name()]; ok {

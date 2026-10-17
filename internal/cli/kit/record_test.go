@@ -1,11 +1,12 @@
 package kit
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/VOD-Studio/kite/internal/cli/recall"
+	"github.com/VOD-Studio/kite/internal/recall"
 )
 
 // newKitWithTestPool 构造一个 Kit,召回池指向临时目录,返回池路径供断言。
@@ -16,7 +17,7 @@ func newKitWithTestPool(t *testing.T) (*Kit, string) {
 	pool := recall.NewPool(func() (string, error) { return path, nil })
 	k := &Kit{pool: pool}
 	// 注入 capturing stderr 让 Warnf 可断言。
-	var buf capturingWriter
+	var buf bytes.Buffer
 	k.Err = &buf
 	return k, path
 }

@@ -123,3 +123,33 @@ func unmarshalCached[Resp any](newResp func() Resp, data []byte) (Resp, bool) {
 	}
 	return r, true
 }
+
+// ExecuteWithCookie 走 cookie override 路径执行 endpoint:cookie 从 ctx 取
+// (engine.WithCookie 注入),不经 session 池,不读写缓存。
+//
+// 写操作 / 即时数据 / 本地持有 cookie 的调用方(CLI、gRPC cookie 拦截器路径)共用
+// 本函数,与 Execute 同样应用 PathFunc——执行语义只在 engine 一处定义,调用方不得再拷贝。
+func ExecuteWithCookie[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoint[Req, Resp], req Req) (Resp, error) { //nolint:revive // 与 Execute 保持同一参数顺序
+	var zero Resp
+
+	params, err := ep.MapRequest(req)
+	if err != nil {
+		return zero, fmt.Errorf("map request: %w", err)
+	}
+
+	meta := ep.Meta
+	if ep.PathFunc != nil {
+		meta.Path = ep.PathFunc(req)
+	}
+
+	raw, _, err := e.RawDoWithCookieAndInput(ctx, meta, params)
+	if err != nil {
+		return zero, err
+	}
+
+	resp, err := ep.MapResponse(req, raw)
+	if err != nil {
+		return zero, fmt.Errorf("map response: %w", err)
+	}
+	return resp, nil
+}

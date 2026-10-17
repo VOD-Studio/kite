@@ -10,11 +10,11 @@ import (
 
 // rawFollowItem 是网易云关注/粉丝列表的单个用户结构。
 type rawFollowItem struct {
-	UserID      int64  `json:"userId"`   // 用户ID
-	Nickname    string `json:"nickname"` // 昵称
-	AvatarURL   string `json:"avatarUrl"` // 头像URL
-	Followeds   int64  `json:"followeds"` // 粉丝数
-	Follows     int64  `json:"follows"`   // 关注数
+	UserID    int64  `json:"userId"`    // 用户ID
+	Nickname  string `json:"nickname"`  // 昵称
+	AvatarURL string `json:"avatarUrl"` // 头像URL
+	Followeds int64  `json:"followeds"` // 粉丝数
+	Follows   int64  `json:"follows"`   // 关注数
 }
 
 // parseFollowList 解析关注列表。

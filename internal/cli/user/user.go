@@ -34,18 +34,18 @@ func NewCommand(k *kit.Kit) *cobra.Command {
 // 命名偏移:playlists↔UserPlaylist、follow-each-other↔FollowEachOther、similar↔SimilarUsers。
 func annotateUserRpcs(c *cobra.Command) {
 	rpcs := map[string][]string{
-		"account":            {"UserService/Account"},
-		"detail":             {"UserService/Detail"},
-		"detail-by-name":     {"UserService/DetailByName"},
-		"sub-count":          {"UserService/SubCount"},
-		"playlists":          {"UserService/UserPlaylist"},
-		"follows":            {"UserService/Follows"},
-		"followeds":          {"UserService/Followeds"},
-		"follow-each-other":  {"UserService/FollowEachOther"},
-		"record":             {"UserService/Record"},
-		"events":             {"UserService/Events"},
-		"level":              {"UserService/Level"},
-		"similar":            {"UserService/SimilarUsers"},
+		"account":           {"UserService/Account"},
+		"detail":            {"UserService/Detail"},
+		"detail-by-name":    {"UserService/DetailByName"},
+		"sub-count":         {"UserService/SubCount"},
+		"playlists":         {"UserService/UserPlaylist"},
+		"follows":           {"UserService/Follows"},
+		"followeds":         {"UserService/Followeds"},
+		"follow-each-other": {"UserService/FollowEachOther"},
+		"record":            {"UserService/Record"},
+		"events":            {"UserService/Events"},
+		"level":             {"UserService/Level"},
+		"similar":           {"UserService/SimilarUsers"},
 	}
 	for _, sub := range c.Commands() {
 		if v, ok := rpcs[sub.Name()]; ok {

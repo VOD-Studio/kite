@@ -75,6 +75,7 @@ const (
 // 动画参数(对齐 oh-my-pi Loader 源码):
 //   - spinner 每 80ms 推进一帧(SPINNER_ADVANCE_MS)
 //   - shimmer 30fps 重绘(RENDER_INTERVAL_MS = 1000/30)
+//
 // 两个独立驱动:spinner 换帧 + shimmer 亮带推进。取较短的 33ms tick 同时驱动两者。
 const animInterval = 33 * time.Millisecond
 
@@ -106,7 +107,7 @@ type model struct {
 	compiled compiledPalette
 
 	// CONFIRMED 时填充,Run 退出后回传调用方。
-	confirmedRaw  json.RawMessage
+	confirmedRaw    json.RawMessage
 	confirmedCookie string
 }
 
@@ -151,8 +152,8 @@ func Run(deps Deps, output io.Writer) (Result, error) {
 		return Result{}, fmt.Errorf("登录界面返回意外类型 %T", final)
 	}
 	return Result{
-		Confirmed:  m.state == stateConfirmed,
-		Raw:        m.confirmedRaw,
-		SetCookie:  m.confirmedCookie,
+		Confirmed: m.state == stateConfirmed,
+		Raw:       m.confirmedRaw,
+		SetCookie: m.confirmedCookie,
 	}, nil
 }

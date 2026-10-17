@@ -24,22 +24,23 @@ import (
 	"github.com/VOD-Studio/kite/internal/cli/song"
 	"github.com/VOD-Studio/kite/internal/cli/user"
 	"github.com/VOD-Studio/kite/internal/cli/version"
+	"github.com/VOD-Studio/kite/internal/localstate"
 )
 
 // NewRootCommand 创建根命令并装配所有命令组。
 //
 // 登录类命令挂顶层(高频入口),接口按领域分组(song/album/...)。
 // 登录态来源: 1. NETEASE_COOKIE 环境变量(优先,临时换号调试)
-// 2. 本地配置目录下的 session.json(login/login-cellphone 写入,logout 删除);
-//    路径见 kite doctor(macOS ~/Library/Application Support/kite/、
-//    Linux ~/.config/kite/、Windows %AppData%\kite\)。
+//  2. 本地配置目录下的 session.json(login/login-cellphone 写入,logout 删除);
+//     路径见 kite doctor(macOS ~/Library/Application Support/kite/、
+//     Linux ~/.config/kite/、Windows %AppData%\kite\)。
 func NewRootCommand() *cobra.Command {
 	k := kit.New()
 
 	// config.toml 装配(PRD-0017):构造期加载一次,flag 默认值与 Render 消费。
 	// 坏文件(解析失败/key 越界)= 硬错误:所有命令拒绝执行,静默回退会掩盖用户设置。
 	// 此时命令树仍按内置默认构造(flag 注册需要值),PersistentPreRunE 兜底拦截执行。
-	cfg, cfgErr := kit.LoadConfig()
+	cfg, cfgErr := localstate.LoadConfig()
 	if cfgErr == nil {
 		k.Config = cfg
 	}
@@ -106,12 +107,12 @@ func NewRootCommand() *cobra.Command {
 				return fmt.Errorf("配置不可用,已拒绝执行: %w", cfgErr)
 			}
 		}
-		raw, source := proxyFlag, kit.ProxySourceFlag
+		raw, source := proxyFlag, localstate.ProxySourceFlag
 		if raw == "" {
-			raw, source = k.Config.Proxy, kit.ProxySourceConfig
+			raw, source = k.Config.Proxy, localstate.ProxySourceConfig
 		}
 		if raw != "" {
-			u, err := kit.ParseProxyURL(raw)
+			u, err := localstate.ParseProxyURL(raw)
 			if err != nil {
 				return errors.Join(kit.ErrUsage, err)
 			}

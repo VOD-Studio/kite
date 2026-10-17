@@ -112,9 +112,9 @@ func TestGuard_LeafCommandsRunnable(t *testing.T) {
 
 // guardCmd 是 walkAllCmd 的访问单元。
 type guardCmd struct {
-	name          string
+	name           string
 	hasSubCommands bool
-	runnable      bool
+	runnable       bool
 }
 
 // walkAll 深度优先遍历命令树(含 root),visit(name, short)。

@@ -15,21 +15,22 @@ import (
 
 	"github.com/VOD-Studio/kite/internal/cli/kit"
 	"github.com/VOD-Studio/kite/internal/cli/songdl"
+	"github.com/VOD-Studio/kite/internal/localstate"
 )
 
 // deps 注入 kit 函数,测试替身用(song download 的 downloadDeps 同款模式)。
 type deps struct {
-	path     func() (string, error)                      // config.toml 路径
-	load     func() (kit.Config, map[string]bool, error) // 生效值 + 文件里显式设置的 key 集
-	set      func(key, value string) error               // 校验并写入
-	wantJSON func() bool                                 // 输出形态(kit.WantJSON 同链,测试可替身)
+	path     func() (string, error)                             // config.toml 路径
+	load     func() (localstate.Config, map[string]bool, error) // 生效值 + 文件里显式设置的 key 集
+	set      func(key, value string) error                      // 校验并写入
+	wantJSON func() bool                                        // 输出形态(kit.WantJSON 同链,测试可替身)
 }
 
 func defaultDeps(k *kit.Kit) deps {
 	return deps{
-		path:     kit.ConfigPath,
-		load:     kit.LoadConfigWithSet,
-		set:      kit.SetConfigKey,
+		path:     localstate.ConfigPath,
+		load:     localstate.LoadConfigWithSet,
+		set:      localstate.SetConfigKey,
 		wantJSON: k.WantJSON,
 	}
 }
@@ -41,7 +42,7 @@ func completeConfigKeys(_ *cobra.Command, args []string, toComplete string) ([]c
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 	var out []cobra.Completion
-	for _, key := range kit.ConfigKeys() {
+	for _, key := range localstate.ConfigKeys() {
 		if strings.HasPrefix(key, toComplete) {
 			out = append(out, key)
 		}
@@ -106,8 +107,8 @@ func newGetCommand(d deps) *cobra.Command {
 			out := cmd.OutOrStdout()
 			if len(args) == 1 {
 				key := args[0]
-				if !kit.IsKnownConfigKey(key) {
-					return fmt.Errorf("未知配置项 %q(可用: %s)", key, strings.Join(kit.ConfigKeys(), " "))
+				if !localstate.IsKnownConfigKey(key) {
+					return fmt.Errorf("未知配置项 %q(可用: %s)", key, strings.Join(localstate.ConfigKeys(), " "))
 				}
 				fmt.Fprintln(out, displayValue(key, cfg))
 				return nil
@@ -115,7 +116,7 @@ func newGetCommand(d deps) *cobra.Command {
 			// 无参:全量列表。输出形态走 kit.WantJSON 同一条优先级链
 			// (--json > 非TTY自动JSON > config > 默认),config get | jq 直接可用。
 			rows := []entry{}
-			for _, key := range kit.ConfigKeys() {
+			for _, key := range localstate.ConfigKeys() {
 				source := "默认"
 				if set[key] {
 					source = "config"
@@ -167,7 +168,7 @@ type entry struct {
 
 // displayValue 返回 key 的生效值字符串形态。
 // filename_template 未设(空)时展示实际生效的默认模板——get 永远回答「现在命令实际用什么」。
-func displayValue(key string, cfg kit.Config) string {
+func displayValue(key string, cfg localstate.Config) string {
 	switch key {
 	case "level":
 		return strconv.Itoa(cfg.Level)

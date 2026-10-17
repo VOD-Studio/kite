@@ -40,11 +40,13 @@ kite song download 347230 --level 3   # 下载单曲(1标准 2较高 3无损 4Hi
 
 ## 架构
 
-三层运行时,共享 `internal/netease/` 核心与 `internal/service/` 业务层:
+共享 `internal/netease/` 核心(engine 请求引擎 + endpoint 接口声明),三个前端平行消费:
 
-- **service 层**:网易云业务逻辑,CLI 与 TUI 共同消费。
-- **CLI**(`internal/cli/`):输出导向(表格 / JSON),按领域分包,`kit/` 是公共渲染层。
+- **gRPC / REST 服务**(`cmd/server`):`internal/service` 是 gRPC adapter。
+- **CLI**(`internal/cli/`):直连 engine,输出导向(表格 / JSON),按领域分包,`kit/` 是渲染层。
 - **TUI**(`internal/tui/`,规划中):bubbletea v2 完整客户端,与 CLI 平行不耦合。
+
+前端共享的本地能力(会话 / 配置 / 召回池)在 `internal/localstate`、`internal/recall`。分层规则见 [AGENTS.md](AGENTS.md),由测试守护。
 
 gRPC 契约的唯一真相在 [`proto/netease/music/v1/`](proto/netease/music/v1/)。TUI 架构决策见 [ADR](docs/adr/tui-client-architecture.md)。
 
@@ -66,13 +68,13 @@ go test ./...             # 测试
 go vet ./...              # 检查
 ```
 
-环境依赖 **Go 1.25**。若环境缺 Go,`make` 无提示直接失败——请先安装,不要自行处理。
+Go 版本以 `go.mod` 为准。若环境缺 Go,`make` 无提示直接失败。
 
 ## 技术栈
 
-- Go 1.25 + gRPC + grpc-gateway(契约优先,proto 定义 RPC)
+- Go + gRPC + grpc-gateway(契约优先,proto 定义 RPC)
 - bubbletea v2 / lipgloss v2(TUI)、cobra(CLI 命令树)
-- OpenTelemetry 可观测性(OTLP exporter / Prometheus 指标 / 结构化日志)
+- `observability/` 包提供 OTel / Prometheus / 日志脱敏(已实现,尚未接入 `cmd/server`)
 - Redis 缓存与会话存储(当前 noop,后续接入)
 - 网易云 weapi/eapi 加密自实现(Go 标准库,不依赖第三方音乐库)
 

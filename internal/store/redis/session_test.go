@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	musicredis "github.com/VOD-Studio/kite/internal/store/redis"
 	"github.com/VOD-Studio/kite/internal/netease/session"
+	musicredis "github.com/VOD-Studio/kite/internal/store/redis"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 )

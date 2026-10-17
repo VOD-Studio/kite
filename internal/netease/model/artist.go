@@ -12,22 +12,22 @@ import (
 //
 // 在歌曲的 ar 字段、专辑的 artist 字段、歌手详情等处出现。
 type rawArtist struct {
-	ID    int64    `json:"id"`      // 歌手ID
-	Name  string   `json:"name"`    // 歌手名
-	Alias []string `json:"alias"`  // 别名列表
-	Pic   string   `json:"picUrl"`  // 头像URL
+	ID    int64    `json:"id"`        // 歌手ID
+	Name  string   `json:"name"`      // 歌手名
+	Alias []string `json:"alias"`     // 别名列表
+	Pic   string   `json:"picUrl"`    // 头像URL
 	Img   string   `json:"img1v1Url"` // 1:1头像URL
 }
 
 // rawArtistInfo 是网易云歌手详情接口的响应。
 type rawArtistInfo struct {
-	Code int `json:"code"` // 业务码
+	Code   int `json:"code"` // 业务码
 	Artist struct {
-		ID         int64  `json:"id"`        // 歌手ID
-		Name       string `json:"name"`      // 歌手名
-		Img1v1URL  string `json:"img1v1Url"` // 1:1头像URL
-		BriefDesc  string `json:"briefDesc"` // 歌手简介
-	} `json:"artist"`                        // 歌手信息
+		ID        int64  `json:"id"`        // 歌手ID
+		Name      string `json:"name"`      // 歌手名
+		Img1v1URL string `json:"img1v1Url"` // 1:1头像URL
+		BriefDesc string `json:"briefDesc"` // 歌手简介
+	} `json:"artist"` // 歌手信息
 	HotSongs []rawSong `json:"hotSongs"` // 热门歌曲列表
 }
 

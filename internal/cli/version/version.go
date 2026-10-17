@@ -12,10 +12,10 @@ import (
 // (如 go run / 本地 go build 无 vcs)则 version 为 (devel)、vcs 字段缺失。
 // doctor(#41)的「版本」检查项复用本类型与读取函数。
 type VersionInfo struct {
-	Version   string `json:"version"`             // module version(go install 嵌入,否则 (devel))
-	Commit    string `json:"commit,omitempty"`    // vcs.revision(短哈希)
+	Version   string `json:"version"`              // module version(go install 嵌入,否则 (devel))
+	Commit    string `json:"commit,omitempty"`     // vcs.revision(短哈希)
 	BuildTime string `json:"build_time,omitempty"` // vcs.time(RFC3339)
-	GoVersion string `json:"go_version"`          // 编译用的 Go 版本
+	GoVersion string `json:"go_version"`           // 编译用的 Go 版本
 	Modified  bool   `json:"modified,omitempty"`   // vcs.modified:工作区有未提交改动
 }
 

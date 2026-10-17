@@ -33,10 +33,18 @@ var Suggest = &engine.Endpoint[*mmpb.SuggestRequest, *mmpb.SuggestResponse]{
 	MapResponse: func(req *mmpb.SuggestRequest, raw json.RawMessage) (*mmpb.SuggestResponse, error) {
 		var resp struct {
 			Result struct {
-				Songs     []struct{ Name string `json:"name"` } `json:"songs"`
-				Albums    []struct{ Name string `json:"name"` } `json:"albums"`
-				Artists   []struct{ Name string `json:"name"` } `json:"artists"`
-				Playlists []struct{ Name string `json:"name"` } `json:"playlists"`
+				Songs []struct {
+					Name string `json:"name"`
+				} `json:"songs"`
+				Albums []struct {
+					Name string `json:"name"`
+				} `json:"albums"`
+				Artists []struct {
+					Name string `json:"name"`
+				} `json:"artists"`
+				Playlists []struct {
+					Name string `json:"name"`
+				} `json:"playlists"`
 			} `json:"result"`
 		}
 		if err := json.Unmarshal(raw, &resp); err != nil {

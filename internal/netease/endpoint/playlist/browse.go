@@ -16,11 +16,11 @@ import (
 
 // HighQuality 获取精品歌单列表。
 var HighQuality = &engine.Endpoint[*mmpb.HighQualityRequest, *mmpb.HighQualityResponse]{
-	Meta:   weapiMeta("/weapi/playlist/highquality/list"),
-	Cache:  browseCache("playlist:highquality", func(r *mmpb.HighQualityRequest) string {
+	Meta: weapiMeta("/weapi/playlist/highquality/list"),
+	Cache: browseCache("playlist:highquality", func(r *mmpb.HighQualityRequest) string {
 		return fmt.Sprintf("%s:%s:%d:%d", "playlist:highquality", r.GetCat(), r.GetLimit(), r.GetOffset())
 	}),
-	NewResp:    func() *mmpb.HighQualityResponse { return &mmpb.HighQualityResponse{} },
+	NewResp: func() *mmpb.HighQualityResponse { return &mmpb.HighQualityResponse{} },
 	MapRequest: func(req *mmpb.HighQualityRequest) (map[string]any, error) {
 		limit := req.GetLimit()
 		if limit <= 0 {
@@ -33,8 +33,8 @@ var HighQuality = &engine.Endpoint[*mmpb.HighQualityRequest, *mmpb.HighQualityRe
 
 // HighQualityTags 获取精品歌单标签列表。
 var HighQualityTags = &engine.Endpoint[*mmpb.HighQualityTagsRequest, *mmpb.HighQualityTagsResponse]{
-	Meta:  weapiMeta("/weapi/playlist/highquality/tags"),
-	Cache: browseCacheConst[*mmpb.HighQualityTagsRequest]("playlist:hq:tags"),
+	Meta:       weapiMeta("/weapi/playlist/highquality/tags"),
+	Cache:      browseCacheConst[*mmpb.HighQualityTagsRequest]("playlist:hq:tags"),
 	NewResp:    func() *mmpb.HighQualityTagsResponse { return &mmpb.HighQualityTagsResponse{} },
 	MapRequest: func(*mmpb.HighQualityTagsRequest) (map[string]any, error) { return map[string]any{}, nil },
 	MapResponse: func(_ *mmpb.HighQualityTagsRequest, raw json.RawMessage) (*mmpb.HighQualityTagsResponse, error) {
@@ -67,8 +67,8 @@ func rawToString(raw json.RawMessage) string {
 
 // CatList 获取歌单分类列表。
 var CatList = &engine.Endpoint[*mmpb.CatListRequest, *mmpb.CatListResponse]{
-	Meta:  weapiMeta("/weapi/playlist/catalogue"),
-	Cache: browseCacheConst[*mmpb.CatListRequest]("playlist:catlist"),
+	Meta:       weapiMeta("/weapi/playlist/catalogue"),
+	Cache:      browseCacheConst[*mmpb.CatListRequest]("playlist:catlist"),
 	NewResp:    func() *mmpb.CatListResponse { return &mmpb.CatListResponse{} },
 	MapRequest: func(*mmpb.CatListRequest) (map[string]any, error) { return map[string]any{}, nil },
 	MapResponse: func(_ *mmpb.CatListRequest, raw json.RawMessage) (*mmpb.CatListResponse, error) {
@@ -94,11 +94,11 @@ var CatList = &engine.Endpoint[*mmpb.CatListRequest, *mmpb.CatListResponse]{
 
 // BrowseHot 获取网友精选碟（热门歌单）。
 var BrowseHot = &engine.Endpoint[*mmpb.BrowseHotRequest, *mmpb.BrowseHotResponse]{
-	Meta:  weapiMeta("/weapi/playlist/list"),
+	Meta: weapiMeta("/weapi/playlist/list"),
 	Cache: browseCache("playlist:hot", func(r *mmpb.BrowseHotRequest) string {
 		return fmt.Sprintf("%s:%s:%s:%d:%d", "playlist:hot", r.GetCat(), r.GetOrder(), r.GetLimit(), r.GetOffset())
 	}),
-	NewResp:    func() *mmpb.BrowseHotResponse { return &mmpb.BrowseHotResponse{} },
+	NewResp: func() *mmpb.BrowseHotResponse { return &mmpb.BrowseHotResponse{} },
 	MapRequest: func(req *mmpb.BrowseHotRequest) (map[string]any, error) {
 		limit := req.GetLimit()
 		if limit <= 0 {
@@ -133,8 +133,8 @@ var Subscribers = &engine.Endpoint[*mmpb.SubscribersRequest, *mmpb.SubscribersRe
 	MapResponse: func(_ *mmpb.SubscribersRequest, raw json.RawMessage) (*mmpb.SubscribersResponse, error) {
 		var resp struct {
 			Subscribers []struct {
-				UserID    int64  `json:"userId"`   // 用户ID
-				Nickname  string `json:"nickname"` // 昵称
+				UserID    int64  `json:"userId"`    // 用户ID
+				Nickname  string `json:"nickname"`  // 昵称
 				AvatarURL string `json:"avatarUrl"` // 头像URL
 			} `json:"subscribers"`
 		}

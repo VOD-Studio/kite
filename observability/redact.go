@@ -14,13 +14,13 @@ import (
 // 这些字段绝不能明文进日志：一旦日志被采集到第三方或截图分享，
 // 就是安全事故。
 var sensitiveKeys = map[string]redactStrategy{
-	"cookie":      redactHash,
-	"set-cookie":  redactHash,
-	"phone":       redactHash,
-	"token":       redactMask,
-	"password":    redactMask,
-	"captcha":     redactMask,
-	"session":     redactMask,
+	"cookie":        redactHash,
+	"set-cookie":    redactHash,
+	"phone":         redactHash,
+	"token":         redactMask,
+	"password":      redactMask,
+	"captcha":       redactMask,
+	"session":       redactMask,
 	"authorization": redactMask,
 }
 

@@ -1,7 +1,8 @@
 // Package service 是 grpc service impl 层（薄路由，无业务逻辑）。
 //
-// 每个方法恒一行 return resp, err（Execute 返回值类型，service 取地址返回指针满足 gRPC 签名）。
-// service 是 gRPC server interface 的 adapter 边界。
+// 每个方法恒一行调用 engine.Execute / engine.ExecuteWithCookie。
+// service 只是 gRPC server interface 的 adapter，只被 internal/server 引用；
+// CLI 与 TUI 不经过它，共享边界是 engine + endpoint（见 docs/adr/shared-boundary-engine.md）。
 package service
 
 import (
