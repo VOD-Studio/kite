@@ -198,6 +198,34 @@ jobs:
       - name: 镜像冒烟
         run: scripts/docker-smoke.sh kite-server:ci
 
+  # Rust 互操作冒烟:服务是给 Rust 等其它语言的项目用的,这里证明「Rust 真的能用」——
+  # 用 proto 生成 tonic 客户端,对真实运行的 kite-server 验证鉴权与 ErrorInfo 错误契约,
+  # 并编译 / 运行文档里的 Rust 示例。不访问上游网易云。
+  rust-interop:
+    name: Rust Interop
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+          version: ${{ env.BUF_VERSION }}
+      # rustup 1.28+ 不再自动安装 rust-toolchain.toml 指定的工具链,需显式安装
+      - name: 安装固定的 Rust 工具链
+        working-directory: interop/rust
+        run: rustup toolchain install
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            interop/rust/target
+          key: rust-interop-${{ runner.os }}-${{ hashFiles('interop/rust/Cargo.lock', 'interop/rust/rust-toolchain.toml') }}
+          restore-keys: rust-interop-${{ runner.os }}-
+      - run: make interop-rust
+
   # 发布配置的合并前校验:goreleaser 配置错误、跨平台构建失败原本要到打 tag 才暴露。
   # 跳过 docker / 签名 / 发布(需要 buildx、OIDC 与 registry 凭据);镜像构建由 Docker Build job 覆盖。
   release-check:
@@ -253,7 +281,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [hygiene, lint, test, cross-build, proto, vuln, docker, release-check, pr-title]
+    needs: [hygiene, lint, test, cross-build, proto, vuln, docker, rust-interop, release-check, pr-title]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

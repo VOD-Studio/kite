@@ -1,0 +1,23 @@
+# Rust 客户端互操作冒烟:用 kite 的 proto 生成 tonic 客户端,对真实运行的 kite-server 做调用,
+# 验证「Rust 项目能用这个服务」这件事本身——契约(proto)、错误语义(ErrorInfo)、鉴权。
+# 不是发布产物。运行方式见 scripts/rust-interop.sh。
+[package]
+name = "kite-interop"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+prost = "0.14.4"
+tonic = "0.14.6"
+tonic-health = "0.14.6"
+tonic-prost = "0.14.6"
+tonic-types = "0.14.6"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+[build-dependencies]
+prost-types = "0.14.4"
+prost = "0.14.4"
+tonic-prost-build = "0.14.6"

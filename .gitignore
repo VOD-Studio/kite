@@ -31,3 +31,5 @@ history.jsonl
 
 # GoReleaser 产物
 dist/
+interop/rust/target/
+interop/rust/kite.binpb

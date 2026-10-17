@@ -84,7 +84,7 @@ func TestDependencyDirection(t *testing.T) {
 		}
 		if d.IsDir() {
 			switch d.Name() {
-			case ".git", "gen", "node_modules", "tmp":
+			case ".git", "gen", "node_modules", "tmp", "target":
 				return filepath.SkipDir
 			}
 			return nil
