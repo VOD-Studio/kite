@@ -27,6 +27,7 @@ go vet ./...              # 检查
 - **release PR 的 CI**:release PR 由 `github-actions[bot]` 创建,`GITHUB_TOKEN` 触发的事件有两个坑——仓库的「首次贡献者需批准」策略会让它的 pull_request CI 停在 `action_required`(此时 required check `CI OK` 视为未满足、PR 保持 BLOCKED),且按 GitHub 规则这类事件原则上不会触发其它 workflow。`release-please.yml` 每次运行后调用 `scripts/release-pr-ci.sh`:有等待批准的运行就批准(这个 PR 由我们自己的 workflow 生成,批准是安全的,无需放宽仓库策略);轮询约 1 分钟仍没有任何 pull_request 运行,则回退为在 release 分支上 `workflow_dispatch` 一次 CI。逻辑有假 `gh` 的单元测试(`make scripts-check`)。若 release PR 仍是 BLOCKED,在 Actions 页手动重跑 `Release Please`。
 - **镜像冒烟**:`Docker Build` job 在构建后跑 `scripts/docker-smoke.sh`(无令牌拒绝启动、`/healthz`、REST 鉴权),不访问外网。镜像的监听地址 / 令牌策略见 [`docs/server-security.md`](docs/server-security.md);`Dockerfile` 与 `Dockerfile.release` 的 `KITE_SERVER_*` 必须一致(有测试守护)。
 - **Rust 互操作冒烟**:`Rust Interop` job 跑 `make interop-rust`(`scripts/rust-interop.sh`):`buf` 把 proto 编成描述符,`interop/rust` 据此生成 tonic 客户端,对真实运行的 `kite-server` 验证健康检查、令牌鉴权和 `ErrorInfo`。`docs/` 里的 Rust 示例与 `interop/rust/src/*.rs` 逐字一致(有测试守护):改示例先改文档,再原样同步。本地需要 `cargo`,较慢,不在 `make check` 里。
+- **BSR 发布**:release 成功后 `bsr` job 调用 `bsr.yml`,把 `proto/` 推送到 `buf.build/vod-studio/kite`(标签 `main` + 版本 tag),供其它语言的项目直接依赖。需要 BSR 上已有组织 `vod-studio` 和仓库 secret `BUF_TOKEN`;未配置时只给提示、跳过,不影响发布。手动补推:Actions → `BSR` → Run workflow(填 tag)。
 - **发布**:release PR 合并后,`release-please.yml` 在同一 workflow 内直接调用 `release.yml`(release-please 用 `GITHUB_TOKEN` 打的 tag 不会触发 `on: push: tags`)。手动补发某个 tag 的产物:Actions → `Release` → Run workflow。
 
 ## 工作流(分支与提交)

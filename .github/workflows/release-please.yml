@@ -82,3 +82,15 @@ jobs:
     uses: ./.github/workflows/release.yml
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
+
+  # release 成功后把 proto 发布到 Buf Schema Registry(版本 tag 作为 label),供其它语言的项目直接依赖。
+  # 独立于 release job:BSR 的问题不影响已发布的产物,也可以单独重跑。未配置 BUF_TOKEN 时只给提示、跳过。
+  bsr:
+    needs: [release-please, release]
+    if: needs.release-please.outputs.release_created == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/bsr.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets: inherit
