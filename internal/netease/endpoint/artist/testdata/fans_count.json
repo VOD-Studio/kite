@@ -1,0 +1,12 @@
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "isFollow": false,
+    "fansCnt": 19103189,
+    "followCnt": 0,
+    "followDay": "",
+    "followDayCnt": 0,
+    "follow": false
+  }
+}

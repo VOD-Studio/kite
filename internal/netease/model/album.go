@@ -27,7 +27,7 @@ type rawAlbumDetail struct {
 		ID          int64       `json:"id"`          // 专辑ID
 		Name        string      `json:"name"`        // 专辑名
 		PicUrl      string      `json:"picUrl"`      // 封面URL
-		PublishTime string      `json:"publishTime"` // 发行时间（网易云原始字符串格式）
+		PublishTime int64       `json:"publishTime"` // 发行时间(毫秒级 Unix 时间戳;曾误声明为 string,真实响应一解析就报错)
 		Artists     []rawArtist `json:"artists"`     // 歌手数组
 	} `json:"album"` // 专辑信息
 	Songs []rawSong `json:"songs"` // 歌曲列表
@@ -35,18 +35,21 @@ type rawAlbumDetail struct {
 
 // MapAlbum 把网易云原始专辑结构转成 proto Album。
 func MapAlbum(a rawAlbum) *mmpb.Album {
-	publishTime := ""
-	if a.PublishTime > 0 {
-		// 网易云 publishTime 是毫秒级 Unix 时间戳，转成可读字符串。
-		publishTime = time.UnixMilli(a.PublishTime).Format("2006-01-02")
-	}
 	return &mmpb.Album{
 		Id:          a.ID,
 		Name:        a.Name,
 		PicUrl:      a.Pic,
-		PublishTime: publishTime,
+		PublishTime: formatPublishTime(a.PublishTime),
 		Artist:      MapArtist(a.Artist),
 	}
+}
+
+// formatPublishTime 把网易云毫秒级 Unix 时间戳转成可读日期；0 / 负数表示未知，返回空串。
+func formatPublishTime(ms int64) string {
+	if ms <= 0 {
+		return ""
+	}
+	return time.UnixMilli(ms).Format("2006-01-02")
 }
 
 // MapAlbums 把网易云原始专辑数组转成 proto Album 列表。
@@ -74,7 +77,7 @@ func DecodeAlbumDetail(raw json.RawMessage) (*mmpb.Album, []*mmpb.Song, error) {
 		Id:          a.ID,
 		Name:        a.Name,
 		PicUrl:      a.PicUrl,
-		PublishTime: a.PublishTime,
+		PublishTime: formatPublishTime(a.PublishTime),
 		Artist:      albumArtist,
 	}
 	return album, MapSongs(r.Songs), nil

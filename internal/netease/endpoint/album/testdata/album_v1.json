@@ -1,0 +1,372 @@
+{
+  "resourceState": true,
+  "songs": [
+    {
+      "rtUrls": [],
+      "ar": [
+        {
+          "id": 11127,
+          "name": "Beyond",
+          "tns": [
+            "超越"
+          ]
+        }
+      ],
+      "al": {
+        "id": 34209,
+        "name": "海阔天空",
+        "picUrl": "https://p1.music.126.net/iAwVf8ag_45csIUuh1wSZg==/1099511689",
+        "pic_str": "109951168912558470",
+        "pic": 109951168912558470
+      },
+      "st": 1,
+      "noCopyrightRcmd": null,
+      "artistClassics": null,
+      "songJumpInfo": null,
+      "djId": 0,
+      "no": 1,
+      "fee": 1,
+      "mv": 376199,
+      "cd": "1",
+      "t": 0,
+      "v": 120,
+      "dt": 326000,
+      "rtype": 0,
+      "rurl": null,
+      "pst": 0,
+      "alia": [],
+      "pop": 100.0,
+      "rt": "600902000004240302",
+      "mst": 9,
+      "cp": 1416737,
+      "crbt": null,
+      "cf": "",
+      "h": {
+        "br": 320001,
+        "fid": 0,
+        "size": 13042460,
+        "vd": -5628.0,
+        "sr": 44100
+      },
+      "sq": {
+        "br": 797831,
+        "fid": 0,
+        "size": 32511640,
+        "vd": -5286.0,
+        "sr": 44100
+      },
+      "hr": null,
+      "l": {
+        "br": 128001,
+        "fid": 0,
+        "size": 5217010,
+        "vd": -1489.0,
+        "sr": 44100
+      },
+      "rtUrl": null,
+      "ftype": 0,
+      "a": null,
+      "m": {
+        "br": 192001,
+        "fid": 0,
+        "size": 7825493,
+        "vd": -3050.0,
+        "sr": 44100
+      },
+      "mark": 17179877376,
+      "name": "海阔天空",
+      "id": 347230,
+      "tns": [
+        "Boundless Oceans, Vast Skies"
+      ],
+      "privilege": {
+        "id": 347230,
+        "fee": 1,
+        "payed": 0,
+        "st": 0,
+        "pl": 0,
+        "dl": 0,
+        "sp": 0,
+        "cp": 0,
+        "subp": 1,
+        "cs": false,
+        "maxbr": 999000,
+        "fl": 0,
+        "toast": false,
+        "flag": 4,
+        "preSell": false,
+        "playMaxbr": 999000,
+        "downloadMaxbr": 999000,
+        "maxBrLevel": "lossless",
+        "playMaxBrLevel": "lossless",
+        "downloadMaxBrLevel": "lossless",
+        "plLevel": "none",
+        "dlLevel": "none",
+        "flLevel": "none",
+        "rscl": null,
+        "freeTrialPrivilege": {
+          "resConsumable": true,
+          "userConsumable": false,
+          "listenType": null,
+          "cannotListenReason": null,
+          "playReason": null,
+          "freeLimitTagType": null
+        },
+        "rightSource": 0,
+        "chargeInfoList": [
+          {
+            "rate": 128000,
+            "chargeUrl": null,
+            "chargeMessage": null,
+            "chargeType": 1
+          },
+          {
+            "rate": 192000,
+            "chargeUrl": null,
+            "chargeMessage": null,
+            "chargeType": 1
+          }
+        ],
+        "code": 0,
+        "message": null,
+        "plLevels": null,
+        "dlLevels": null,
+        "ignoreCache": null,
+        "bd": null
+      },
+      "eq": "rock"
+    },
+    {
+      "rtUrls": [],
+      "ar": [
+        {
+          "id": 11127,
+          "name": "Beyond",
+          "tns": [
+            "超越"
+          ]
+        }
+      ],
+      "al": {
+        "id": 34209,
+        "name": "海阔天空",
+        "picUrl": "https://p1.music.126.net/iAwVf8ag_45csIUuh1wSZg==/1099511689",
+        "pic_str": "109951168912558470",
+        "pic": 109951168912558470
+      },
+      "st": 1,
+      "noCopyrightRcmd": null,
+      "artistClassics": null,
+      "songJumpInfo": null,
+      "djId": 0,
+      "no": 2,
+      "fee": 1,
+      "mv": 0,
+      "cd": "1",
+      "t": 0,
+      "v": 29,
+      "dt": 221426,
+      "rtype": 0,
+      "rurl": null,
+      "pst": 0,
+      "alia": [],
+      "pop": 55.0,
+      "rt": "",
+      "mst": 9,
+      "cp": 1416737,
+      "crbt": null,
+      "cf": "",
+      "h": {
+        "br": 320000,
+        "fid": 0,
+        "size": 8859733,
+        "vd": -28284.0,
+        "sr": 44100
+      },
+      "sq": {
+        "br": 958152,
+        "fid": 0,
+        "size": 26520051,
+        "vd": -28386.0,
+        "sr": 44100
+      },
+      "hr": null,
+      "l": {
+        "br": 128000,
+        "fid": 0,
+        "size": 3543919,
+        "vd": -24309.0,
+        "sr": 44100
+      },
+      "rtUrl": null,
+      "ftype": 0,
+      "a": null,
+      "m": {
+        "br": 192000,
+        "fid": 0,
+        "size": 5315857,
+        "vd": -25799.0,
+        "sr": 44100
+      },
+      "mark": 17179877376,
+      "name": "爸爸妈妈",
+      "id": 347232,
+      "privilege": {
+        "id": 347232,
+        "fee": 1,
+        "payed": 0,
+        "st": 0,
+        "pl": 0,
+        "dl": 0,
+        "sp": 0,
+        "cp": 0,
+        "subp": 1,
+        "cs": false,
+        "maxbr": 999000,
+        "fl": 0,
+        "toast": false,
+        "flag": 4,
+        "preSell": false,
+        "playMaxbr": 999000,
+        "downloadMaxbr": 999000,
+        "maxBrLevel": "lossless",
+        "playMaxBrLevel": "lossless",
+        "downloadMaxBrLevel": "lossless",
+        "plLevel": "none",
+        "dlLevel": "none",
+        "flLevel": "none",
+        "rscl": null,
+        "freeTrialPrivilege": {
+          "resConsumable": true,
+          "userConsumable": false,
+          "listenType": null,
+          "cannotListenReason": null,
+          "playReason": null,
+          "freeLimitTagType": null
+        },
+        "rightSource": 0,
+        "chargeInfoList": [
+          {
+            "rate": 128000,
+            "chargeUrl": null,
+            "chargeMessage": null,
+            "chargeType": 1
+          },
+          {
+            "rate": 192000,
+            "chargeUrl": null,
+            "chargeMessage": null,
+            "chargeType": 1
+          }
+        ],
+        "code": 0,
+        "message": null,
+        "plLevels": null,
+        "dlLevels": null,
+        "ignoreCache": null,
+        "bd": null
+      },
+      "eq": "rock"
+    }
+  ],
+  "code": 200,
+  "album": {
+    "songs": [],
+    "paid": false,
+    "onSale": false,
+    "mark": 0,
+    "awardTags": null,
+    "displayTags": null,
+    "artists": [
+      {
+        "img1v1Id": 18686200114669622,
+        "topicPerson": 0,
+        "albumSize": 0,
+        "picId": 0,
+        "briefDesc": "",
+        "musicSize": 0,
+        "picUrl": "https://p2.music.126.net/6y-UleORITEDbvrOLV0Q8A==/5639395138",
+        "img1v1Url": "https://p2.music.126.net/VnZiScyynLG7atLIZ2YPkw==/1868620011",
+        "followed": false,
+        "trans": "",
+        "alias": [],
+        "name": "Beyond",
+        "id": 11127,
+        "img1v1Id_str": "18686200114669622"
+      }
+    ],
+    "copyrightId": 1416737,
+    "picId": 109951168912558470,
+    "artist": {
+      "img1v1Id": 109951165566993818,
+      "topicPerson": 0,
+      "albumSize": 144,
+      "picId": 109951165566992331,
+      "briefDesc": "",
+      "musicSize": 2600,
+      "picUrl": "https://p2.music.126.net/EawqbkXCxGmxZ6nnqTKxKw==/1099511655",
+      "img1v1Url": "https://p2.music.126.net/9aCJYVD0JZ0NckqAn3a_3w==/1099511655",
+      "followed": false,
+      "trans": "超越",
+      "alias": [],
+      "name": "Beyond",
+      "id": 11127,
+      "picId_str": "109951165566992331",
+      "transNames": [
+        "超越"
+      ],
+      "img1v1Id_str": "109951165566993818"
+    },
+    "briefDesc": "",
+    "publishTime": 747504000000,
+    "company": "滚石唱片",
+    "picUrl": "https://p2.music.126.net/iAwVf8ag_45csIUuh1wSZg==/1099511689",
+    "commentThreadId": "R_AL_3_34209",
+    "companyId": 0,
+    "pic": 109951168912558470,
+    "blurPicUrl": "https://p2.music.126.net/iAwVf8ag_45csIUuh1wSZg==/1099511689",
+    "subType": "录音室版",
+    "status": 1,
+    "description": "《海阔天空》是黄家驹为BEYOND成立十周年而作的，刻画着他们十年来的心路历程。\n记得与家驹谈到这首歌的原创动机时，他的",
+    "tags": "",
+    "alias": [],
+    "name": "海阔天空",
+    "id": 34209,
+    "type": "专辑",
+    "size": 10,
+    "picId_str": "109951168912558470",
+    "info": {
+      "commentThread": {
+        "id": "R_AL_3_34209",
+        "resourceInfo": {
+          "id": 34209,
+          "userId": -1,
+          "name": "海阔天空",
+          "imgUrl": "http://p4.music.126.net/iAwVf8ag_45csIUuh1wSZg==/10995116891",
+          "creator": null,
+          "encodedId": null,
+          "subTitle": null,
+          "webUrl": null
+        },
+        "resourceType": 3,
+        "commentCount": 377,
+        "likedCount": 0,
+        "shareCount": 394,
+        "hotCount": 26,
+        "latestLikedUsers": null,
+        "resourceId": 34209,
+        "resourceOwnerId": -1,
+        "resourceTitle": "海阔天空"
+      },
+      "latestLikedUsers": null,
+      "liked": false,
+      "comments": null,
+      "resourceType": 3,
+      "resourceId": 34209,
+      "commentCount": 377,
+      "likedCount": 0,
+      "shareCount": 394,
+      "threadId": "R_AL_3_34209"
+    }
+  }
+}

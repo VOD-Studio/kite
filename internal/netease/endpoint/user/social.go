@@ -16,8 +16,12 @@ import (
 // Follows 是获取用户关注列表的接口声明。
 var Follows = &engine.Endpoint[*mmpb.FollowsRequest, *mmpb.FollowsResponse]{
 	Meta: engine.Meta{
-		Path: "/weapi/user/getfollows", Method: "POST",
+		Path: "/weapi/user/getfollows", Method: "POST", // 占位,实际 path 由 PathFunc 生成
 		Crypto: engine.CryptoWeAPI, Auth: session.AuthAnonymous,
+	},
+	// uid 必须拼进 path。曾把 uid 放 body:真实上游返回 404(业务码),服务端因此恒报 NOT_FOUND。
+	PathFunc: func(req *mmpb.FollowsRequest) string {
+		return fmt.Sprintf("/weapi/user/getfollows/%d", req.GetUserId())
 	},
 	Cache: &engine.CachePolicy[*mmpb.FollowsRequest]{
 		Key: func(req *mmpb.FollowsRequest) string {
@@ -31,7 +35,7 @@ var Follows = &engine.Endpoint[*mmpb.FollowsRequest, *mmpb.FollowsResponse]{
 		if limit <= 0 {
 			limit = 30
 		}
-		return map[string]any{"uid": fmt.Sprintf("%d", req.GetUserId()), "limit": limit, "offset": req.GetOffset()}, nil
+		return map[string]any{"offset": req.GetOffset(), "limit": limit, "order": true}, nil
 	},
 	MapResponse: parseFollowList,
 }

@@ -1,7 +1,6 @@
 package kit
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -78,15 +77,4 @@ func printJSONTo(w io.Writer, msg proto.Message) error {
 	}
 	fmt.Fprintln(w, string(b))
 	return nil
-}
-
-// PrintRaw 直接 pretty 打印原始 JSON(动态 path 接口未经 proto 映射时用)。
-func PrintRaw(raw json.RawMessage) {
-	var v any
-	if err := json.Unmarshal(raw, &v); err != nil {
-		fmt.Println(string(raw))
-		return
-	}
-	b, _ := json.MarshalIndent(v, "", "  ")
-	fmt.Println(string(b))
 }

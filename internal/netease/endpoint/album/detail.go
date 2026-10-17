@@ -15,10 +15,15 @@ import (
 // GetAlbum 是获取专辑详情的接口声明。
 var GetAlbum = &engine.Endpoint[*mmpb.GetAlbumRequest, *mmpb.GetAlbumResponse]{
 	Meta: engine.Meta{
-		Path:   "/weapi/v1/album/detail",
+		Path:   "/weapi/v1/album", // 占位,实际 path 由 PathFunc 生成
 		Method: "POST",
 		Crypto: engine.CryptoWeAPI,
 		Auth:   session.AuthAnonymous,
+	},
+	// id 必须拼进 path。曾用 /weapi/v1/album/detail 且 id 放 body:真实上游只返回 {code,msg},
+	// 没有 album 字段,宽松解析下静默得到空专辑——RPC 成功但返回空。
+	PathFunc: func(req *mmpb.GetAlbumRequest) string {
+		return fmt.Sprintf("/weapi/v1/album/%d", req.GetAlbumId())
 	},
 	Cache: &engine.CachePolicy[*mmpb.GetAlbumRequest]{
 		Key: func(req *mmpb.GetAlbumRequest) string {
@@ -28,7 +33,7 @@ var GetAlbum = &engine.Endpoint[*mmpb.GetAlbumRequest, *mmpb.GetAlbumResponse]{
 	},
 	NewResp: func() *mmpb.GetAlbumResponse { return &mmpb.GetAlbumResponse{} },
 	MapRequest: func(req *mmpb.GetAlbumRequest) (map[string]any, error) {
-		return map[string]any{"id": fmt.Sprintf("%d", req.GetAlbumId())}, nil
+		return map[string]any{}, nil
 	},
 	MapResponse: func(req *mmpb.GetAlbumRequest, raw json.RawMessage) (*mmpb.GetAlbumResponse, error) {
 		a, songs, err := model.DecodeAlbumDetail(raw)
