@@ -47,7 +47,7 @@ type smokeCase struct {
 // knownEmpty 登记目前已知对匿名调用返回空的 RPC(用例名 → 原因):只记录、不失败。
 // 显式登记而不是删掉用例——这样它不会悄悄被遗忘;问题修复后(不再为空)会提示移除登记。
 var knownEmpty = map[string]string{
-	"Playlist.RelatedPlaylistRecommend": "匿名调用时上游 /eapi/playlist/detail/rcmd/get 对所有歌单都返回 data=null(可能需要登录态或接口已变),见 #76",
+	"Playlist.RelatedPlaylistRecommend": "匿名调用时上游 /eapi/playlist/detail/rcmd/get 对所有歌单都返回 data=null(可能需要登录态或接口已变),见 #78",
 }
 
 func TestUpstreamSmoke(t *testing.T) {
