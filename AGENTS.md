@@ -82,6 +82,7 @@ CI 的约定(唯一门禁 `CI OK`、工具版本来源、发布流程)见 [`CONT
 
 - **`docs/cmd/` 是生成物,不要手改**,改命令树后跑 `make docs`。命令语法唯一真相是 `kite <命令> --help`;其它文档指向 `--help` 或生成参考,**不要复制命令手册**(复制即第二份真相)。
 - 上手:[`docs/kite-guide.md`](docs/kite-guide.md) · CLI 设计:[`docs/kite-cli-design.md`](docs/kite-cli-design.md) · 路线图:[`docs/kite-roadmap.md`](docs/kite-roadmap.md)
+- 对外契约:[`docs/grpc-errors.md`](docs/grpc-errors.md)(gRPC/REST 错误映射;改 `internal/server/errors.go` 的 reason 必须同步)
 - 领域术语与决策索引:[`CONTEXT.md`](CONTEXT.md) · ADR:[`docs/adr/`](docs/adr/) · PRD:[`docs/prd/`](docs/prd/)
 - 改了架构边界,同步改本文件和 `internal/archtest` 的规则表,二者不一致即视为 bug。
 

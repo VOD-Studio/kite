@@ -49,11 +49,13 @@ type App struct {
 	httpServer *http.Server
 }
 
-// NewApp 创建双 server 应用，注入 engine 和 session 池装配真实 service impl。
-func NewApp(grpcAddr, httpAddr string, eng *engine.Engine, sessions session.SessionStore) (*App, error) {
-	// interceptor 链：cookie（凭证出域，从 metadata 提取上游网易云 cookie 注入 context）。
-	// 链式为未来 recovery/trace/log/rate/auth interceptor 留位。
-	grpcServer := grpc.NewServer(grpc.ChainUnaryInterceptor(CookieInterceptor))
+// newGRPCServer 装配 gRPC server(拦截器链 + 全部领域 service),不监听端口,便于测试。
+//
+// 拦截器顺序:ErrorInterceptor 在最外层,保证任何内层(含其它拦截器)返回的错误都被统一映射为
+// gRPC status;CookieInterceptor 把 metadata 里的上游 cookie 注入 context。
+// 链式为未来 recovery/trace/log/rate/auth interceptor 留位。
+func newGRPCServer(eng *engine.Engine, sessions session.SessionStore) *grpc.Server {
+	grpcServer := grpc.NewServer(grpc.ChainUnaryInterceptor(ErrorInterceptor, CookieInterceptor))
 
 	// 注册全部领域 service（真实 impl，持有 *engine.Engine）。
 	mmpb.RegisterSongServiceServer(grpcServer, service.NewSongServer(eng))
@@ -65,6 +67,12 @@ func NewApp(grpcAddr, httpAddr string, eng *engine.Engine, sessions session.Sess
 	mmpb.RegisterRecommendServiceServer(grpcServer, service.NewRecommendServer(eng))
 	mmpb.RegisterFMServiceServer(grpcServer, service.NewFMServer(eng))
 	mmpb.RegisterUserServiceServer(grpcServer, service.NewUserServer(eng))
+	return grpcServer
+}
+
+// NewApp 创建双 server 应用，注入 engine 和 session 池装配真实 service impl。
+func NewApp(grpcAddr, httpAddr string, eng *engine.Engine, sessions session.SessionStore) (*App, error) {
+	grpcServer := newGRPCServer(eng, sessions)
 
 	// 开启 gRPC reflection，grpcurl 可列出并调用全部 RPC（地基阶段验收依赖）。
 	reflection.Register(grpcServer)
