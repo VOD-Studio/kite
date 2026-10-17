@@ -11,11 +11,15 @@ package engine
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"google.golang.org/protobuf/proto"
+
+	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 // Endpoint 是一个网易云接口的完整声明。
@@ -60,9 +64,16 @@ type CachePolicy[Req any] struct {
 func Execute[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoint[Req, Resp], req Req) (Resp, error) {
 	var zero Resp
 
-	// 1. 缓存命中直接返回。
+	// 缓存 key 与可缓存性在调用前一次算定:需要登录态的接口按凭据隔离,池路径不缓存。
+	var cacheKey string
+	useCache := false
 	if ep.Cache != nil && e.cache != nil {
-		key := ep.Cache.Key(req)
+		cacheKey, useCache = scopedCacheKey(ctx, ep.Meta.Auth, ep.Cache.Key(req))
+	}
+
+	// 1. 缓存命中直接返回。
+	if useCache {
+		key := cacheKey
 		if hit, ok, err := e.cache.Get(ctx, key); err == nil && ok {
 			if r, ok := unmarshalCached(ep.NewResp, hit); ok {
 				return r, nil
@@ -92,11 +103,10 @@ func Execute[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoint[Req, Re
 	}
 
 	// 3. 回填缓存。
-	if ep.Cache != nil && e.cache != nil {
-		key := ep.Cache.Key(req)
+	if useCache {
 		if pm, ok := any(resp).(proto.Message); ok {
 			if data, err := proto.Marshal(pm); err == nil {
-				_ = e.cache.Set(ctx, key, data, ep.Cache.TTL)
+				_ = e.cache.Set(ctx, cacheKey, data, ep.Cache.TTL)
 			}
 		}
 	}
@@ -152,4 +162,25 @@ func ExecuteWithCookie[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoi
 		return zero, fmt.Errorf("map response: %w", err)
 	}
 	return resp, nil
+}
+
+// scopedCacheKey 返回实际使用的缓存 key 及该次调用是否可缓存。
+//
+//   - 匿名接口：key 原样，各调用方共享。
+//   - 需要登录态的接口：响应属于某个用户，key 追加凭据指纹（cookie 的 SHA-256 前 8 字节），
+//     不同用户互不命中；指纹而非原始 cookie，避免凭据进入 Redis key / 日志。
+//   - 需要登录态但 ctx 没有 cookie（走 session 池）：身份在选 session 之前未知，
+//     无法安全地区分用户，直接不缓存。
+//
+// 这样「接口作者忘了在 key 里带用户」不再可能造成跨用户串数据。
+func scopedCacheKey(ctx context.Context, auth session.AuthRequirement, base string) (string, bool) {
+	if auth != session.AuthLoggedIn {
+		return base, true
+	}
+	cookie := CookieFromContext(ctx)
+	if cookie == "" {
+		return "", false
+	}
+	sum := sha256.Sum256([]byte(cookie))
+	return base + "|u:" + hex.EncodeToString(sum[:8]), true
 }
