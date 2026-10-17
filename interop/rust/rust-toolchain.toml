@@ -1,0 +1,4 @@
+# 固定工具链:门禁不依赖会自行变化的外部状态(stable 每 6 周变一次)。
+[toolchain]
+channel = "1.94.0"
+profile = "minimal"

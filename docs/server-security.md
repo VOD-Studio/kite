@@ -44,14 +44,15 @@ grpcurl -plaintext -H "authorization: Bearer $KITE_TOKEN" 127.0.0.1:3722 list
 curl -H "Authorization: Bearer $KITE_TOKEN" http://127.0.0.1:3721/api/v1/songs/347230
 ```
 
-Rust(tonic):给生成的客户端挂拦截器。下面的拦截器用 `tonic` 0.14 编译并通过单元测试。
+Rust(tonic):给生成的客户端挂拦截器。下面的拦截器用 `tonic` 0.14(edition 2024)编译,并在 CI 里对真实运行的服务端做互操作测试(`interop/rust/`)。
 
 ```rust
 use tonic::{metadata::MetadataValue, Request, Status};
 
+// `use<>`:返回的拦截器不借用 `token`,否则传入临时字符串(如从环境变量读取)时无法编译。
 pub fn auth_interceptor(
     token: &str,
-) -> Result<impl FnMut(Request<()>) -> Result<Request<()>, Status> + Clone, tonic::metadata::errors::InvalidMetadataValue>
+) -> Result<impl FnMut(Request<()>) -> Result<Request<()>, Status> + Clone + use<>, tonic::metadata::errors::InvalidMetadataValue>
 {
     let value: MetadataValue<_> = format!("Bearer {token}").parse()?;
     Ok(move |mut req: Request<()>| {

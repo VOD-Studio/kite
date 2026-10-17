@@ -64,9 +64,10 @@ cookie 决定「以哪个网易云账号执行」。两者的错误分别是 `SE
 
 ## Rust(tonic)示例
 
-下面的代码用 `tonic` / `tonic-types` 0.14 编译并通过测试。测试里**包含一段由 Go 服务端
-(`toStatusError`)产出的 `google.rpc.Status` 二进制,Rust 端成功解析出 `LOGIN_REQUIRED` /
-`kite.music` / `provider=netease`**,即跨语言的线上格式已验证。
+下面的代码用 `tonic` / `tonic-types` 0.14 编译,**在 CI 里对真实运行的 kite-server 执行**
+(`interop/rust/`,`make interop-rust`):用 proto 生成 tonic 客户端,断言无令牌得到 `SERVER_AUTH_FAILED`、
+有令牌但未登录得到 `LOGIN_REQUIRED`,并用下面的 `classify` 分类。本文的 Rust 代码块与
+`interop/rust/src/classify.rs` 逐字一致(测试守护),不会与实际可编译的代码脱节。
 
 ```rust
 use tonic::{Code, Status};
