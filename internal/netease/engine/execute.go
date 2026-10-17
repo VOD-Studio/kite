@@ -83,25 +83,10 @@ func Execute[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoint[Req, Re
 		}
 	}
 
-	// 2. 真实调用：MapRequest → RawDo → MapResponse。
-	params, err := ep.MapRequest(req)
-	if err != nil {
-		return zero, fmt.Errorf("map request: %w", err)
-	}
-
-	meta := ep.Meta
-	if ep.PathFunc != nil {
-		meta.Path = ep.PathFunc(req)
-	}
-
-	raw, err := e.RawDo(ctx, meta, params)
+	// 2. 真实调用：MapRequest → RawDo → MapResponse（与 ExecuteWithCookie 共用 callEndpoint）。
+	resp, err := callEndpoint(e, ctx, ep, req, credFromPool)
 	if err != nil {
 		return zero, err
-	}
-
-	resp, err := ep.MapResponse(req, raw)
-	if err != nil {
-		return zero, wrapMapResponseError(err)
 	}
 
 	// 3. 回填缓存。
@@ -142,6 +127,12 @@ func unmarshalCached[Resp any](newResp func() Resp, data []byte) (Resp, bool) {
 // 写操作 / 即时数据 / 本地持有 cookie 的调用方(CLI、gRPC cookie 拦截器路径)共用
 // 本函数,与 Execute 同样应用 PathFunc——执行语义只在 engine 一处定义,调用方不得再拷贝。
 func ExecuteWithCookie[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoint[Req, Resp], req Req) (Resp, error) { //nolint:revive // 与 Execute 保持同一参数顺序
+	return callEndpoint(e, ctx, ep, req, credFromContext)
+}
+
+// callEndpoint 是 Execute / ExecuteWithCookie 共享的核心：MapRequest → PathFunc → 引擎管线 → MapResponse。
+// 两者的区别只有凭据策略(及 Execute 外层的缓存)，这里只写一份。
+func callEndpoint[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoint[Req, Resp], req Req, policy credentialPolicy) (Resp, error) { //nolint:revive // 与 Execute 保持同一参数顺序
 	var zero Resp
 
 	params, err := ep.MapRequest(req)
@@ -154,7 +145,7 @@ func ExecuteWithCookie[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoi
 		meta.Path = ep.PathFunc(req)
 	}
 
-	raw, _, err := e.RawDoWithCookieAndInput(ctx, meta, params)
+	raw, _, err := e.do(ctx, meta, params, policy)
 	if err != nil {
 		return zero, err
 	}
