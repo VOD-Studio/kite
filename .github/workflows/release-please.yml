@@ -22,6 +22,10 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write       # 创建 release PR + 打 tag
+      pull-requests: write  # 开/合并 release PR
+      actions: write        # 为 release PR 分支触发 CI(workflow_dispatch)
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
       tag_name: ${{ steps.rp.outputs.tag_name }}
@@ -43,6 +47,17 @@ jobs:
               {"type":"chore","section":"Miscellaneous","hidden":true},
               {"type":"test","section":"Tests","hidden":true}
             ]
+
+      # release PR 被创建 / 更新后,在其分支上跑一次 CI(见 ci.yml 里 workflow_dispatch 的说明)。
+      # 分支名优先取 outputs.pr.headBranchName;取不到时回落 release-please 的固定默认分支名。
+      # 先判空再 fromJSON:没有 PR 时 outputs.pr 为空串,fromJSON('') 会报错。
+      - name: 为 release PR 触发 CI
+        if: steps.rp.outputs.prs_created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ (steps.rp.outputs.pr && fromJSON(steps.rp.outputs.pr).headBranchName) || 'release-please--branches--main' }}
+        run: gh workflow run ci.yml --ref "${BRANCH}"
 
   # 仅在本次运行真的创建了 release(即 release PR 被合并)时才发布产物。
   # caller 需授予被调用 workflow 所需权限的超集。
