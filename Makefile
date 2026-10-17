@@ -16,8 +16,9 @@ GOVULNCHECK_VERSION   := v1.6.0
 # 仅本地热重载用,不影响 CI。
 AIR_VERSION           := latest
 
-# proto breaking 检查的对照基线(PR 对比 main)。CI 需 fetch-depth: 0。
-PROTO_BREAKING_BASE ?= ../.git\#branch=origin/main,subdir=proto
+# proto breaking 检查的对照基线:本地 .git 里 origin/main 的远端跟踪引用(PR 对比 main)。
+# 用 buf 文档明确支持的 ref= 语法;CI 需 fetch-depth: 0 才有该引用。
+PROTO_BREAKING_BASE ?= ../.git\#ref=refs/remotes/origin/main,subdir=proto
 
 ## all: 默认 —— 等同 help(裸 make 不应触发有副作用的生成)
 all: help
