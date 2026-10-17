@@ -79,12 +79,15 @@ dockers_v2:
       org.opencontainers.image.revision: "{{ .FullCommit }}"
       org.opencontainers.image.version: "{{ .Version }}"
 
+# 按 digest 签名(与 goreleaser 默认参数一致):只写 ${artifact} 时 cosign 会警告「按 tag 而不是 digest
+# 标识镜像」——tag 可变,签名对象应是不可变的 digest。dockers_v2 为每个镜像 artifact 填充 digest(见发布日志
+# 的 "created images ... digest=sha256:..."),同一次构建的多个 tag 指向同一个 digest。
 docker_signs:
   - cmd: cosign
     output: true
     args:
       - "sign"
-      - "${artifact}"
+      - "${artifact}@${digest}"
       - "--yes"
 
 signs:
