@@ -142,6 +142,39 @@ func TestExecute_PathFunc(t *testing.T) {
 	require.Equal(t, "/weapi/v3/song/detail/5929", got, "PathFunc 应覆盖 Meta.Path")
 }
 
+// TestExecuteWithCookie_PathFuncAndCookie cookie override 路径与 Execute 同样应用
+// PathFunc,且 cookie 从 context 流到上游、不读写缓存。
+func TestExecuteWithCookie_PathFuncAndCookie(t *testing.T) {
+	t.Parallel()
+
+	var gotPath, gotCookie atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath.Store(r.URL.Path)
+		gotCookie.Store(r.Header.Get("Cookie"))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":200,"songs":[{"id":1,"name":"歌"}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := &countingCache{}
+	eng := engine.New(engine.WithCache(c), engine.WithBaseURL(srv.URL))
+	ep := makeSongDetailEndpoint() // 带 Cache 策略,ExecuteWithCookie 应忽略
+	ep.PathFunc = func(req *mmpb.GetSongDetailRequest) string {
+		return "/weapi/v3/song/detail/" + jsonNumber(req.GetSongId())
+	}
+
+	ctx := engine.WithCookie(context.Background(), "MUSIC_U=abc")
+	resp, err := engine.ExecuteWithCookie(eng, ctx, ep, &mmpb.GetSongDetailRequest{SongId: 5929})
+	require.NoError(t, err)
+	require.Equal(t, "歌", resp.GetSong().GetName())
+
+	path, _ := gotPath.Load().(string)
+	require.Equal(t, "/weapi/v3/song/detail/5929", path, "PathFunc 应覆盖 Meta.Path")
+	cookie, _ := gotCookie.Load().(string)
+	require.Contains(t, cookie, "MUSIC_U=abc", "context cookie 应流到上游")
+	require.Zero(t, c.gets+c.sets, "cookie override 路径不读写缓存")
+}
+
 // countingCache 是带计数的内存 Cache，验证 Execute 的缓存命中/回填行为。
 // 用 map 存数据（不是 Noop——Noop 永远 miss，无法验证命中路径）。
 type countingCache struct {

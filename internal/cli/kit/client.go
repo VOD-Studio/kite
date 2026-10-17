@@ -18,8 +18,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/VOD-Studio/kite/internal/cache"
-	"github.com/VOD-Studio/kite/internal/cli/recall"
+	"github.com/VOD-Studio/kite/internal/localstate"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
+	"github.com/VOD-Studio/kite/internal/recall"
 )
 
 // ErrNotLogin 未登录哨兵错误,Execute 据此映射退出码 3。
@@ -39,7 +40,7 @@ type Kit struct {
 	// Config 是生效的用户偏好(PRD-0017)。New() 填内置默认;root 装配时
 	// 用 LoadConfig() 的结果覆盖(坏文件在 root 层硬错误)。Output 参与
 	// Render 三态:优先级链 --json > 非TTY自动JSON > config > 内置默认。
-	Config Config
+	Config localstate.Config
 
 	// ProxyURL 是当前生效的显式代理(nil = 未注入,环境变量层自然生效);
 	// ProxySource 记录来源("flag" / "config" / "")供 doctor 展示解析链(PRD-0018)。
@@ -61,13 +62,13 @@ type Kit struct {
 }
 
 // New 创建 Kit。engine 无缓存、无 session 池,纯转发到网易云。
-// 召回池默认指向 kit.HistoryPath()(PRD-0015 #44 可注入路径)。
+// 召回池默认指向 localstate.HistoryPath()(PRD-0015 #44 可注入路径)。
 func New() *Kit {
 	return &Kit{
 		eng:    engine.New(engine.WithCache(cache.Noop{})),
 		Out:    os.Stdout,
-		Config: DefaultConfig(),
-		pool:   recall.NewPool(HistoryPath),
+		Config: localstate.DefaultConfig(),
+		pool:   recall.NewPool(localstate.HistoryPath),
 	}
 }
 
@@ -178,25 +179,9 @@ func (k *Kit) RawDo(ctx context.Context, meta engine.Meta, params map[string]any
 	return k.eng.RawDoWithCookieAndInput(ctx, meta, params)
 }
 
-// Exec 执行一个声明式 endpoint(注入当前 cookie)。
-// 是 service 包 executeOverride 的等价物:复制而非 import,
-// 因为 service 包还装配了 gRPC 相关类型,这里只要纯执行逻辑。
+// Exec 执行一个声明式 endpoint(注入当前 cookie)。执行语义见 engine.ExecuteWithCookie。
 func Exec[Req, Resp any](k *Kit, ctx context.Context, ep *engine.Endpoint[Req, Resp], req Req) (Resp, error) {
-	params, err := ep.MapRequest(req)
-	if err != nil {
-		var zero Resp
-		return zero, err
-	}
-	meta := ep.Meta
-	if ep.PathFunc != nil {
-		meta.Path = ep.PathFunc(req)
-	}
-	raw, _, err := k.RawDo(ctx, meta, params)
-	if err != nil {
-		var zero Resp
-		return zero, err
-	}
-	return ep.MapResponse(req, raw)
+	return engine.ExecuteWithCookie(k.eng, ctx, ep, req)
 }
 
 // RequireLogin 检查当前有可用的登录态(环境变量或本地会话文件)。

@@ -65,11 +65,11 @@ func (f *fakeDeps) now() time.Time {
 
 func newTestModel(fd *fakeDeps) model {
 	return newModel(Deps{
-		QR:     "▀▀▀\n▄▄▄\n", // 简化的 QR 占位
-		QRURL:  "https://music.163.com/login?codekey=test123",
+		QR:      "▀▀▀\n▄▄▄\n", // 简化的 QR 占位
+		QRURL:   "https://music.163.com/login?codekey=test123",
 		PollCtx: context.Background(),
-		Check:  fd.check,
-		Now:    fd.now,
+		Check:   fd.check,
+		Now:     fd.now,
 	})
 }
 

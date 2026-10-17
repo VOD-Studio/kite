@@ -17,7 +17,7 @@ const MaxLines = 1000
 
 // Pool 是召回池的本地存储,落 append-only JSONL。
 //
-// 一个 Pool 绑定一个文件路径(由 kit.HistoryPath() 提供,PRD-0015 #44 已建可注入 seam)。
+// 一个 Pool 绑定一个文件路径(由 localstate.HistoryPath() 提供,PRD-0015 #44 已建可注入 seam)。
 // Append 追加事件(原子 tmp+rename 保证主文件不被中断污染);Load 读全事件流
 // (单行损坏只丢该行);TopN 读 + frecency 打分返回 top N 候选。
 //
@@ -25,7 +25,7 @@ const MaxLines = 1000
 // 后台 fire-and-forget)——本类型只管本地 JSONL 读写。
 type Pool struct {
 	// path 返回 JSONL 文件路径。函数而非字符串,使测试能用 kit 的可注入 userConfigDir
-	// 间接重定向(默认绑 kit.HistoryPath)。
+	// 间接重定向(默认绑 localstate.HistoryPath)。
 	path func() (string, error)
 	// now 返回当前时间,默认 time.Now;测试注入保证时段桶确定性。
 	now func() time.Time

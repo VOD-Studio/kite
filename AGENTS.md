@@ -1,167 +1,89 @@
 # kite
 
-Go 实现的网易云能力服务 + 命令行工具(单体仓库)。
+Go 实现的网易云能力服务 + 命令行工具(单体仓库)。分支 / commit / PR 规范见 [`CONTRIBUTING.md`](CONTRIBUTING.md),本文件只写架构边界与代码约束。
 
-两个产物共享同一套网易云核心(`internal/netease/`)与 service 层:gRPC + grpc-gateway 服务,以及直连 engine 的 CLI。
+> 写作原则:这里的每条边界要么有测试守护(标注在句末),要么明确标成「约定」。没有守护也没有标注的断言不要加——它迟早与代码脱节。
 
-## 架构与代码边界
+## 产物与入口
 
-### 入口
-
-- **`cmd/server`** —— gRPC(`:3722`)+ grpc-gateway REST(`:3721`)双 server,SIGINT/SIGTERM 优雅关闭。
-- **`cmd/kite`** —— CLI 工具,直连 engine + endpoint 声明,**不经 gRPC**。
-- **`cmd/kite-docs`** —— 命令树 markdown 生成器(`make docs` 调用)。
-- **`cmd/demo`** —— 临时验证脚本,非交付产物。
-
-### internal/ 分层
-
-| 包 | 职责 |
+| 入口 | 说明 |
 |---|---|
-| `internal/netease/` | 网易云核心:`engine`(请求引擎)/ `endpoint`(API 声明)/ `session`(会话管理)/ `model`(数据模型)。weapi/eapi 加密用 Go 标准库自实现,不依赖第三方音乐库。 |
-| `internal/cli/` | CLI 命令按领域分包(`auth`/`song`/`album`/`artist`/`playlist`/`user`/`search`/`recommend`/`fm`)。`kit/` 是公共基础设施:渲染层、session、召回池。 |
-| `internal/server/` | gRPC server 装配 + cookie 拦截器。 |
-| `internal/service/` | service 层,**CLI 与 TUI 的共享边界**。 |
-| `internal/cache/` `internal/store/` | Redis 缓存与会话存储(当前 noop 实现,后续接入)。 |
-| `internal/infra/` | 基础设施装配。 |
-| `observability/` | 日志 / OTel tracer / Prometheus 指标 / 敏感字段脱敏。 |
-| `errors/` | 错误码与错误类型定义。 |
+| `cmd/server` | gRPC(`:3722`)+ grpc-gateway REST(`:3721`),SIGINT/SIGTERM 优雅关闭。 |
+| `cmd/kite` | CLI。**直连 engine + endpoint 声明,不经 gRPC / service。** |
+| `cmd/kite-docs` | 命令树 markdown 生成器(`make docs` 调用)。 |
+| `cmd/demo` | 进度条等终端组件的演示脚本,非交付产物、不发布。 |
+
+## 分层
+
+依赖方向只能自上而下。**由 `internal/archtest` 守护**,违规即红。
+
+```
+cmd/*
+  │
+  ├─ 前端 / 适配器(互相平行,不得互相依赖)
+  │    internal/cli/**      CLI:cobra 命令树 + kit(渲染 / 进度 / Kit 装配)
+  │    internal/tui/**      TUI(规划中,目录尚不存在)
+  │    internal/server, internal/service   gRPC 适配器(service 只被 server 引用)
+  │
+  ├─ 前端共享的本地能力(不得依赖任何前端)
+  │    internal/localstate  配置目录路径 / session.json / config.toml / 代理地址解析
+  │    internal/recall      召回池(history.jsonl、frecency 打分、预热)
+  │
+  └─ 核心(不得依赖上面任何一层)
+       internal/netease/engine    请求引擎:Execute / ExecuteWithCookie / 重试 / 熔断
+       internal/netease/endpoint  API 声明(每接口一个包级 var)
+       internal/netease/session   cookie 池接口
+       internal/netease/model     数据模型
+       errors/  gen/(proto 生成物)
+```
 
 ### 关键约束
 
-- **proto 是 RPC 契约的唯一真相**。`proto/netease/music/v1/` 定义全部 RPC;改 RPC 必须先改 proto 再 `make proto` 重新生成。不要在 Go 代码里手写与 proto 冲突的类型。
-- **CLI 与 TUI 平行不耦合**。两者都调 `internal/service/`,不互相直接调用。新域接入顺序是「先 CLI 后 TUI」——CLI 验证接口稳了再补 TUI 视图(见 `docs/adr/tui-client-architecture.md`)。
-- **接口覆盖现状**。proto 建模 78 RPC(上游蓝图约 357)。评论 / MV / 排行榜 / 电台 / 网盘 / 签到等域尚未建模也未接入,统一由 issue #34 追踪。新域接入节奏:endpoint 声明 + CLI 直连验证 → proto 建模 → TUI 视图。
+- **共享边界是 engine + endpoint,不是 service。** 三个前端都消费 endpoint 声明;执行语义只在 `engine.Execute` / `engine.ExecuteWithCookie` 定义,**调用方不得拷贝**。决策与取舍见 [ADR](docs/adr/shared-boundary-engine.md)。
+- **`internal/service` 是 gRPC adapter**:方法恒一行调 engine,不放业务逻辑,不被 CLI / TUI 引用。
+- **CLI 与 TUI 平行不耦合**:两者共用的东西必须先提到 CLI 之外(如 `localstate`、`recall`),再各自引用。禁止 `tui → cli`。
+- **`internal/cli/kit` 只做 CLI 呈现**:渲染、进度、Kit 装配。与前端无关的东西(文件路径、会话、配置、召回池)不要放进来。
+- **proto 是 RPC 契约的唯一真相**(`proto/netease/music/v1/`)。改 RPC 先改 proto 再 `make proto`;不要手写与 proto 冲突的类型。
+- **proto ↔ CLI 一一对应由 `internal/cli/rpc_guard_test.go` 守护**:新增 rpc 要么接 CLI 命令,要么在 `rpcsWithoutCliAllowlist` 登记理由。
+- **新域接入节奏**(约定):endpoint 声明 + CLI 直连验证 → proto 建模 → TUI 视图。尚未建模的域(评论 / MV / 排行榜 / 电台 / 网盘 / 签到等)由 issue #34 追踪;当前 RPC 数量以 `proto/` 为准,文档里不写死数字。
 
-## 开发流与命令 (Makefile)
+### 已知债务(诚实登记)
+
+| 现状 | 影响 | 处理时机 |
+|---|---|---|
+| `cli/songdl` 依赖 `kit.Kit`(进度渲染、HTTP client) | TUI 无法复用下载核心 | TUI 首次需要下载时,先拆出不含渲染的核心 |
+| `redis/`(`internal/cache/redis`、`internal/store/redis`、`internal/infra/redis`)与 `observability/` **已实现但未接入任何二进制** | `cmd/server` 实际用 `cache.Noop` + `session.NoopStore`,指标 / tracing 不生效 | 接入 `cmd/server`,或在确认不用时删除 |
+| `internal/service` 无测试 | adapter 的行为只靠 engine 侧测试间接覆盖 | 改动 service 时顺手补 |
+
+## 开发命令
 
 所有代码生成走根 `Makefile`:
 
-- **`make proto`** —— 改 `proto/` 后重新生成 Go stub / gRPC service / gateway / OpenAPI 到 `gen/`。`gen/` **提交进版本控制**(被项目代码 `import` 硬依赖,clone 即可编译;与 `docs/cmd/` 同性质)。改 proto 后跑此命令再 `git add gen/` 提交,CI 守护 job 会校验漂移。决策见 [ADR](docs/adr/generated-code-commit-policy.md)。
-- **`make proto-lint`** —— 检查 proto 文件规范。
-- **`make docs`** —— 改命令树后重新生成 `docs/cmd/` 命令参考。**freshness 守护测试依赖此 target**,不跑会导致 `docs_freshness_test.go` 红。
-- **`make clean`** —— 清除本地构建产物(`tmp/`、`bin/` 等)。**不清 `gen/`**——它已进版本控制(见上条),清了等于删跟踪文件。
-
-裸命令:
+- **`make proto`** —— 改 `proto/` 后重新生成到 `gen/`。`gen/` **提交进版本控制**(代码硬依赖它,clone 即可编译),改完 `git add gen/`;CI 校验漂移。决策见 [ADR](docs/adr/generated-code-commit-policy.md)。
+- **`make proto-lint`** —— 检查 proto 规范。
+- **`make docs`** —— 改命令树后刷新 `docs/cmd/`。`TestDocsFreshness` 依赖它,不跑会红。
+- **`make clean`** —— 清本地构建产物(`tmp/`、`bin/`)。不清 `gen/`。
 
 ```bash
-go build ./cmd/server/    # 编译服务
-go build ./cmd/kite/      # 编译 CLI
-go test ./...             # 测试
-go vet ./...              # 检查
+go build ./cmd/server/ ./cmd/kite/
+go test ./...
+go vet ./...
 ```
 
-### 环境依赖须知
+### 环境
 
-- 后端需要 **Go 1.25**。若环境缺 Go,`make` 无提示直接失败。**不要自行安装 Go**,停下来告知用户并等待处理。
-- proto 工具链:`buf`(Makefile 自动探测 `$GOPATH/bin/buf`)。改 proto 时需要本地有 buf。
+- Go 版本**以 `go.mod` 为准**。环境缺 Go 时 `make` 会无提示失败——**不要自行安装 Go**,停下来告知用户。
+- 改 proto 需要本地有 `buf`(Makefile 自动探测 `$GOPATH/bin/buf`)。
 
-## Agent skills
+## 文档
 
-### 命令文档(生成真相)
+- **`docs/cmd/` 是生成物,不要手改**,改命令树后跑 `make docs`。命令语法唯一真相是 `kite <命令> --help`;其它文档指向 `--help` 或生成参考,**不要复制命令手册**(复制即第二份真相)。
+- 上手:[`docs/kite-guide.md`](docs/kite-guide.md) · CLI 设计:[`docs/kite-cli-design.md`](docs/kite-cli-design.md) · 路线图:[`docs/kite-roadmap.md`](docs/kite-roadmap.md)
+- 领域术语与决策索引:[`CONTEXT.md`](CONTEXT.md) · ADR:[`docs/adr/`](docs/adr/) · PRD:[`docs/prd/`](docs/prd/)
+- 改了架构边界,同步改本文件和 `internal/archtest` 的规则表,二者不一致即视为 bug。
 
-`docs/cmd/` 由 `cmd/kite-docs` 通过 cobra `GenMarkdownTree` 生成,**不是手写**。命令语法的唯一真相是 `kite <命令> --help`,生成参考与之同步。**不要手改 `docs/cmd/` 下任何文件**——改命令树后跑 `make docs` 刷新。
+## 提交前(摘要,细则见 CONTRIBUTING.md)
 
-### 文档入口
-
-- **上手流程**:[`docs/kite-guide.md`](docs/kite-guide.md) —— 安装 / 登录 / 常用操作 / 别名 / 补全。
-- **CLI 设计背景**:[`docs/kite-cli-design.md`](docs/kite-cli-design.md) —— 输出层、渲染层、退出码等架构决策。
-- **功能路线图**:[`docs/kite-roadmap.md`](docs/kite-roadmap.md) —— 各 Phase(输出层 / 实用功能 / 配置 / 工程化 / TUI)状态与规划。
-- **领域术语与决策索引**:[`CONTEXT.md`](CONTEXT.md) —— 项目领域词汇表 + 不可逆决策索引(访谈产出,后续实现引用)。
-- **ADR**:[`docs/adr/`](docs/adr/) —— 架构决策记录(`tui-client-architecture`、`generated-code-commit-policy`)。
-- **PRD**:[`docs/prd/`](docs/prd/) —— 具体 feature 规格(最新 PRD-0016 TUI 客户端)。
-
-agent 友好原则:`--help` 是命令语法唯一真相。skill 或外部文档一律指向 `--help` 或生成参考,不要复制命令手册——复制即第二份真相,必然腐烂。
-
-<!-- MANUAL: Any manually added notes below this line are preserved on regeneration -->
-
-## 工作流(分支与提交)
-
-### 分支命名
-
-每个新任务 / 模块 / feature 先从 `main` 新建分支完成,不在 `main` 上直接开发。
-
-**分支单位是 feature / PRD,不是单个 issue**。一个 PRD 拆出的多个子 issue 属于同一工作单元,共用一个分支,在同一 PR 里推进(子 issue 在该分支上作为独立的原子 commit 落地,见下文「原子性」)。只有当 issue 之间**无依赖且分属不同 feature** 时才各自开分支。「一 issue 一分支一 PR」是过度拆分,与 commit 原子性反对的精神一致——会让 review 队列膨胀、强耦合 issue 难以协调合并顺序。
-
-判据:若一组 issue 共享同一个 PRD 父节点,或互相有 blocked-by 依赖,它们就该在同一个分支。
-
-格式:**`<type>/<scope>-<简述>`**
-
-- **type** 对齐 Conventional Commits:`feat` / `fix` / `chore` / `docs` / `refactor` / `style` / `test` / `perf` / `hotfix`。
-- **scope** 指向最内层模块(`netease` / `cli` / `server` / `proto` / `tui`)或文件 / 区域名(`readme` / `ci` / `deps`)。可省略(scope 难以定位单模块时)。
-- 全小写,`/` 分段,`-` 连词。无空格、无大写、无特殊字符。
-- 简述用英文或拼音,短而清晰。
-
-✅ 正确:
-- `docs/readme-rewrite`
-- `feat/cli-lyric-flag`
-- `fix/netease-fee-field`
-- `chore/deps-bump-bubbletea`
-- `refactor/server-shutdown`
-
-❌ 错误:
-- `feature/这是一个很长的中文分支名`(冗长 + 中文)
-- `update`(无 type 无 scope)
-- `Fix/Login`(大写)
-- `new-feature`(无 scope,scope 难定位时可省,但能定位就该写)
-
-### Commit message 格式
-
-- 中文 Conventional Commits:`feat(cli): 添加新功能` / `fix(netease): 修复接口 bug` / `refactor(server): ...`。
-- **scope 指向最内层模块**,不叠加冗余前缀。
-  - ✅ `fix(netease): artist albums fee 字段补全`
-  - ✅ `feat(cli): song play 支持歌词同步`
-  - ❌ `fix(api/netease): ...`(`api` 是冗余前缀,kite 是单体仓库)
-  - ❌ `feat(kite): ...`(改动集中在一个子模块时,scope 用模块名而非项目名)
-- **body 用 bullet points 列改动事实**,不写散文,不夹带主观评判与设计论证。决策过程写 PR 描述或 ADR。
-- **本地 commit,不推送**。PR 由人工 review 后合并。
-
-### 原子性
-
-> 业界共识([fnune](https://fnune.com/2018/02/19/git-best-practices-atomic-commits/)、[Fagner Brack](https://fagnerbrack.com/one-commit-one-change-3d10b10cebbf)):**一个 commit = 一个逻辑变更**。
-
-核心判据(只这三问,不列优先级表):
-
-1. **单独 revert 会让构建坏掉吗?** 会 → 拆得不够,或拆错了粒度。
-2. **三个月后看标题能一眼知道做了什么吗?** 不能 → 标题太笼统,或一个 commit 混了多件事。
-3. **它服务的是同一个任务吗?** 一个任务可跨多文件、多层;混多个无关任务才该拆。
-
-**反对过度拆分**。原子性服务于可读性与可回滚,不是为了「切碎」。例:「给 `song play` 加 `--lyric` 同步歌词」是一个完整任务,可以一个 commit 含 flag 解析 + 歌词获取 + 播放器集成。强行拆成「加 flag」「加歌词获取」「接入播放器」三个 commit,每个单独看都不完整,反而破坏可读性。
-
-**draft 阶段宽松**。开发中可以先随便提交(WIP、调试片段都行),最后用 `git rebase -i` 整理成原子 commit。不要求边写边原子——要求的是**最终进入 main / PR 的历史是原子的**。
-
-### 架构耦合
-
-> 这是代码层面的原则,**不是 commit 拆分规则**。与原子性分开理解。
-
-- **公共包不夹带领域业务逻辑**。`internal/cli/kit/`(渲染层 / session / 召回池)、`observability/`、`errors/` 这类公共基础设施,不写网易云 `song` / `playlist` 等领域特有逻辑。领域逻辑放对应 `internal/cli/<domain>/` 或 `internal/service/`。
-  - 判断「是否公共」看**是否被多个领域引用**,而非位置。某领域私有逻辑一旦被第二个领域复用,应先 `refactor: 将 X 从 features/A 提到公共层` 单独提交,再在新领域接入。
-- **service 层是 CLI / TUI 的共享边界**。两者都调 `internal/service/`,不互相直接调用。TUI view 工厂直接消费 service 接口,不经 CLI 命令层。
-- **proto 是契约唯一真相**。Go 代码里不手写与 proto 冲突的类型;改 RPC 先改 proto 再生成。
-
-### PR 与 issue 规范
-
-**Issue 标题**:
-
-- 格式 **`[scope] 描述`**,scope 用最内层模块名(同 commit scope 规则)。
-- ✅ `[netease] artist albums 接口 fee 字段补全`
-- ✅ `[cli] song download 断点续传失效`
-- ❌ `vertical: 补全挂载`(暴露实现方法论,不该出现在标题)
-- 连续任务序列(如某 feature 的 T1–Tn)带 `Tn` 编号;独立 feature 不带编号。
-
-**Issue labels**:
-
-- **默认不加 label**。仅当改动性质明确匹配 GitHub 内置语义 label 时才加(如 `bug`、`documentation`)。
-- 不加 `ready-for-agent` 等流程性 label——对人工 review 无信息量。
-
-**PR 创建**(`gh pr create`):
-
-- **assignees**:`--assignee @me`(当前 gh 账号)。
-- **reviewers**:仓库全部 collaborator——`--reviewer DefectingCat,xunrua,JingpengZhang`。
-- **labels**:默认不加(同 issue 规则)。
-- **base**:指向 `main`(仓库默认分支)。
-
-**合并**:
-
-- **手动合并**,不勾 auto-merge。由人工 review approve 后在 UI 点合并。
-- 合并方式:**squash merge**(单 commit 历史,与已有 PR 惯例一致)。
-- 合并后:**自动删除分支**(`gh pr merge --squash --delete-branch`,合并即删远程 + 本地 feature 分支)。
+- 从 `main` 开分支,格式 `<type>/<scope>-<简述>`,分支单位是 feature / PRD,不是单个 issue。
+- 中文 Conventional Commits,scope 用最内层模块,body 用 bullet 列事实;**本地 commit,不推送**。
+- 一个 commit = 一个逻辑变更。

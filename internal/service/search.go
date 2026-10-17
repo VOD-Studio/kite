@@ -5,8 +5,8 @@ import (
 	"context"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/kite/internal/netease/engine"
 	searchendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/search"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // SearchServer 实现 SearchServiceServer。

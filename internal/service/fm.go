@@ -5,8 +5,8 @@ import (
 	"context"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/kite/internal/netease/engine"
 	fmendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/fm"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // FMServer 实现 FMServiceServer。

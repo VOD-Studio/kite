@@ -1,10 +1,10 @@
-// Package kit
+// Package localstate
 // proxy.go 实现代理 URL 的解析与校验(PRD-0018)。
 //
 // flag(--proxy)与 config(proxy key)共用本函数:单一校验真相。
 // 空串 = 未设置(返回 nil,nil,回落环境变量层——那是 Go 默认 transport 的
 // ProxyFromEnvironment 行为,本包不做任何注入)。
-package kit
+package localstate
 
 import (
 	"fmt"

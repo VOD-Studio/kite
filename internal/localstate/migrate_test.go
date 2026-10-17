@@ -1,6 +1,7 @@
-package kit
+package localstate
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,8 +36,8 @@ func statPerm(t *testing.T, path string) os.FileMode {
 
 // TestMigrate_NewUser_BothPathsAbsent 两路径都不存在 → 无迁移、无输出、无错误。
 func TestMigrate_NewUser_BothPathsAbsent(t *testing.T) {
-	withTestConfigDir(t)              // 新路径在临时目录
-	t.Setenv("HOME", t.TempDir())     // 旧路径在另一个临时目录(不存在)
+	withTestConfigDir(t)          // 新路径在临时目录
+	t.Setenv("HOME", t.TempDir()) // 旧路径在另一个临时目录(不存在)
 	var out capturingWriter
 	if err := migrateLegacySession(&out); err != nil {
 		t.Fatalf("migrateLegacySession error: %v", err)
@@ -137,12 +138,11 @@ func TestMigrate_Failure_MkdirAllBlocked(t *testing.T) {
 
 func TestSaveThenLoadSession_RoundTrip(t *testing.T) {
 	withTestConfigDir(t)
-	k := &Kit{}
 	sess := Session{Cookie: "abc", UserID: 42, SavedAt: "2026-07-24T00:00:00Z"}
-	if err := k.SaveSession(sess); err != nil {
+	if err := SaveSession(sess); err != nil {
 		t.Fatalf("SaveSession: %v", err)
 	}
-	got, err := k.LoadSession()
+	got, err := LoadSession(io.Discard)
 	if err != nil {
 		t.Fatalf("LoadSession: %v", err)
 	}
@@ -155,16 +155,14 @@ func TestLoadSession_FileMissing(t *testing.T) {
 	// 新路径无文件 + 旧路径也无 → 新用户,LoadSession 应返回错误(未登录)。
 	withTestConfigDir(t)
 	t.Setenv("HOME", t.TempDir()) // 旧路径不存在
-	k := &Kit{}
-	if _, err := k.LoadSession(); err == nil {
+	if _, err := LoadSession(io.Discard); err == nil {
 		t.Error("无会话文件时 LoadSession 应返回 error")
 	}
 }
 
 func TestSaveSession_Permissions(t *testing.T) {
 	dir := withTestConfigDir(t)
-	k := &Kit{}
-	if err := k.SaveSession(Session{Cookie: "x"}); err != nil {
+	if err := SaveSession(Session{Cookie: "x"}); err != nil {
 		t.Fatal(err)
 	}
 	got := statPerm(t, filepath.Join(dir, "session.json"))
@@ -175,15 +173,14 @@ func TestSaveSession_Permissions(t *testing.T) {
 
 func TestClearSession_Idempotent(t *testing.T) {
 	withTestConfigDir(t)
-	k := &Kit{}
 	// 不存在时不算错。
-	if err := k.ClearSession(); err != nil {
+	if err := ClearSession(); err != nil {
 		t.Errorf("ClearSession 不存在时应无错: %v", err)
 	}
-	if err := k.SaveSession(Session{Cookie: "x"}); err != nil {
+	if err := SaveSession(Session{Cookie: "x"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := k.ClearSession(); err != nil {
+	if err := ClearSession(); err != nil {
 		t.Fatalf("ClearSession 存在时: %v", err)
 	}
 }

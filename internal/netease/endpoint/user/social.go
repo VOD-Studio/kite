@@ -25,7 +25,7 @@ var Follows = &engine.Endpoint[*mmpb.FollowsRequest, *mmpb.FollowsResponse]{
 		},
 		TTL: 24 * time.Hour,
 	},
-	NewResp:    func() *mmpb.FollowsResponse { return &mmpb.FollowsResponse{} },
+	NewResp: func() *mmpb.FollowsResponse { return &mmpb.FollowsResponse{} },
 	MapRequest: func(req *mmpb.FollowsRequest) (map[string]any, error) {
 		limit := req.GetLimit()
 		if limit <= 0 {
@@ -48,7 +48,7 @@ var Followeds = &engine.Endpoint[*mmpb.FollowedsRequest, *mmpb.FollowedsResponse
 		},
 		TTL: 24 * time.Hour,
 	},
-	NewResp:    func() *mmpb.FollowedsResponse { return &mmpb.FollowedsResponse{} },
+	NewResp: func() *mmpb.FollowedsResponse { return &mmpb.FollowedsResponse{} },
 	MapRequest: func(req *mmpb.FollowedsRequest) (map[string]any, error) {
 		limit := req.GetLimit()
 		if limit <= 0 {
@@ -88,14 +88,14 @@ var Events = &engine.Endpoint[*mmpb.EventsRequest, *mmpb.EventsResponse]{
 	MapResponse: func(_ *mmpb.EventsRequest, raw json.RawMessage) (*mmpb.EventsResponse, error) {
 		var resp struct {
 			Events []struct {
-				ID        int64  `json:"id"`        // 动态ID
-				UserID    int64  `json:"userId"`    // 发布者ID
-				Type      int    `json:"type"`      // 动态类型
-				JSON      string `json:"json"`      // 动态JSON内容
-				ShowTime  int64  `json:"showTime"`  // 发布时间(毫秒)
+				ID       int64  `json:"id"`       // 动态ID
+				UserID   int64  `json:"userId"`   // 发布者ID
+				Type     int    `json:"type"`     // 动态类型
+				JSON     string `json:"json"`     // 动态JSON内容
+				ShowTime int64  `json:"showTime"` // 发布时间(毫秒)
 			} `json:"events"`
-			More      bool  `json:"more"`      // 是否更多
-			LastEvent int64 `json:"lasttime"`  // 最后动态ID
+			More      bool  `json:"more"`     // 是否更多
+			LastEvent int64 `json:"lasttime"` // 最后动态ID
 		}
 		if err := json.Unmarshal(raw, &resp); err != nil {
 			return nil, fmt.Errorf("解析动态列表失败: %w", err)
@@ -126,7 +126,7 @@ var Record = &engine.Endpoint[*mmpb.RecordRequest, *mmpb.RecordResponse]{
 	NewResp: func() *mmpb.RecordResponse { return &mmpb.RecordResponse{} },
 	MapRequest: func(req *mmpb.RecordRequest) (map[string]any, error) {
 		return map[string]any{
-			"uid": fmt.Sprintf("%d", req.GetUserId()),
+			"uid":  fmt.Sprintf("%d", req.GetUserId()),
 			"type": req.GetType(),
 		}, nil
 	},

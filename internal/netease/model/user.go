@@ -7,11 +7,11 @@ import mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 //
 // 在歌单创建者、用户详情、关注/粉丝列表等处出现。
 type rawUser struct {
-	UserID    int64  `json:"userId"`   // 用户ID（歌单创建者等场景）
-	Nickname  string `json:"nickname"` // 昵称
+	UserID    int64  `json:"userId"`    // 用户ID（歌单创建者等场景）
+	Nickname  string `json:"nickname"`  // 昵称
 	AvatarURL string `json:"avatarUrl"` // 头像URL
 	// LoginStatus 等接口用不同的字段名。
-	ProfileUserID int64  `json:"id"` // 用户ID（LoginStatus 等 profile.id 场景）
+	ProfileUserID int64 `json:"id"` // 用户ID（LoginStatus 等 profile.id 场景）
 }
 
 // MapUser 把网易云原始用户结构转成 proto User。

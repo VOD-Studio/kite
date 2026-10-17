@@ -32,7 +32,7 @@ func ParseSubscribed(raw json.RawMessage) *mmpb.SubscribeResponse {
 // ParseCreateResponse 解析新建歌单响应（返回歌单 ID）。
 func ParseCreateResponse(raw json.RawMessage) *mmpb.CreateResponse {
 	var resp struct {
-		ID int64 `json:"id"` // 新建歌单ID（部分版本在 playlist.id）
+		ID       int64 `json:"id"` // 新建歌单ID（部分版本在 playlist.id）
 		Playlist struct {
 			ID int64 `json:"id"` // 歌单ID
 		} `json:"playlist"` // 歌单信息
@@ -67,12 +67,12 @@ func writeMeta(path string) engine.Meta {
 
 // 写操作 Meta 集合。
 var (
-	SubscribeMeta   = writeMeta("/weapi/playlist/subscribe")
-	CreateMeta      = writeMeta("/weapi/playlist/create")
-	DeleteMeta      = writeMeta("/weapi/playlist/delete")
-	UpdateNameMeta  = writeMeta("/weapi/playlist/update/name")
-	UpdateDescMeta  = writeMeta("/weapi/playlist/update/description")
-	UpdateTagsMeta  = writeMeta("/weapi/playlist/update/tags")
+	SubscribeMeta    = writeMeta("/weapi/playlist/subscribe")
+	CreateMeta       = writeMeta("/weapi/playlist/create")
+	DeleteMeta       = writeMeta("/weapi/playlist/delete")
+	UpdateNameMeta   = writeMeta("/weapi/playlist/update/name")
+	UpdateDescMeta   = writeMeta("/weapi/playlist/update/description")
+	UpdateTagsMeta   = writeMeta("/weapi/playlist/update/tags")
 	UpdateTracksMeta = writeMeta("/weapi/playlist/manipulate/tracks")
 )
 
@@ -84,7 +84,7 @@ func SubscribeRequest(req *mmpb.SubscribeRequest) map[string]any {
 // CreateRequest 构造新建歌单入参。
 func CreateRequest(req *mmpb.CreateRequest) map[string]any {
 	return map[string]any{
-		"name": req.GetName(),
+		"name":    req.GetName(),
 		"privacy": boolToInt(req.GetPrivacy()),
 	}
 }
@@ -121,8 +121,8 @@ func UpdateTracksRequest(req *mmpb.UpdateTracksRequest) map[string]any {
 		ids = append(ids, fmt.Sprintf("%d", id))
 	}
 	return map[string]any{
-		"op": op,
-		"pid": fmt.Sprintf("%d", req.GetPlaylistId()),
+		"op":     op,
+		"pid":    fmt.Sprintf("%d", req.GetPlaylistId()),
 		"tracks": joinComma(ids),
 	}
 }

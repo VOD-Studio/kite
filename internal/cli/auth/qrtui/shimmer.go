@@ -24,10 +24,10 @@ import (
 
 const (
 	shimmerSpeedCellsPerS = 30
-	classicPadding         = 10
-	classicBandHalfWidth   = 6
-	intensityHigh          = 0.65
-	intensityMid           = 0.22
+	classicPadding        = 10
+	classicBandHalfWidth  = 6
+	intensityHigh         = 0.65
+	intensityMid          = 0.22
 )
 
 // tier 三档颜色之一。

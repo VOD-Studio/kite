@@ -92,14 +92,14 @@ func DecodeRecommendPlaylists(raw json.RawMessage) ([]*mmpb.Playlist, error) {
 
 // rawRecommendNewSong 是推荐新音乐列表项（歌曲嵌在 song 字段下）。
 type rawRecommendNewSong struct {
-	ID   int64             `json:"id"`   // 列表项ID（非歌曲ID）
-	Song rawRecommendSong  `json:"song"` // 实际歌曲信息（全名字段 artists/album/duration）
+	ID   int64            `json:"id"`   // 列表项ID（非歌曲ID）
+	Song rawRecommendSong `json:"song"` // 实际歌曲信息（全名字段 artists/album/duration）
 }
 
 // rawRecommendSong 是推荐/新歌接口的歌曲项（字段名用全名，与 rawSong 的缩写不同）。
 type rawRecommendSong struct {
-	ID       int64  `json:"id"`       // 歌曲ID
-	Name     string `json:"name"`     // 歌曲名
+	ID      int64  `json:"id"`   // 歌曲ID
+	Name    string `json:"name"` // 歌曲名
 	Artists []struct {
 		ID   int64  `json:"id"`   // 歌手ID
 		Name string `json:"name"` // 歌手名

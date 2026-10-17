@@ -5,8 +5,8 @@ import (
 	"context"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
-	"github.com/VOD-Studio/kite/internal/netease/engine"
 	artistendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/artist"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // ArtistServer 实现 ArtistServiceServer。

@@ -10,15 +10,16 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/localstate"
 )
 
 // fakeDeps 构造注入替身的 deps。set 记录调用供断言;wantJSON 注入输出形态
 // (测试环境非 TTY,真实 kit.WantJSON 会恒真,表格用例须显式替身为 false)。
-func fakeDeps(cfg kit.Config, set map[string]bool, setErr error, wantJSON bool) (deps, *[]string) {
+func fakeDeps(cfg localstate.Config, set map[string]bool, setErr error, wantJSON bool) (deps, *[]string) {
 	calls := &[]string{}
 	return deps{
 		path: func() (string, error) { return "/tmp/kite-config-dir/config.toml", nil },
-		load: func() (kit.Config, map[string]bool, error) { return cfg, set, nil },
+		load: func() (localstate.Config, map[string]bool, error) { return cfg, set, nil },
 		set: func(key, value string) error {
 			*calls = append(*calls, key+"="+value)
 			return setErr
@@ -39,14 +40,14 @@ func runConfig(t *testing.T, d deps, k *kit.Kit, args ...string) (string, error)
 }
 
 func TestConfigPath_BarePath(t *testing.T) {
-	d, _ := fakeDeps(kit.DefaultConfig(), nil, nil, false)
+	d, _ := fakeDeps(localstate.DefaultConfig(), nil, nil, false)
 	out, err := runConfig(t, d, kit.New(), "path")
 	require.NoError(t, err)
 	require.Equal(t, "/tmp/kite-config-dir/config.toml\n", out, "config path 裸打路径")
 }
 
 func TestConfigGet_SingleKey_BareValue(t *testing.T) {
-	cfg := kit.DefaultConfig()
+	cfg := localstate.DefaultConfig()
 	cfg.Level = 3
 	d, _ := fakeDeps(cfg, map[string]bool{"level": true}, nil, false)
 
@@ -56,7 +57,7 @@ func TestConfigGet_SingleKey_BareValue(t *testing.T) {
 }
 
 func TestConfigGet_UnsetKey_AnswersDefault(t *testing.T) {
-	d, _ := fakeDeps(kit.DefaultConfig(), map[string]bool{}, nil, false)
+	d, _ := fakeDeps(localstate.DefaultConfig(), map[string]bool{}, nil, false)
 
 	out, err := runConfig(t, d, kit.New(), "get", "level")
 	require.NoError(t, err)
@@ -64,7 +65,7 @@ func TestConfigGet_UnsetKey_AnswersDefault(t *testing.T) {
 }
 
 func TestConfigGet_FilenameTemplateUnset_ShowsEffectiveDefault(t *testing.T) {
-	d, _ := fakeDeps(kit.DefaultConfig(), map[string]bool{}, nil, false)
+	d, _ := fakeDeps(localstate.DefaultConfig(), map[string]bool{}, nil, false)
 
 	out, err := runConfig(t, d, kit.New(), "get", "filename_template")
 	require.NoError(t, err)
@@ -72,7 +73,7 @@ func TestConfigGet_FilenameTemplateUnset_ShowsEffectiveDefault(t *testing.T) {
 }
 
 func TestConfigGet_UnknownKey_Errors(t *testing.T) {
-	d, _ := fakeDeps(kit.DefaultConfig(), map[string]bool{}, nil, false)
+	d, _ := fakeDeps(localstate.DefaultConfig(), map[string]bool{}, nil, false)
 
 	_, err := runConfig(t, d, kit.New(), "get", "levil")
 	require.Error(t, err)
@@ -80,7 +81,7 @@ func TestConfigGet_UnknownKey_Errors(t *testing.T) {
 }
 
 func TestConfigGet_NoArgs_TableWithSource(t *testing.T) {
-	cfg := kit.DefaultConfig()
+	cfg := localstate.DefaultConfig()
 	cfg.Level = 3
 	cfg.Output = "json"
 	d, _ := fakeDeps(cfg, map[string]bool{"level": true, "output": true}, nil, false)
@@ -104,7 +105,7 @@ func TestConfigGet_NoArgs_TableWithSource(t *testing.T) {
 }
 
 func TestConfigGet_NoArgs_JSONMode(t *testing.T) {
-	cfg := kit.DefaultConfig()
+	cfg := localstate.DefaultConfig()
 	cfg.Level = 3
 	d, _ := fakeDeps(cfg, map[string]bool{"level": true}, nil, true)
 	out, err := runConfig(t, d, kit.New(), "get")
@@ -116,7 +117,7 @@ func TestConfigGet_NoArgs_JSONMode(t *testing.T) {
 // TestConfigGet_NoArgs_PipeJSON 守护:非 TTY(--json 与 config 之外的第三层)
 // 自动 JSON——config get | jq 直接可用,与 Render 同一条 WantJSON 链。
 func TestConfigGet_NoArgs_PipeJSON(t *testing.T) {
-	d, _ := fakeDeps(kit.DefaultConfig(), map[string]bool{}, nil, true)
+	d, _ := fakeDeps(localstate.DefaultConfig(), map[string]bool{}, nil, true)
 	out, err := runConfig(t, d, kit.New(), "get")
 	require.NoError(t, err)
 	require.Contains(t, out, `"key"`)
@@ -124,7 +125,7 @@ func TestConfigGet_NoArgs_PipeJSON(t *testing.T) {
 }
 
 func TestConfigSet_Success_ConfirmationLine(t *testing.T) {
-	d, calls := fakeDeps(kit.DefaultConfig(), map[string]bool{}, nil, false)
+	d, calls := fakeDeps(localstate.DefaultConfig(), map[string]bool{}, nil, false)
 
 	out, err := runConfig(t, d, kit.New(), "set", "level", "3")
 	require.NoError(t, err)
@@ -134,7 +135,7 @@ func TestConfigSet_Success_ConfirmationLine(t *testing.T) {
 }
 
 func TestConfigSet_Failure_Propagates(t *testing.T) {
-	d, calls := fakeDeps(kit.DefaultConfig(), map[string]bool{}, errors.New("配置 level 的值 9 越界"), false)
+	d, calls := fakeDeps(localstate.DefaultConfig(), map[string]bool{}, errors.New("配置 level 的值 9 越界"), false)
 
 	_, err := runConfig(t, d, kit.New(), "set", "level", "9")
 	require.Error(t, err)

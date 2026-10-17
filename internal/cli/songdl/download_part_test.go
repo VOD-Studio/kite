@@ -90,7 +90,7 @@ func TestDownloadToFile_FreshDownload(t *testing.T) {
 		t.Errorf("内容不符: got %d bytes, want %d", len(got), len(body))
 	}
 	// .part 应被 rename 清理掉。
-	if _, err := os.Stat(finalPath+".part"); !os.IsNotExist(err) {
+	if _, err := os.Stat(finalPath + ".part"); !os.IsNotExist(err) {
 		t.Errorf(".part 应被 rename 清理, 仍存在")
 	}
 }

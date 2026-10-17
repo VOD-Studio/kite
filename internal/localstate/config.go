@@ -1,4 +1,4 @@
-// Package kit
+// Package localstate
 // config.go 实现 config.toml 的加载/校验/写入(PRD-0017)。
 //
 // 设计原则(决策见 CONTEXT.md「不可逆决策」表):
@@ -6,7 +6,7 @@
 //   - 文件不存在 = 正常态(全部内置默认);文件存在但坏 = 硬错误,静默回退会掩盖用户设置;
 //   - set 写盘前完成全部校验,读取侧复用同一套校验(手改文件同样被拦);
 //   - tmp+rename 原子写,文件 0600、目录 0700(与 session 一致)。
-package kit
+package localstate
 
 import (
 	"fmt"
