@@ -10,7 +10,7 @@
 
 ## 安装
 
-需要 Go 1.25+:
+需要 Go(版本见 `go.mod`):
 
 ```sh
 go install github.com/VOD-Studio/kite/cmd/kite@latest

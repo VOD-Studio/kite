@@ -7,7 +7,7 @@
 
 | 术语 | 定义 |
 |---|---|
-| **双产物** | kite 的两个交付物:`server`(gRPC + grpc-gateway 服务)和 `kite`(直连 engine 的 CLI)。共享 `internal/netease/` 核心与 `internal/service/`。 |
+| **双产物** | kite 的两个交付物:`server`(gRPC + grpc-gateway 服务)和 `kite`(直连 engine 的 CLI)。共享 `internal/netease/` 核心(engine + endpoint);`internal/service/` 只是 gRPC adapter,CLI 不经过它(见 ADR shared-boundary-engine)。 |
 | **gen/** | `buf generate` 从 `proto/` 产出的 Go stub/gRPC service/gateway/OpenAPI。被项目代码 `import` **硬依赖**(不生成则 vet/test 红)。性质同 `docs/cmd/`(生成产物且已提交)。 |
 | **release PR** | release-please 从 conventional commits 推导版本号后自动开的 PR,含待发布 CHANGELOG。合并即触发打 tag → GoReleaser 构建。 |
 | **配置(config.toml)** | 用户偏好的持久化,只收「已存在 flag 或硬编码默认值」的 key,不造新语义。与**状态文件**(session.json / history.jsonl,程序运行产生)同住配置目录但性质不同:配置可删可重建,状态不可。 |
@@ -32,6 +32,7 @@
 | config 周边集成 | doctor 加 config 检查项;config 命令组进 help「工具」分组;**不进 onboarding 场景推送**(带问题来找的功能,主动推是噪音) | 2026-08-16 | (无需 ADR) |
 | proxy 优先级链 | `--proxy` > config `proxy` > 环境变量 > 直连;显式设置**整体替换**环境变量层(不混合态);不做显式禁用哨兵(禁用在 shell 层 `env -u` 解决) | 2026-08-16 | (无需 ADR,git `http.proxy` 同款覆盖语义;详见 PRD-0018) |
 | proxy 范围与防坑 | 协议白名单 http/https/socks5,scheme 必须显式;`config set proxy ""` = **清除 key**(空值有真实语义,区别于 download_dir);**API 与音频下载必须同走一个代理决策**(下载不经 engine,只改一侧必分裂) | 2026-08-16 | (无需 ADR;机制见 PRD-0018) |
+| 前端共享边界 | engine + endpoint(不是 service);本地能力放 `localstate` / `recall`;依赖方向由 `internal/archtest` 守护 | 2026-10-17 | [shared-boundary-engine](docs/adr/shared-boundary-engine.md) |
 | 治理文件 | 本次含 SECURITY.md + CONTRIBUTING.md(原 P3 提前) | 2026-07-27 | (无需 ADR) |
 
 ## 暂缓项(后续 phase)

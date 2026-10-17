@@ -1,6 +1,8 @@
 # kite TUI 客户端:三栏布局 + 插件式 view 注册 + shimmer 加载态
 
 > supersede `play-screen-bubbletea.md`(原「单曲播放屏重写」范围)。播放屏升级为 TUI 客户端的一个视图,不再是独立产物。
+>
+> **修订(2026-10-17)**:下文「view 直接调 service」应读作「view 直接消费 engine + endpoint 声明」。`internal/service` 是 gRPC adapter,不是共享边界,见 [shared-boundary-engine](shared-boundary-engine.md)。
 
 owner 决策(2026-07-27 访谈):废弃现有播放屏的单曲视图设计,用 charm.land(bubbletea v2 + lipgloss)重做**完整 TUI 客户端**——侧边栏导航 + 列表主区 + 常驻 mini-player + 全屏播放页。不参考现有任何界面设计。CLI 子命令全部保留,与 TUI 平行;裸跑 onboarding 行为不变。
 
