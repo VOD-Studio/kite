@@ -178,25 +178,9 @@ func (k *Kit) RawDo(ctx context.Context, meta engine.Meta, params map[string]any
 	return k.eng.RawDoWithCookieAndInput(ctx, meta, params)
 }
 
-// Exec 执行一个声明式 endpoint(注入当前 cookie)。
-// 是 service 包 executeOverride 的等价物:复制而非 import,
-// 因为 service 包还装配了 gRPC 相关类型,这里只要纯执行逻辑。
+// Exec 执行一个声明式 endpoint(注入当前 cookie)。执行语义见 engine.ExecuteWithCookie。
 func Exec[Req, Resp any](k *Kit, ctx context.Context, ep *engine.Endpoint[Req, Resp], req Req) (Resp, error) {
-	params, err := ep.MapRequest(req)
-	if err != nil {
-		var zero Resp
-		return zero, err
-	}
-	meta := ep.Meta
-	if ep.PathFunc != nil {
-		meta.Path = ep.PathFunc(req)
-	}
-	raw, _, err := k.RawDo(ctx, meta, params)
-	if err != nil {
-		var zero Resp
-		return zero, err
-	}
-	return ep.MapResponse(req, raw)
+	return engine.ExecuteWithCookie(k.eng, ctx, ep, req)
 }
 
 // RequireLogin 检查当前有可用的登录态(环境变量或本地会话文件)。
