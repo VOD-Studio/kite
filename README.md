@@ -48,7 +48,7 @@ kite song download 347230 --level 3   # 下载单曲(1标准 2较高 3无损 4Hi
 
 前端共享的本地能力(会话 / 配置 / 召回池)在 `internal/localstate`、`internal/recall`。分层规则见 [AGENTS.md](AGENTS.md),由测试守护。
 
-gRPC 契约的唯一真相在 [`proto/netease/music/v1/`](proto/netease/music/v1/)。TUI 架构决策见 [ADR](docs/adr/tui-client-architecture.md)。
+gRPC 契约的唯一真相在 [`proto/netease/music/v1/`](proto/netease/music/v1/)。错误以标准 gRPC status + `ErrorInfo` 返回,映射与各语言客户端的处理方式见 [错误契约](docs/grpc-errors.md)。TUI 架构决策见 [ADR](docs/adr/tui-client-architecture.md)。
 
 ## 开发
 

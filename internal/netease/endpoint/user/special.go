@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 	"github.com/VOD-Studio/kite/internal/netease/session"
@@ -46,7 +47,7 @@ var DetailByName = &engine.Endpoint[*mmpb.DetailByNameRequest, *mmpb.DetailByNam
 			return nil, fmt.Errorf("解析昵称查询失败: %w", err)
 		}
 		if len(resp.Result.Userprofiles) == 0 {
-			return nil, fmt.Errorf("未找到该昵称对应的用户")
+			return nil, fmt.Errorf("未找到该昵称对应的用户: %w", merrors.ErrNotFound)
 		}
 		return &mmpb.DetailByNameResponse{UserId: resp.Result.Userprofiles[0].UserID}, nil
 	},

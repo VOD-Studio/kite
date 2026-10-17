@@ -14,11 +14,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"google.golang.org/protobuf/proto"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
@@ -99,7 +101,7 @@ func Execute[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoint[Req, Re
 
 	resp, err := ep.MapResponse(req, raw)
 	if err != nil {
-		return zero, fmt.Errorf("map response: %w", err)
+		return zero, wrapMapResponseError(err)
 	}
 
 	// 3. 回填缓存。
@@ -159,7 +161,7 @@ func ExecuteWithCookie[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoi
 
 	resp, err := ep.MapResponse(req, raw)
 	if err != nil {
-		return zero, fmt.Errorf("map response: %w", err)
+		return zero, wrapMapResponseError(err)
 	}
 	return resp, nil
 }
@@ -183,4 +185,22 @@ func scopedCacheKey(ctx context.Context, auth session.AuthRequirement, base stri
 	}
 	sum := sha256.Sum256([]byte(cookie))
 	return base + "|u:" + hex.EncodeToString(sum[:8]), true
+}
+
+// wrapMapResponseError 包装 MapResponse 返回的错误并保证它带有分类。
+//
+//   - 已带语义哨兵（不存在 / 未登录 / 限流 / 上游不可用等）的错误保留原类别，
+//     不能被误报为「响应格式无效」（例如「歌曲不存在」就是 ErrNotFound）。
+//   - 没有明确类别的（JSON 解码失败、缺字段）说明上游响应形状不符预期，归为 ErrInvalidResponse，
+//     对外映射为 UPSTREAM_INVALID_RESPONSE，客户端据此知道是上游接口可能变了而不是自己的问题。
+func wrapMapResponseError(err error) error {
+	for _, sentinel := range []error{
+		merrors.ErrUnauthorized, merrors.ErrNotFound, merrors.ErrRateLimited,
+		merrors.ErrUpstreamUnavailable, merrors.ErrInvalidResponse, merrors.ErrUnsupportedPlatform,
+	} {
+		if errors.Is(err, sentinel) {
+			return fmt.Errorf("map response: %w", err)
+		}
+	}
+	return fmt.Errorf("%w: map response: %w", merrors.ErrInvalidResponse, err)
 }

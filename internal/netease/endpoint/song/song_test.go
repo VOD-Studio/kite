@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +31,15 @@ func TestDetail_MapResponse_Empty(t *testing.T) {
 	t.Parallel()
 
 	_, err := Detail.MapResponse(&mmpb.GetSongDetailRequest{}, json.RawMessage(`{"code":200,"songs":[]}`))
-	require.Error(t, err)
+	require.ErrorIs(t, err, merrors.ErrNotFound, "歌曲不存在应归类为 ErrNotFound(对外映射为 RESOURCE_NOT_FOUND)")
+}
+
+// TestURL_MapResponse_NoURL 没有可用播放 URL(如 VIP 歌曲)归类为 ErrNotFound。
+func TestURL_MapResponse_NoURL(t *testing.T) {
+	t.Parallel()
+
+	_, err := URL.MapResponse(&mmpb.GetSongURLRequest{}, json.RawMessage(`{"code":200,"data":[]}`))
+	require.ErrorIs(t, err, merrors.ErrNotFound)
 }
 
 // TestURL_MapResponse 播放URL解析。

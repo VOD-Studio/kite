@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +28,7 @@ func TestDetailByName_MapResponse_Empty(t *testing.T) {
 	fixture := `{"result":{"userprofiles":[],"userprofileCount":0},"code":200}`
 
 	_, err := DetailByName.MapResponse(&mmpb.DetailByNameRequest{Nickname: "不存在的昵称"}, json.RawMessage(fixture))
-	require.Error(t, err)
+	require.ErrorIs(t, err, merrors.ErrNotFound)
 }
 
 // TestParseFollowEachOther 关注列表包含判断。
