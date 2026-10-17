@@ -1,5 +1,5 @@
 .PHONY: all help install-tools install-cli fmt fmt-check tidy-check vet test lint vuln build build-server \
-        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust check ci-env clean
+        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs status scripts-check interop-rust check ci-env clean
 
 # 工具探测:优先 PATH,回退 $GOPATH/bin(GOBIN 也在 PATH 时无所谓)
 BUF           ?= $(shell command -v buf 2>/dev/null           || echo $$(go env GOPATH)/bin/buf)
@@ -130,6 +130,12 @@ docs:
 	go run cmd/kite-docs/main.go docs/cmd
 	@echo "命令参考已刷新(若 docs/cmd/ 有变化记得提交)"
 
+## status: 刷新进度看板 docs/status/(proto + CLI 注解 + roadmap.yaml → progress.md / status.json)
+## 改了 rpc、命令或 docs/status/roadmap.yaml 之后必须跑,TestStatusFreshness 守护;同步到博客是手动的(见 scripts/publish-status.sh),只在维护者明确要求时才做。
+status:
+	go run ./cmd/kite-status docs/status
+	@echo "进度看板已刷新(记得提交 docs/status/)"
+
 ## interop-rust: Rust 客户端互操作冒烟(buf 编 proto → 生成 tonic 客户端 → 对真实 kite-server 调用)
 ## 需要 cargo(工具链由 interop/rust/rust-toolchain.toml 固定);较慢,不在 make check 里。
 interop-rust:
@@ -139,6 +145,7 @@ interop-rust:
 scripts-check:
 	@if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh; else echo "(未安装 shellcheck,跳过静态检查)"; fi
 	scripts/release-pr-ci_test.sh
+	scripts/publish-status_test.sh
 
 ## check: push 前一键自检(镜像 CI 的主要检查;vuln / verify-gen 依赖网络,按需单独跑)
 check: fmt-check tidy-check scripts-check vet test lint proto-lint

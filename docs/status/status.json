@@ -1,0 +1,682 @@
+{
+  "schemaVersion": 1,
+  "post": {
+    "id": "388eb0c5-fc69-4636-aeda-c22b40f151e5",
+    "slug": "kite-progress",
+    "title": "kite 开发进度看板",
+    "excerpt": "kite 已经开发了哪些接口、哪些在做、接下来做什么。接口清单由代码自动生成。",
+    "tags": [
+      "developer-tools"
+    ]
+  },
+  "totalRpcs": 78,
+  "rpcsWithCli": 78,
+  "blueprintTotal": 357,
+  "services": [
+    {
+      "service": "PlaylistService",
+      "domain": "歌单",
+      "rpcs": [
+        {
+          "method": "GetPlaylist",
+          "command": "kite playlist detail",
+          "short": "歌单详情",
+          "alsoUsedBy": [
+            "kite playlist download"
+          ]
+        },
+        {
+          "method": "HighQuality",
+          "command": "kite playlist highquality",
+          "short": "精品歌单"
+        },
+        {
+          "method": "HighQualityTags",
+          "command": "kite playlist highquality-tags",
+          "short": "精品歌单标签"
+        },
+        {
+          "method": "CatList",
+          "command": "kite playlist catlist",
+          "short": "歌单分类列表"
+        },
+        {
+          "method": "BrowseHot",
+          "command": "kite playlist hot",
+          "short": "热门歌单"
+        },
+        {
+          "method": "Subscribers",
+          "command": "kite playlist subscribers",
+          "short": "歌单收藏者"
+        },
+        {
+          "method": "AllTracks",
+          "command": "kite playlist tracks",
+          "short": "歌单全部歌曲",
+          "alsoUsedBy": [
+            "kite playlist download"
+          ]
+        },
+        {
+          "method": "Subscribe",
+          "command": "kite playlist subscribe",
+          "short": "收藏/取消收藏歌单(写操作,登录态)"
+        },
+        {
+          "method": "Create",
+          "command": "kite playlist create",
+          "short": "创建歌单(写操作,登录态)"
+        },
+        {
+          "method": "Delete",
+          "command": "kite playlist delete",
+          "short": "删除歌单(写操作,登录态)"
+        },
+        {
+          "method": "UpdateName",
+          "command": "kite playlist update-name",
+          "short": "歌单改名(写操作,登录态)"
+        },
+        {
+          "method": "UpdateDesc",
+          "command": "kite playlist update-desc",
+          "short": "修改歌单描述(写操作,登录态)"
+        },
+        {
+          "method": "UpdateTags",
+          "command": "kite playlist update-tags",
+          "short": "修改歌单标签(写操作,登录态)"
+        },
+        {
+          "method": "UpdateTracks",
+          "command": "kite playlist update-tracks",
+          "short": "歌单增删歌曲(写操作,登录态)"
+        },
+        {
+          "method": "SimilarPlaylists",
+          "command": "kite playlist similar",
+          "short": "相似歌单(按歌曲)"
+        },
+        {
+          "method": "RelatedPlaylistRecommend",
+          "command": "kite playlist related",
+          "short": "相关歌单推荐"
+        }
+      ]
+    },
+    {
+      "service": "SongService",
+      "domain": "歌曲",
+      "rpcs": [
+        {
+          "method": "GetSongDetail",
+          "command": "kite song detail",
+          "short": "歌曲详情",
+          "alsoUsedBy": [
+            "kite song download"
+          ]
+        },
+        {
+          "method": "GetSongURL",
+          "command": "kite song url",
+          "short": "歌曲播放地址",
+          "alsoUsedBy": [
+            "kite song download",
+            "kite playlist download"
+          ]
+        },
+        {
+          "method": "GetLyric",
+          "command": "kite song lyric",
+          "short": "歌词"
+        },
+        {
+          "method": "Like",
+          "command": "kite song like",
+          "short": "红心/取消红心(写操作,登录态)"
+        },
+        {
+          "method": "Trash",
+          "command": "kite song trash",
+          "short": "丢进垃圾桶,降推荐权重(写操作,登录态)"
+        },
+        {
+          "method": "DisallowRecommend",
+          "command": "kite song disallow-recommend",
+          "short": "标记不感兴趣,影响日推(写操作,登录态)"
+        },
+        {
+          "method": "CheckAvailable",
+          "command": "kite song check-available",
+          "short": "检查歌曲是否可用"
+        },
+        {
+          "method": "LikedList",
+          "command": "kite song liked-list",
+          "short": "红心歌曲列表(登录态)"
+        },
+        {
+          "method": "QualityDetail",
+          "command": "kite song quality-detail",
+          "short": "音质详情(eapi)"
+        },
+        {
+          "method": "LikeCount",
+          "command": "kite song like-count",
+          "short": "红心数(eapi)"
+        },
+        {
+          "method": "IsLike",
+          "command": "kite song is-like",
+          "short": "是否已红心(登录态)"
+        },
+        {
+          "method": "DynamicCover",
+          "command": "kite song dynamic-cover",
+          "short": "动态封面(eapi)"
+        },
+        {
+          "method": "ChorusTime",
+          "command": "kite song chorus-time",
+          "short": "副歌(eapi)"
+        },
+        {
+          "method": "CreatorInfo",
+          "command": "kite song creator-info",
+          "short": "创作者(eapi)"
+        },
+        {
+          "method": "GetWordLyric",
+          "command": "kite song word-lyric",
+          "short": "逐字歌词"
+        },
+        {
+          "method": "SimilarSongs",
+          "command": "kite song similar-songs",
+          "short": "相似歌曲"
+        }
+      ]
+    },
+    {
+      "service": "UserService",
+      "domain": "用户",
+      "rpcs": [
+        {
+          "method": "Account",
+          "command": "kite user account",
+          "short": "当前账号信息(登录态)"
+        },
+        {
+          "method": "Detail",
+          "command": "kite user detail",
+          "short": "用户详情"
+        },
+        {
+          "method": "SubCount",
+          "command": "kite user sub-count",
+          "short": "当前用户计数(登录态)"
+        },
+        {
+          "method": "UserPlaylist",
+          "command": "kite user playlists",
+          "short": "用户歌单"
+        },
+        {
+          "method": "DetailByName",
+          "command": "kite user detail-by-name",
+          "short": "按昵称查用户 ID"
+        },
+        {
+          "method": "FollowEachOther",
+          "command": "kite user follow-each-other",
+          "short": "是否互相关注"
+        },
+        {
+          "method": "Follows",
+          "command": "kite user follows",
+          "short": "用户关注列表"
+        },
+        {
+          "method": "Followeds",
+          "command": "kite user followeds",
+          "short": "用户粉丝列表"
+        },
+        {
+          "method": "Events",
+          "command": "kite user events",
+          "short": "用户动态"
+        },
+        {
+          "method": "Record",
+          "command": "kite user record",
+          "short": "听歌排行"
+        },
+        {
+          "method": "Level",
+          "command": "kite user level",
+          "short": "用户等级"
+        },
+        {
+          "method": "SimilarUsers",
+          "command": "kite user similar",
+          "short": "相似用户(按歌曲)"
+        }
+      ]
+    },
+    {
+      "service": "AlbumService",
+      "domain": "专辑",
+      "rpcs": [
+        {
+          "method": "GetAlbum",
+          "command": "kite album detail",
+          "short": "专辑详情"
+        },
+        {
+          "method": "NewAlbumShelf",
+          "command": "kite album shelf",
+          "short": "新碟上架"
+        },
+        {
+          "method": "NewestAlbums",
+          "command": "kite album newest",
+          "short": "最新专辑"
+        },
+        {
+          "method": "AllNewAlbums",
+          "command": "kite album all",
+          "short": "全部新碟"
+        },
+        {
+          "method": "SubscribedAlbums",
+          "command": "kite album subscribed",
+          "short": "已收藏专辑列表(登录态)"
+        },
+        {
+          "method": "AlbumDynamic",
+          "command": "kite album dynamic",
+          "short": "专辑动态信息(收藏数等)"
+        },
+        {
+          "method": "AlbumSongQuality",
+          "command": "kite album song-quality",
+          "short": "专辑歌曲音质"
+        },
+        {
+          "method": "SubscribeAlbum",
+          "command": "kite album subscribe",
+          "short": "收藏专辑(写操作,登录态)"
+        },
+        {
+          "method": "UnsubscribeAlbum",
+          "command": "kite album unsubscribe",
+          "short": "取消收藏专辑(写操作,登录态)"
+        }
+      ]
+    },
+    {
+      "service": "ArtistService",
+      "domain": "歌手",
+      "rpcs": [
+        {
+          "method": "GetArtist",
+          "command": "kite artist detail",
+          "short": "歌手详情"
+        },
+        {
+          "method": "AllSongs",
+          "command": "kite artist songs",
+          "short": "歌手全部歌曲"
+        },
+        {
+          "method": "TopSongs",
+          "command": "kite artist top-songs",
+          "short": "歌手热门歌曲"
+        },
+        {
+          "method": "Albums",
+          "command": "kite artist albums",
+          "short": "歌手专辑列表"
+        },
+        {
+          "method": "Desc",
+          "command": "kite artist desc",
+          "short": "歌手简介"
+        },
+        {
+          "method": "Similar",
+          "command": "kite artist similar",
+          "short": "相似歌手"
+        },
+        {
+          "method": "Fans",
+          "command": "kite artist fans",
+          "short": "歌手粉丝"
+        },
+        {
+          "method": "TopArtists",
+          "command": "kite artist toplist",
+          "short": "歌手榜"
+        },
+        {
+          "method": "ArtistSubscribe",
+          "command": "kite artist subscribe",
+          "short": "收藏/取消收藏歌手(写操作,登录态)"
+        }
+      ]
+    },
+    {
+      "service": "AuthService",
+      "domain": "登录",
+      "rpcs": [
+        {
+          "method": "SendCaptcha",
+          "command": "kite send-captcha",
+          "short": "发送短信验证码"
+        },
+        {
+          "method": "LoginByCellphone",
+          "command": "kite login-cellphone",
+          "short": "手机号验证码登录"
+        },
+        {
+          "method": "LoginQrcode",
+          "command": "kite login",
+          "short": "扫码登录,cookie 持久化到本地配置目录"
+        },
+        {
+          "method": "CheckQrcode",
+          "command": "kite login",
+          "short": "扫码登录,cookie 持久化到本地配置目录"
+        },
+        {
+          "method": "LoginStatus",
+          "command": "kite login-status",
+          "short": "查看当前登录态"
+        },
+        {
+          "method": "Logout",
+          "command": "kite logout",
+          "short": "登出并删除本地会话文件"
+        }
+      ]
+    },
+    {
+      "service": "SearchService",
+      "domain": "搜索",
+      "rpcs": [
+        {
+          "method": "Search",
+          "command": "kite search",
+          "short": "搜索(默认单曲)"
+        },
+        {
+          "method": "Suggest",
+          "command": "kite search suggest",
+          "short": "搜索建议"
+        },
+        {
+          "method": "Hot",
+          "command": "kite search hot",
+          "short": "热搜列表"
+        },
+        {
+          "method": "HotDetail",
+          "command": "kite search hot-detail",
+          "short": "热搜详情"
+        },
+        {
+          "method": "DefaultKeyword",
+          "command": "kite search default-keyword",
+          "short": "默认搜索关键词"
+        }
+      ]
+    },
+    {
+      "service": "RecommendService",
+      "domain": "推荐",
+      "rpcs": [
+        {
+          "method": "GetDailyRecommend",
+          "command": "kite recommend daily-songs",
+          "short": "每日推荐歌曲"
+        },
+        {
+          "method": "DailyRecommendPlaylists",
+          "command": "kite recommend daily-playlists",
+          "short": "每日推荐歌单(登录态)"
+        },
+        {
+          "method": "RecommendPlaylists",
+          "command": "kite recommend playlists",
+          "short": "推荐歌单"
+        },
+        {
+          "method": "RecommendNewSongs",
+          "command": "kite recommend new-songs",
+          "short": "推荐新歌"
+        }
+      ]
+    },
+    {
+      "service": "FMService",
+      "domain": "私人 FM",
+      "rpcs": [
+        {
+          "method": "GetPersonalFM",
+          "command": "kite fm",
+          "short": "私人 FM"
+        }
+      ]
+    }
+  ],
+  "domains": [
+    {
+      "id": "song",
+      "name": "歌曲",
+      "status": "done",
+      "service": "SongService"
+    },
+    {
+      "id": "playlist",
+      "name": "歌单",
+      "status": "done",
+      "service": "PlaylistService"
+    },
+    {
+      "id": "user",
+      "name": "用户",
+      "status": "done",
+      "service": "UserService"
+    },
+    {
+      "id": "album",
+      "name": "专辑",
+      "status": "done",
+      "service": "AlbumService"
+    },
+    {
+      "id": "artist",
+      "name": "歌手",
+      "status": "done",
+      "service": "ArtistService"
+    },
+    {
+      "id": "auth",
+      "name": "登录",
+      "status": "done",
+      "service": "AuthService"
+    },
+    {
+      "id": "search",
+      "name": "搜索",
+      "status": "done",
+      "service": "SearchService"
+    },
+    {
+      "id": "recommend",
+      "name": "推荐",
+      "status": "done",
+      "service": "RecommendService"
+    },
+    {
+      "id": "fm",
+      "name": "私人 FM",
+      "status": "done",
+      "service": "FMService"
+    },
+    {
+      "id": "comment",
+      "name": "评论",
+      "status": "planned",
+      "issue": 28
+    },
+    {
+      "id": "mv",
+      "name": "MV",
+      "status": "planned",
+      "issue": 32
+    },
+    {
+      "id": "toplist",
+      "name": "排行榜",
+      "status": "planned",
+      "issue": 29
+    },
+    {
+      "id": "djradio",
+      "name": "电台",
+      "status": "planned",
+      "issue": 33
+    },
+    {
+      "id": "cloud",
+      "name": "云盘",
+      "status": "planned",
+      "issue": 30
+    },
+    {
+      "id": "task",
+      "name": "签到与云贝",
+      "status": "planned",
+      "issue": 31,
+      "note": "可能只登记不接 CLI"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "error-contract",
+      "name": "gRPC 错误契约",
+      "status": "done",
+      "refs": [
+        55
+      ],
+      "note": "错误以标准 gRPC status 加 google.rpc.ErrorInfo 返回,reason 稳定可依赖;REST 同步映射为 401/404/429/503 等。契约见 docs/grpc-errors.md。"
+    },
+    {
+      "id": "server-auth",
+      "name": "服务访问鉴权与健康检查",
+      "status": "done",
+      "refs": [
+        59
+      ],
+      "note": "bearer token 鉴权(gRPC 与 REST 同一套规则,reflection 也受保护),默认只监听本机回环,对外监听必须配令牌;标准 gRPC 健康检查与 REST /healthz。"
+    },
+    {
+      "id": "rust-interop",
+      "name": "Rust 互操作测试",
+      "status": "done",
+      "refs": [
+        60
+      ],
+      "note": "CI 里用 proto 生成 tonic 客户端,对真实运行的服务端验证鉴权与错误契约;文档里的 Rust 示例会被编译并执行。"
+    },
+    {
+      "id": "release",
+      "name": "发布与交付",
+      "status": "done",
+      "refs": [
+        45,
+        46,
+        49,
+        58,
+        62
+      ],
+      "note": "唯一 CI 门禁,合并 release PR 后自动发布 CLI 与 kite-server 的 6 个平台归档、ghcr 镜像,镜像与校验和经 cosign 签名。"
+    },
+    {
+      "id": "engine-stability",
+      "name": "请求引擎稳定性修复",
+      "status": "done",
+      "refs": [
+        51,
+        53
+      ],
+      "note": "修复 cookie 请求路径的缓存串号、熔断误判、服务端登录态接口失效;私人 FM 不再缓存。"
+    },
+    {
+      "id": "status-board",
+      "name": "进度看板",
+      "status": "done",
+      "refs": [
+        68
+      ],
+      "note": "本页。接口清单由代码生成并有测试守护,不会和代码脱节;同步到博客由维护者按需手动触发。"
+    },
+    {
+      "id": "dedupe",
+      "name": "P1 去重",
+      "status": "planned",
+      "refs": [
+        64
+      ],
+      "note": "无行为变化的重构:收敛请求引擎入口,统一 endpoint 声明方式,压缩新增一个接口需要手写的位置数。先于多源地基。"
+    },
+    {
+      "id": "multi-provider",
+      "name": "P2 多源地基",
+      "status": "planned",
+      "refs": [
+        65
+      ],
+      "note": "领域模型、小而可选的能力接口、provider 注册。会有破坏性变更(命令行的 --id 变成 provider:id,proto 拆分)。"
+    },
+    {
+      "id": "second-provider",
+      "name": "P3 第二个音乐源",
+      "status": "planned",
+      "refs": [
+        63
+      ],
+      "note": "选与网易云差异最大的一个,用来验证抽象。所有音乐源都会接入,顺序未定。"
+    },
+    {
+      "id": "tui",
+      "name": "P4 终端界面(TUI)",
+      "status": "planned",
+      "refs": [
+        63
+      ],
+      "note": "建在多源地基之上的完整终端客户端。"
+    },
+    {
+      "id": "bsr",
+      "name": "发布到 Buf Schema Registry",
+      "status": "planned",
+      "refs": [
+        66
+      ],
+      "note": "让其它语言的项目直接依赖 proto。待确定组织名与发布凭据。"
+    },
+    {
+      "id": "server-hardening",
+      "name": "服务加固",
+      "status": "planned",
+      "refs": [
+        67
+      ],
+      "note": "内置 TLS、限流、多令牌与调用方身份。"
+    }
+  ]
+}

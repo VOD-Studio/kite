@@ -1,0 +1,102 @@
+# kite 开发进度的手写部分:正在做 / 规划中的事项,以及各接口域的中文名。
+#
+# 「已完成的接口」不写在这里——它们由 proto 描述符 + CLI 命令注解自动导出(cmd/kite-status)。
+# 改完本文件后运行 `make status` 刷新 docs/status/,并提交生成物;TestStatusFreshness 守护不脱节。
+#
+# 维护约定(约定,无法被测试完全守护):
+#   - 完成一件事的那个 PR,同时把它在本文件里的 status 改成 done、补上 refs(PR / issue 编号);
+#   - 新开工的事项先加进来(planned / in_progress),并链接它的 issue。
+# 能被测试守护的部分见 cmd/kite-status/main_test.go:proto 里的每个 service 必须被一个已上线的域认领,
+# 标 planned 的域在 proto 里不能已经有 service。
+
+# 看板文章在 violet 的元信息(slug 固定,更新是改同一篇文章)。同步到博客是手动的,见 scripts/publish-status.sh。
+post:
+  id: 388eb0c5-fc69-4636-aeda-c22b40f151e5
+  slug: kite-progress
+  title: kite 开发进度看板
+  excerpt: kite 已经开发了哪些接口、哪些在做、接下来做什么。接口清单由代码自动生成。
+  tags: [developer-tools]
+
+# 上游接口蓝图总数(NeteaseCloudMusicApi 全量约 357 个),用于估算覆盖率。数字依据见 issue #34。
+blueprint_total: 357
+
+# 网易云接口域。status=done 的域必须通过 service 认领 proto 里的一个 service。
+domains:
+  - { id: song,      name: 歌曲,       status: done, service: SongService }
+  - { id: playlist,  name: 歌单,       status: done, service: PlaylistService }
+  - { id: user,      name: 用户,       status: done, service: UserService }
+  - { id: album,     name: 专辑,       status: done, service: AlbumService }
+  - { id: artist,    name: 歌手,       status: done, service: ArtistService }
+  - { id: auth,      name: 登录,       status: done, service: AuthService }
+  - { id: search,    name: 搜索,       status: done, service: SearchService }
+  - { id: recommend, name: 推荐,       status: done, service: RecommendService }
+  - { id: fm,        name: 私人 FM,    status: done, service: FMService }
+  - { id: comment,   name: 评论,       status: planned, issue: 28 }
+  - { id: mv,        name: MV,         status: planned, issue: 32 }
+  - { id: toplist,   name: 排行榜,     status: planned, issue: 29 }
+  - { id: djradio,   name: 电台,       status: planned, issue: 33 }
+  - { id: cloud,     name: 云盘,       status: planned, issue: 30 }
+  - { id: task,      name: 签到与云贝, status: planned, issue: 31, note: 可能只登记不接 CLI }
+
+# 平台与工程路线。refs 是 PR / issue 编号(都链接到 GitHub)。
+tracks:
+  - id: error-contract
+    name: gRPC 错误契约
+    status: done
+    refs: [55]
+    note: 错误以标准 gRPC status 加 google.rpc.ErrorInfo 返回,reason 稳定可依赖;REST 同步映射为 401/404/429/503 等。契约见 docs/grpc-errors.md。
+  - id: server-auth
+    name: 服务访问鉴权与健康检查
+    status: done
+    refs: [59]
+    note: bearer token 鉴权(gRPC 与 REST 同一套规则,reflection 也受保护),默认只监听本机回环,对外监听必须配令牌;标准 gRPC 健康检查与 REST /healthz。
+  - id: rust-interop
+    name: Rust 互操作测试
+    status: done
+    refs: [60]
+    note: CI 里用 proto 生成 tonic 客户端,对真实运行的服务端验证鉴权与错误契约;文档里的 Rust 示例会被编译并执行。
+  - id: release
+    name: 发布与交付
+    status: done
+    refs: [45, 46, 49, 58, 62]
+    note: 唯一 CI 门禁,合并 release PR 后自动发布 CLI 与 kite-server 的 6 个平台归档、ghcr 镜像,镜像与校验和经 cosign 签名。
+  - id: engine-stability
+    name: 请求引擎稳定性修复
+    status: done
+    refs: [51, 53]
+    note: 修复 cookie 请求路径的缓存串号、熔断误判、服务端登录态接口失效;私人 FM 不再缓存。
+  - id: status-board
+    name: 进度看板
+    status: done
+    refs: [68]
+    note: 本页。接口清单由代码生成并有测试守护,不会和代码脱节;同步到博客由维护者按需手动触发。
+  - id: dedupe
+    name: P1 去重
+    status: planned
+    refs: [64]
+    note: 无行为变化的重构:收敛请求引擎入口,统一 endpoint 声明方式,压缩新增一个接口需要手写的位置数。先于多源地基。
+  - id: multi-provider
+    name: P2 多源地基
+    status: planned
+    refs: [65]
+    note: 领域模型、小而可选的能力接口、provider 注册。会有破坏性变更(命令行的 --id 变成 provider:id,proto 拆分)。
+  - id: second-provider
+    name: P3 第二个音乐源
+    status: planned
+    refs: [63]
+    note: 选与网易云差异最大的一个,用来验证抽象。所有音乐源都会接入,顺序未定。
+  - id: tui
+    name: P4 终端界面(TUI)
+    status: planned
+    refs: [63]
+    note: 建在多源地基之上的完整终端客户端。
+  - id: bsr
+    name: 发布到 Buf Schema Registry
+    status: planned
+    refs: [66]
+    note: 让其它语言的项目直接依赖 proto。待确定组织名与发布凭据。
+  - id: server-hardening
+    name: 服务加固
+    status: planned
+    refs: [67]
+    note: 内置 TLS、限流、多令牌与调用方身份。

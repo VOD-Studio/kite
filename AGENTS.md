@@ -62,6 +62,7 @@ cmd/*
 - **`make proto`** —— 改 `proto/` 后重新生成到 `gen/`。`gen/` **提交进版本控制**(代码硬依赖它,clone 即可编译),改完 `git add gen/`;CI 校验漂移。决策见 [ADR](docs/adr/generated-code-commit-policy.md)。
 - **`make proto-lint`** —— 检查 proto 规范。
 - **`make docs`** —— 改命令树后刷新 `docs/cmd/`。`TestDocsFreshness` 依赖它,不跑会红。
+- **`make status`** —— 改 rpc、CLI 命令或 `docs/status/roadmap.yaml` 后刷新进度看板 `docs/status/`(生成物入库,`TestStatusFreshness` 守护)。合入 main 后 `Publish Status` 自动同步到博客。**完成一件事的 PR 要同时把它在 `roadmap.yaml` 里改成 `done` 并补上 refs。** 博客上的看板文章**只在维护者明确要求时**才同步(`scripts/publish-status.sh`),不要自行发布或更新。
 - **`make interop-rust`** —— Rust 客户端互操作冒烟(需要 `cargo`,较慢,CI 的 `Rust Interop` job 跑它)。改 proto、鉴权或错误契约后建议本地跑一次。
 - **`make clean`** —— 清本地构建产物(`tmp/`、`bin/`)。不清 `gen/`。
 
@@ -82,6 +83,7 @@ CI 的约定(唯一门禁 `CI OK`、工具版本来源、发布流程)见 [`CONT
 ## 文档
 
 - **`docs/cmd/` 是生成物,不要手改**,改命令树后跑 `make docs`。命令语法唯一真相是 `kite <命令> --help`;其它文档指向 `--help` 或生成参考,**不要复制命令手册**(复制即第二份真相)。
+- 进度:[`docs/status/progress.md`](docs/status/progress.md)(生成,勿手改;手写部分在 `docs/status/roadmap.yaml`)
 - 上手:[`docs/kite-guide.md`](docs/kite-guide.md) · CLI 设计:[`docs/kite-cli-design.md`](docs/kite-cli-design.md) · 路线图:[`docs/kite-roadmap.md`](docs/kite-roadmap.md)
 - 对外契约:[`docs/grpc-errors.md`](docs/grpc-errors.md)(gRPC/REST 错误映射;改 `internal/server/errors.go` 的 reason 必须同步)· [`docs/server-security.md`](docs/server-security.md)(监听地址 / 访问令牌 / 健康检查;改 `internal/server/auth.go` 或 `config` 的 `KITE_SERVER_*` 必须同步)
 - 领域术语与决策索引:[`CONTEXT.md`](CONTEXT.md) · ADR:[`docs/adr/`](docs/adr/) · PRD:[`docs/prd/`](docs/prd/)
