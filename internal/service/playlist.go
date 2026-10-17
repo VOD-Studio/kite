@@ -57,67 +57,41 @@ func (s *PlaylistServer) AllTracks(ctx context.Context, req *mmpb.AllTracksReque
 
 // --- 写操作（cookie override，不走 Execute） ---
 
+// --- 歌单写操作（ctx cookie 路径） ---
+
 // Subscribe 收藏/取消收藏歌单。
 func (s *PlaylistServer) Subscribe(ctx context.Context, req *mmpb.SubscribeRequest) (*mmpb.SubscribeResponse, error) {
-	raw, _, err := s.eng.RawDoWithCookieAndInput(ctx, playlistendpoint.SubscribeMeta, playlistendpoint.SubscribeRequest(req))
-	if err != nil {
-		return nil, err
-	}
-	return playlistendpoint.ParseSubscribed(raw), nil
+	return executeOverride(s.eng, ctx, playlistendpoint.Subscribe, req)
 }
 
 // Create 新建歌单。
 func (s *PlaylistServer) Create(ctx context.Context, req *mmpb.CreateRequest) (*mmpb.CreateResponse, error) {
-	raw, _, err := s.eng.RawDoWithCookieAndInput(ctx, playlistendpoint.CreateMeta, playlistendpoint.CreateRequest(req))
-	if err != nil {
-		return nil, err
-	}
-	return playlistendpoint.ParseCreateResponse(raw), nil
+	return executeOverride(s.eng, ctx, playlistendpoint.Create, req)
 }
 
 // Delete 删除歌单。
 func (s *PlaylistServer) Delete(ctx context.Context, req *mmpb.DeleteRequest) (*mmpb.DeleteResponse, error) {
-	_, _, err := s.eng.RawDoWithCookieAndInput(ctx, playlistendpoint.DeleteMeta, playlistendpoint.DeleteRequest(req))
-	if err != nil {
-		return nil, err
-	}
-	return &mmpb.DeleteResponse{}, nil
+	return executeOverride(s.eng, ctx, playlistendpoint.Delete, req)
 }
 
 // UpdateName 更新歌单名。
 func (s *PlaylistServer) UpdateName(ctx context.Context, req *mmpb.UpdateNameRequest) (*mmpb.UpdateNameResponse, error) {
-	_, _, err := s.eng.RawDoWithCookieAndInput(ctx, playlistendpoint.UpdateNameMeta, playlistendpoint.UpdateNameRequest(req))
-	if err != nil {
-		return nil, err
-	}
-	return &mmpb.UpdateNameResponse{}, nil
+	return executeOverride(s.eng, ctx, playlistendpoint.UpdateName, req)
 }
 
 // UpdateDesc 更新歌单描述。
 func (s *PlaylistServer) UpdateDesc(ctx context.Context, req *mmpb.UpdateDescRequest) (*mmpb.UpdateDescResponse, error) {
-	_, _, err := s.eng.RawDoWithCookieAndInput(ctx, playlistendpoint.UpdateDescMeta, playlistendpoint.UpdateDescRequest(req))
-	if err != nil {
-		return nil, err
-	}
-	return &mmpb.UpdateDescResponse{}, nil
+	return executeOverride(s.eng, ctx, playlistendpoint.UpdateDesc, req)
 }
 
 // UpdateTags 更新歌单标签。
 func (s *PlaylistServer) UpdateTags(ctx context.Context, req *mmpb.UpdateTagsRequest) (*mmpb.UpdateTagsResponse, error) {
-	_, _, err := s.eng.RawDoWithCookieAndInput(ctx, playlistendpoint.UpdateTagsMeta, playlistendpoint.UpdateTagsRequest(req))
-	if err != nil {
-		return nil, err
-	}
-	return &mmpb.UpdateTagsResponse{}, nil
+	return executeOverride(s.eng, ctx, playlistendpoint.UpdateTags, req)
 }
 
 // UpdateTracks 添加或删除歌曲。
 func (s *PlaylistServer) UpdateTracks(ctx context.Context, req *mmpb.UpdateTracksRequest) (*mmpb.UpdateTracksResponse, error) {
-	raw, _, err := s.eng.RawDoWithCookieAndInput(ctx, playlistendpoint.UpdateTracksMeta, playlistendpoint.UpdateTracksRequest(req))
-	if err != nil {
-		return nil, err
-	}
-	return playlistendpoint.ParseUpdateTracksResponse(raw), nil
+	return executeOverride(s.eng, ctx, playlistendpoint.UpdateTracks, req)
 }
 
 // SimilarPlaylists 基于歌曲获取相似歌单。

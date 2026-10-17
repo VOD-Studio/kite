@@ -10,25 +10,24 @@ import (
 	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
-// SubscribeMeta 是收藏/取消收藏歌手的执行元数据。
-var SubscribeMeta = engine.Meta{
-	Path: "/weapi/artist/sub", Method: "POST",
-	Crypto: engine.CryptoWeAPI, Auth: session.AuthLoggedIn,
-}
-
-// SubscribeRequest 构造收藏歌手入参。
-func SubscribeRequest(req *mmpb.ArtistSubscribeRequest) map[string]any {
-	return map[string]any{
-		"artistId":  fmt.Sprintf("%d", req.GetArtistId()),
-		"artistIds": fmt.Sprintf("[%d]", req.GetArtistId()),
-	}
-}
-
-// ParseSubscribeResponse 解析收藏操作响应。
-func ParseSubscribeResponse(raw json.RawMessage) *mmpb.ArtistSubscribeResponse {
-	var resp struct {
-		Sub bool `json:"sub"` // 操作后是否已收藏
-	}
-	_ = json.Unmarshal(raw, &resp)
-	return &mmpb.ArtistSubscribeResponse{Subscribed: resp.Sub}
+// Subscribe 收藏/取消收藏歌手（写操作，ctx cookie 路径，不缓存）。
+var Subscribe = &engine.Endpoint[*mmpb.ArtistSubscribeRequest, *mmpb.ArtistSubscribeResponse]{
+	Meta: engine.Meta{
+		Path: "/weapi/artist/sub", Method: "POST",
+		Crypto: engine.CryptoWeAPI, Auth: session.AuthLoggedIn,
+	},
+	NewResp: func() *mmpb.ArtistSubscribeResponse { return &mmpb.ArtistSubscribeResponse{} },
+	MapRequest: func(req *mmpb.ArtistSubscribeRequest) (map[string]any, error) {
+		return map[string]any{
+			"artistId":  fmt.Sprintf("%d", req.GetArtistId()),
+			"artistIds": fmt.Sprintf("[%d]", req.GetArtistId()),
+		}, nil
+	},
+	MapResponse: func(_ *mmpb.ArtistSubscribeRequest, raw json.RawMessage) (*mmpb.ArtistSubscribeResponse, error) {
+		var resp struct {
+			Sub bool `json:"sub"` // 操作后是否已收藏
+		}
+		_ = json.Unmarshal(raw, &resp) // 写操作响应宽松解析:缺字段按零值
+		return &mmpb.ArtistSubscribeResponse{Subscribed: resp.Sub}, nil
+	},
 }

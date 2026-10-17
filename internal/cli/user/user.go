@@ -189,18 +189,9 @@ func newFollowEachOther(k *kit.Kit) *cobra.Command {
 		Use:   "follow-each-other",
 		Short: "是否互相关注",
 		Args:  cobra.NoArgs,
-		// 需要 target uid 拼进 path(/weapi/user/getfollows/{uid}),走 RawDo。
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			req := &mmpb.FollowEachOtherRequest{UserId: uid, TargetUserId: target}
-			raw, _, err := k.RawDo(k.CookieCtx(), userendpoint.FollowEachOtherMeta(target), userendpoint.FollowEachOtherRequest(req))
-			if err != nil {
-				return err
-			}
-			resp, err := userendpoint.ParseFollowEachOther(req, raw)
-			if err != nil {
-				return err
-			}
-			return k.Render(resp)
+			return kit.RenderExec(k, userendpoint.FollowEachOther, req)
 		},
 	}
 	withUID(c, &uid)
