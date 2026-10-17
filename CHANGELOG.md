@@ -7,6 +7,14 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## [0.3.1](https://github.com/VOD-Studio/kite/compare/v0.3.0...v0.3.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **netease:** 修复 5 个对真实上游不可用的 RPC,新增真实上游冒烟 ([#77](https://github.com/VOD-Studio/kite/issues/77)) ([89ed8ef](https://github.com/VOD-Studio/kite/commit/89ed8efe34eb4b2d67b11f1c074eefb311a68cdf))
+* **proto:** BSR 补推早于接入的历史 tag 时补上模块名 ([#71](https://github.com/VOD-Studio/kite/issues/71)) ([13c606e](https://github.com/VOD-Studio/kite/commit/13c606ef97195a0cb3f64a0dd76e3f28c6d79ce1))
+
 ## [0.3.0](https://github.com/VOD-Studio/kite/compare/v0.2.2...v0.3.0) (2026-10-17)
 
 
