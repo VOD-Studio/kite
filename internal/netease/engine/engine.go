@@ -142,11 +142,10 @@ func (e *Engine) RawDoWithCookieAndInput(ctx context.Context, meta Meta, params 
 	)
 	err := withRetry(ctx, e.retry, func() error {
 		r, sc, callErr := e.doOnceWithCookie(ctx, meta, params, cookie)
+		e.breaker.recordResult(ctx, callErr)
 		if callErr != nil {
-			e.breaker.recordFailure()
 			return callErr
 		}
-		e.breaker.recordSuccess()
 		raw = r
 		setCookie = sc
 		return nil
@@ -216,11 +215,10 @@ func (e *Engine) rawDoWithResult(ctx context.Context, meta Meta, params map[stri
 	)
 	err := withRetry(ctx, e.retry, func() error {
 		r, sc, callErr := e.doOnce(ctx, meta, params)
+		e.breaker.recordResult(ctx, callErr)
 		if callErr != nil {
-			e.breaker.recordFailure()
 			return callErr
 		}
-		e.breaker.recordSuccess()
 		raw = r
 		setCookie = sc
 		return nil
@@ -235,17 +233,25 @@ func (e *Engine) rawDoWithResult(ctx context.Context, meta Meta, params map[stri
 // doOnce 执行一次完整调用（不含重试/熔断）：session 选取 → 加密 → transport → 错误映射。
 // 返回 raw JSON + Set-Cookie。
 func (e *Engine) doOnce(ctx context.Context, meta Meta, params map[string]any) (json.RawMessage, string, error) {
-	// session 选取（登录类接口创建 session 时不走这里，直接传 cookie）。
+	// 凭据解析（登录类接口创建 session 时不走这里，直接传 cookie）。
+	// 需要登录态的接口：调用方经 ctx 自带的 cookie（gRPC 拦截器注入）优先，
+	// 否则从 session 池选取。匿名接口不携带任何用户 cookie。
 	cookie := ""
+	var pooled *session.Session
 	if meta.Auth == session.AuthLoggedIn {
-		if e.sessions == nil {
-			return nil, "", merrors.ErrUnauthorized
+		if c := CookieFromContext(ctx); c != "" {
+			cookie = c
+		} else {
+			if e.sessions == nil {
+				return nil, "", notSent(merrors.ErrUnauthorized)
+			}
+			sess, err := e.sessions.GetAvailable(ctx, meta.Auth)
+			if err != nil {
+				return nil, "", notSent(err)
+			}
+			cookie = sess.Cookie
+			pooled = sess
 		}
-		sess, err := e.sessions.GetAvailable(ctx, meta.Auth)
-		if err != nil {
-			return nil, "", err
-		}
-		cookie = sess.Cookie
 	}
 
 	// 参数序列化为 JSON。
@@ -280,12 +286,9 @@ func (e *Engine) doOnce(ctx context.Context, meta Meta, params map[string]any) (
 	}
 
 	if callErr != nil {
-		// cookie 失效时上报 session 池。
-		if meta.Auth == session.AuthLoggedIn && e.sessions != nil && isUnauthorized(callErr) {
-			sess, _ := e.sessions.GetAvailable(ctx, meta.Auth)
-			if sess != nil {
-				e.sessions.ReportFailure(sess.UserID, callErr)
-			}
+		// 池里取出的 cookie 失效时上报（只上报本次实际用的那个 session）。
+		if pooled != nil && isUnauthorized(callErr) {
+			e.sessions.ReportFailure(pooled.UserID, callErr)
 		}
 		return nil, "", callErr
 	}
