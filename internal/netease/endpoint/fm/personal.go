@@ -3,7 +3,6 @@ package fm
 
 import (
 	"encoding/json"
-	"time"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
@@ -19,12 +18,9 @@ var GetPersonalFM = &engine.Endpoint[*mmpb.GetPersonalFMRequest, *mmpb.GetPerson
 		Crypto: engine.CryptoWeAPI,
 		Auth:   session.AuthLoggedIn,
 	},
-	Cache: &engine.CachePolicy[*mmpb.GetPersonalFMRequest]{
-		Key: func(*mmpb.GetPersonalFMRequest) string {
-			return "fm:personal"
-		},
-		TTL: 30 * time.Minute,
-	},
+	// 不缓存：私人 FM 每次请求上游都会返回新的一批歌曲（客户端靠重复调用"取下一批"），
+	// 缓存会让同一用户在 TTL 内反复拿到同一批。
+	Cache:   nil,
 	NewResp: func() *mmpb.GetPersonalFMResponse { return &mmpb.GetPersonalFMResponse{} },
 	MapRequest: func(*mmpb.GetPersonalFMRequest) (map[string]any, error) {
 		return map[string]any{}, nil
