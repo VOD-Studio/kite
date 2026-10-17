@@ -14,6 +14,7 @@ name: Release Please
 on:
   push:
     branches: [main]
+  workflow_dispatch:   # 手动重跑(例如排查 release PR 上的检查状态)
 
 permissions:
   contents: write       # 创建 release PR + 打 tag
@@ -25,7 +26,7 @@ jobs:
     permissions:
       contents: write       # 创建 release PR + 打 tag
       pull-requests: write  # 开/合并 release PR
-      actions: write        # 为 release PR 分支触发 CI(workflow_dispatch)
+      actions: write        # 批准 release PR 上等待批准的 CI 运行
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
       tag_name: ${{ steps.rp.outputs.tag_name }}
@@ -48,16 +49,41 @@ jobs:
               {"type":"test","section":"Tests","hidden":true}
             ]
 
-      # release PR 被创建 / 更新后,在其分支上跑一次 CI(见 ci.yml 里 workflow_dispatch 的说明)。
-      # 分支名优先取 outputs.pr.headBranchName;取不到时回落 release-please 的固定默认分支名。
-      # 先判空再 fromJSON:没有 PR 时 outputs.pr 为空串,fromJSON('') 会报错。
-      - name: 为 release PR 触发 CI
-        if: steps.rp.outputs.prs_created == 'true'
+      # 批准 release PR 上等待批准的 CI 运行。
+      #
+      # release PR 由 github-actions[bot] 创建 / 更新,仓库「首次贡献者需批准」的策略把它当作首次贡献者,
+      # 它的 pull_request CI 会停在 action_required。实测:即使另外 workflow_dispatch 出一个成功的
+      # CI OK,只要 PR 上还挂着等待批准的运行,required check CI OK 就视为未满足,PR 保持 BLOCKED。
+      # 这个 PR 是我们自己的 workflow 生成的,批准它是安全的(不放宽仓库的批准策略)。
+      #
+      # 每次都运行(不依赖 prs_created):幂等,只批准当前打开的 release PR 头部提交上的待批准运行。
+      # pull_request 事件在 push 之后才异步产生运行,所以轮询等待最多约 1 分钟。
+      - name: 批准 release PR 上等待批准的 CI 运行
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           BRANCH: ${{ (steps.rp.outputs.pr && fromJSON(steps.rp.outputs.pr).headBranchName) || 'release-please--branches--main' }}
-        run: gh workflow run ci.yml --ref "${BRANCH}"
+        run: |
+          head=$(gh pr list --head "${BRANCH}" --state open --json headRefOid --jq '.[0].headRefOid // empty')
+          if [ -z "${head}" ]; then
+            echo "没有打开的 release PR,跳过"
+            exit 0
+          fi
+          for i in $(seq 1 6); do
+            pending=$(gh run list --branch "${BRANCH}" --event pull_request --limit 20 \
+              --json databaseId,headSha,conclusion \
+              --jq ".[] | select(.headSha == \"${head}\" and .conclusion == \"action_required\") | .databaseId")
+            if [ -n "${pending}" ]; then
+              while read -r id; do
+                echo "批准运行 ${id}"
+                gh api -X POST "repos/${GH_REPO}/actions/runs/${id}/approve"
+              done <<<"${pending}"
+              exit 0
+            fi
+            echo "[${i}/6] 暂无等待批准的运行,10 秒后重试"
+            sleep 10
+          done
+          echo "未发现等待批准的运行(可能已被批准,或策略不再要求批准)"
 
   # 仅在本次运行真的创建了 release(即 release PR 被合并)时才发布产物。
   # caller 需授予被调用 workflow 所需权限的超集。

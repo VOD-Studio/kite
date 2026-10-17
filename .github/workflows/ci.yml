@@ -21,10 +21,7 @@ on:
     # edited:改 PR 标题要重新校验(PR Title job 依赖标题)。其它 job 也会重跑,
     # 这是刻意的——若只跑 PR Title,新的 CI OK 会覆盖同一 SHA 上先前失败的结果。
     types: [opened, synchronize, reopened, edited]
-  # release-please 用 GITHUB_TOKEN 开 / 更新 release PR,GITHUB_TOKEN 触发的 pull_request
-  # 不会启动 workflow,PR 上没有 CI OK,会被 required check 永远卡住。workflow_dispatch 是
-  # GITHUB_TOKEN 允许触发的少数事件之一:release-please.yml 在 release 分支上手动跑一次,
-  # check-run 挂在分支 HEAD 上即满足 PR 的 required check。pr-title 等 PR 专属步骤在此事件下跳过。
+  # 手动触发入口(Actions 页 Run workflow)。PR 专属步骤(PR Title、proto breaking)在此事件下按条件跳过。
   workflow_dispatch:
 
 # 同一 PR 多次 push 时取消旧的运行
