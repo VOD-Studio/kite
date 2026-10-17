@@ -48,7 +48,7 @@ kite song download 347230 --level 3   # 下载单曲(1标准 2较高 3无损 4Hi
 
 前端共享的本地能力(会话 / 配置 / 召回池)在 `internal/localstate`、`internal/recall`。分层规则见 [AGENTS.md](AGENTS.md),由测试守护。
 
-gRPC 契约的唯一真相在 [`proto/netease/music/v1/`](proto/netease/music/v1/)。错误以标准 gRPC status + `ErrorInfo` 返回,映射与各语言客户端的处理方式见 [错误契约](docs/grpc-errors.md)。TUI 架构决策见 [ADR](docs/adr/tui-client-architecture.md)。
+gRPC 契约的唯一真相在 [`proto/netease/music/v1/`](proto/netease/music/v1/)。其它语言的项目不必拷贝 `.proto`,可以直接依赖 Buf Schema Registry 上的模块 [`buf.build/vod-studio/kite`](https://buf.build/vod-studio/kite):标签是版本号(如 `:v0.3.0`),`main` 跟随最新正式版。例如 `buf generate buf.build/vod-studio/kite:v0.3.0`,或在自己的 `buf.yaml` 里 `deps: [buf.build/vod-studio/kite:v0.3.0]`。服务的鉴权、监听地址与健康检查见 [服务部署与访问控制](docs/server-security.md)。错误以标准 gRPC status + `ErrorInfo` 返回,映射与各语言客户端的处理方式见 [错误契约](docs/grpc-errors.md)。TUI 架构决策见 [ADR](docs/adr/tui-client-architecture.md)。
 
 ## 开发
 
