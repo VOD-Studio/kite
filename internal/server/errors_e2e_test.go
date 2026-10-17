@@ -83,6 +83,11 @@ func TestE2E_Gateway_HTTPStatus(t *testing.T) {
 	}{
 		{"未登录 → 401", `{"code":301}`, http.StatusUnauthorized, ReasonLoginRequired},
 		{"不存在 → 404", `{"code":404}`, http.StatusNotFound, ReasonResourceNotFound},
+		// 上游正常应答(code 200)但没有该资源:由 endpoint 的 MapResponse 判定,必须同样归为不存在,
+		// 而不是落入 INTERNAL。
+		{"空结果也是不存在 → 404", `{"code":200,"songs":[]}`, http.StatusNotFound, ReasonResourceNotFound},
+		// 上游返回了无法解析的内容:UPSTREAM_INVALID_RESPONSE 必须真实可达。
+		{"响应无法解析 → 500 + UPSTREAM_INVALID_RESPONSE", `<html>not json</html>`, http.StatusInternalServerError, ReasonUpstreamInvalidResponse},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

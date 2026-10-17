@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 	"github.com/VOD-Studio/kite/internal/netease/model"
@@ -44,7 +45,7 @@ var Detail = &engine.Endpoint[*mmpb.GetSongDetailRequest, *mmpb.GetSongDetailRes
 			return &mmpb.GetSongDetailResponse{}, err
 		}
 		if len(songs) == 0 {
-			return &mmpb.GetSongDetailResponse{}, fmt.Errorf("歌曲不存在")
+			return &mmpb.GetSongDetailResponse{}, fmt.Errorf("歌曲不存在: %w", merrors.ErrNotFound)
 		}
 		return &mmpb.GetSongDetailResponse{Song: songs[0]}, nil
 	},

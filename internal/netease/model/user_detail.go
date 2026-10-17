@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
@@ -30,7 +31,7 @@ func DecodeUserDetail(raw json.RawMessage) (*mmpb.UserDetail, error) {
 		return nil, fmt.Errorf("解析用户详情失败: %w", err)
 	}
 	if r.Profile.UserID == 0 {
-		return nil, fmt.Errorf("用户不存在")
+		return nil, fmt.Errorf("用户不存在: %w", merrors.ErrNotFound)
 	}
 	p := r.Profile
 	return &mmpb.UserDetail{

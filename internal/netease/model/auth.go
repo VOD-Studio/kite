@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
@@ -28,7 +29,7 @@ func DecodeLoginResponse(raw json.RawMessage) (*mmpb.Session, error) {
 		return nil, fmt.Errorf("解析登录响应失败: %w", err)
 	}
 	if r.Account.ID == 0 {
-		return nil, fmt.Errorf("未登录")
+		return nil, fmt.Errorf("未登录: %w", merrors.ErrUnauthorized)
 	}
 	return &mmpb.Session{
 		UserId:    r.Account.ID,

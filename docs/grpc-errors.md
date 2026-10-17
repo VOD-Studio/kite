@@ -12,11 +12,11 @@ kite 的 gRPC 服务面向多种语言的客户端(Rust、Go、TypeScript……)
 | `reason` | gRPC code | REST 状态码 | 含义 | 客户端建议 |
 |---|---|---|---|---|
 | `LOGIN_REQUIRED` | `UNAUTHENTICATED` | 401 | 未登录 / 登录态失效 / 没有可用 session | 重新登录后重试;**不要**原样重试 |
-| `RESOURCE_NOT_FOUND` | `NOT_FOUND` | 404 | 资源不存在(歌曲 / 歌单 ID 无效等) | 放弃 |
+| `RESOURCE_NOT_FOUND` | `NOT_FOUND` | 404 | 资源不存在:上游业务码为不存在,或上游正常应答但结果为空(歌曲 / 用户 ID 无效、昵称查不到、没有可用播放 URL 等) | 放弃 |
 | `RATE_LIMITED` | `RESOURCE_EXHAUSTED` | 429 | 被上游限流 | 退避后重试 |
 | `UPSTREAM_UNAVAILABLE` | `UNAVAILABLE` | 503 | 上游不可用(网络错误 / 5xx) | 退避后重试 |
 | `CIRCUIT_OPEN` | `UNAVAILABLE` | 503 | 本服务熔断器打开,请求被短路 | 稍后重试 |
-| `UPSTREAM_INVALID_RESPONSE` | `INTERNAL` | 500 | 上游返回了无法解析的响应 | 不要盲目重试,可能是上游接口变了 |
+| `UPSTREAM_INVALID_RESPONSE` | `INTERNAL` | 500 | 上游返回了形状不符预期的响应(JSON 解码失败、缺字段)。已带明确类别的错误(如不存在)不会落入此项 | 不要盲目重试,可能是上游接口变了 |
 | `UNSUPPORTED` | `UNIMPLEMENTED` | 501 | 不支持的平台 / 能力 | 放弃 |
 | `INTERNAL` | `INTERNAL` | 500 | 未分类的内部错误(`message` 固定为「内部错误」,细节只在服务端日志) | 放弃或上报 |
 | `CANCELED` | `CANCELED` | 499 | 调用方取消了请求 | — |
