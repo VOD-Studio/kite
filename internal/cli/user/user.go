@@ -2,14 +2,11 @@
 package user
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
 	userendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/user"
-	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // NewCommand 创建 user 命令组。
@@ -29,8 +26,6 @@ func NewCommand(k *kit.Kit) *cobra.Command {
 }
 
 // annotateUserRpcs 给 user 组各子命令打 rpc 注解(PRD-0014 #B 命令树守护)。
-// detail/follows 走裸 RawDo(/weapi/v1/user/detail/{uid}、/weapi/user/getfollows/{uid}),
-// 不经 endpoint,但对应 grpc rpc Detail/Follows,必须显式标注。
 // 命名偏移:playlists↔UserPlaylist、follow-each-other↔FollowEachOther、similar↔SimilarUsers。
 func annotateUserRpcs(c *cobra.Command) {
 	rpcs := map[string][]string{
@@ -80,17 +75,8 @@ func newDetail(k *kit.Kit) *cobra.Command {
 		Use:   "detail",
 		Short: "用户详情",
 		Args:  cobra.NoArgs,
-		// detail 需要 uid 拼进 path(/weapi/v1/user/detail/{uid}),走 RawDo。
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			raw, _, err := k.RawDo(k.CookieCtx(), engine.Meta{
-				Path: fmt.Sprintf("/weapi/v1/user/detail/%d", uid), Method: "POST",
-				Crypto: engine.CryptoWeAPI, Auth: 0,
-			}, map[string]any{})
-			if err != nil {
-				return err
-			}
-			kit.PrintRaw(raw)
-			return nil
+			return kit.RenderExec(k, userendpoint.Detail, &mmpb.DetailRequest{UserId: uid})
 		},
 	}
 	withUID(c, &uid)
@@ -147,17 +133,8 @@ func newFollows(k *kit.Kit) *cobra.Command {
 		Use:   "follows",
 		Short: "用户关注列表",
 		Args:  cobra.NoArgs,
-		// follows 需要 uid 拼进 path(/weapi/user/getfollows/{uid}),走 RawDo。
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			raw, _, err := k.RawDo(k.CookieCtx(), engine.Meta{
-				Path: fmt.Sprintf("/weapi/user/getfollows/%d", uid), Method: "POST",
-				Crypto: engine.CryptoWeAPI, Auth: 0,
-			}, map[string]any{"offset": int32(offset), "limit": int32(limit), "order": true})
-			if err != nil {
-				return err
-			}
-			kit.PrintRaw(raw)
-			return nil
+			return kit.RenderExec(k, userendpoint.Follows, &mmpb.FollowsRequest{UserId: uid, Limit: int32(limit), Offset: int32(offset)}) //nolint:gosec // 命令行分页参数,取值范围远小于 int32
 		},
 	}
 	withUID(c, &uid)

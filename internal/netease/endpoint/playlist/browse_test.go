@@ -118,3 +118,21 @@ func TestRelatedPlaylistRecommend_MapResponse(t *testing.T) {
 	require.Equal(t, "相关歌单B", resp.Playlists[0].Name)
 	require.Equal(t, "http://b.jpg", resp.Playlists[0].CoverUrl)
 }
+
+// 精品歌单未指定分类时默认「全部」:上游对空 cat 返回空列表,gRPC 调用方省略字段不应拿到空结果。
+func TestHighQuality_MapRequest_DefaultCat(t *testing.T) {
+	t.Parallel()
+
+	params, err := HighQuality.MapRequest(&mmpb.HighQualityRequest{})
+	require.NoError(t, err)
+	require.Equal(t, "全部", params["cat"])
+
+	params, err = HighQuality.MapRequest(&mmpb.HighQualityRequest{Cat: "华语"})
+	require.NoError(t, err)
+	require.Equal(t, "华语", params["cat"], "显式指定的分类不被覆盖")
+
+	// 缓存 key 也要归一:省略与显式「全部」是同一份数据。
+	require.Equal(t,
+		HighQuality.Cache.Key(&mmpb.HighQualityRequest{}),
+		HighQuality.Cache.Key(&mmpb.HighQualityRequest{Cat: "全部"}))
+}

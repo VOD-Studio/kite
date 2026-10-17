@@ -1,0 +1,14 @@
+{
+  "code": 200,
+  "level": 10,
+  "listenSongs": 35558,
+  "profile": {
+    "userId": 32953014,
+    "nickname": "test-user",
+    "avatarUrl": "http://p1.music.126.net/test/avatar.jpg",
+    "gender": 1,
+    "signature": "test signature",
+    "follows": 22,
+    "followeds": 94
+  }
+}

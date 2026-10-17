@@ -62,6 +62,7 @@ cmd/*
 - **`make proto`** —— 改 `proto/` 后重新生成到 `gen/`。`gen/` **提交进版本控制**(代码硬依赖它,clone 即可编译),改完 `git add gen/`;CI 校验漂移。决策见 [ADR](docs/adr/generated-code-commit-policy.md)。
 - **`make proto-lint`** —— 检查 proto 规范。
 - **`make docs`** —— 改命令树后刷新 `docs/cmd/`。`TestDocsFreshness` 依赖它,不跑会红。
+- **`make upstream-smoke`** —— 真实上游冒烟(需要外网,手动运行,不进 CI):对网易云真实接口逐个调用服务端 RPC,断言响应非空。**改了 endpoint 路径 / 解码器后必跑**——单元测试的夹具与解码器出自同一个假设,上游改了路径 / 字段名 / 类型都发现不了。
 - **`make interop-rust`** —— Rust 客户端互操作冒烟(需要 `cargo`,较慢,CI 的 `Rust Interop` job 跑它)。改 proto、鉴权或错误契约后建议本地跑一次。
 - **`make clean`** —— 清本地构建产物(`tmp/`、`bin/`)。不清 `gen/`。
 

@@ -14,11 +14,24 @@ import (
 	"github.com/VOD-Studio/kite/internal/netease/model"
 )
 
+// defaultHighQualityCat 是精品歌单未指定分类时的默认分类。
+// 上游对空 cat 返回「没有获取数据」(空列表);CLI 的 --cat 默认值也是它。gRPC 调用方省略可选字段
+// (Rust 等客户端很常见)时若不兜底,就会拿到一个看似成功的空列表。
+const defaultHighQualityCat = "全部"
+
+// highQualityCat 返回请求的分类,未指定时用默认分类。
+func highQualityCat(r *mmpb.HighQualityRequest) string {
+	if r.GetCat() == "" {
+		return defaultHighQualityCat
+	}
+	return r.GetCat()
+}
+
 // HighQuality 获取精品歌单列表。
 var HighQuality = &engine.Endpoint[*mmpb.HighQualityRequest, *mmpb.HighQualityResponse]{
 	Meta: weapiMeta("/weapi/playlist/highquality/list"),
 	Cache: browseCache("playlist:highquality", func(r *mmpb.HighQualityRequest) string {
-		return fmt.Sprintf("%s:%s:%d:%d", "playlist:highquality", r.GetCat(), r.GetLimit(), r.GetOffset())
+		return fmt.Sprintf("%s:%s:%d:%d", "playlist:highquality", highQualityCat(r), r.GetLimit(), r.GetOffset())
 	}),
 	NewResp: func() *mmpb.HighQualityResponse { return &mmpb.HighQualityResponse{} },
 	MapRequest: func(req *mmpb.HighQualityRequest) (map[string]any, error) {
@@ -26,7 +39,7 @@ var HighQuality = &engine.Endpoint[*mmpb.HighQualityRequest, *mmpb.HighQualityRe
 		if limit <= 0 {
 			limit = 20
 		}
-		return map[string]any{"cat": req.GetCat(), "limit": limit, "offset": req.GetOffset()}, nil
+		return map[string]any{"cat": highQualityCat(req), "limit": limit, "offset": req.GetOffset()}, nil
 	},
 	MapResponse: parsePlaylistListResponse,
 }

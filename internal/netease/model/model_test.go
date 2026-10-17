@@ -4,6 +4,7 @@ package model
 import (
 	"encoding/json"
 	"testing"
+	"time"
 )
 
 // TestMapSong 验证歌曲映射：缩写字段 → proto 字段。
@@ -209,5 +210,33 @@ func TestDecodeWordLyric_Empty(t *testing.T) {
 	}
 	if len(got.Lines) != 0 {
 		t.Errorf("空 blob 行数 = %d, 期望 0", len(got.Lines))
+	}
+}
+
+// 发行日期不随主机时区变化:上游时间戳对齐在北京时间零点,
+// 747504000000 = UTC 1993-09-08 16:00 = 北京 1993-09-09 00:00。
+// 按进程本地时区格式化,UTC 以西的主机会得到前一天;转 UTC 同样差一天。
+// 本测试改写 time.Local,不能并行。
+func TestFormatPublishTime_FixedZone(t *testing.T) {
+	const ms = 747504000000
+	saved := time.Local
+	t.Cleanup(func() { time.Local = saved })
+
+	for _, zone := range []struct {
+		name string
+		loc  *time.Location
+	}{
+		{"UTC", time.UTC},
+		{"洛杉矶(UTC-8)", time.FixedZone("PST", -8*3600)},
+		{"北京(UTC+8)", time.FixedZone("CST", 8*3600)},
+		{"夏威夷(UTC-10)", time.FixedZone("HST", -10*3600)},
+	} {
+		time.Local = zone.loc
+		if got := formatPublishTime(ms); got != "1993-09-09" {
+			t.Errorf("本地时区 %s: formatPublishTime = %q, 期望 1993-09-09", zone.name, got)
+		}
+	}
+	if got := formatPublishTime(0); got != "" {
+		t.Errorf("0 应为未知(空串),得到 %q", got)
 	}
 }

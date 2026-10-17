@@ -32,16 +32,21 @@ var Account = &engine.Endpoint[*mmpb.AccountRequest, *mmpb.AccountResponse]{
 // Detail 是获取用户详情的接口声明。
 var Detail = &engine.Endpoint[*mmpb.DetailRequest, *mmpb.DetailResponse]{
 	Meta: engine.Meta{
-		Path: "/weapi/v3/user/detail", Method: "POST",
+		Path: "/weapi/v1/user/detail", Method: "POST", // 占位,实际 path 由 PathFunc 生成
 		Crypto: engine.CryptoWeAPI, Auth: session.AuthAnonymous,
+	},
+	// uid 必须拼进 path。曾用 /weapi/v3/user/detail 且 id 放 body:真实上游返回空响应,
+	// 服务端因此恒报 NOT_FOUND,而 CLI 绕过 endpoint 用的正是 path 形式。
+	PathFunc: func(req *mmpb.DetailRequest) string {
+		return fmt.Sprintf("/weapi/v1/user/detail/%d", req.GetUserId())
 	},
 	Cache: &engine.CachePolicy[*mmpb.DetailRequest]{
 		Key: func(req *mmpb.DetailRequest) string { return fmt.Sprintf("user:detail:%d", req.GetUserId()) },
 		TTL: 24 * time.Hour,
 	},
 	NewResp: func() *mmpb.DetailResponse { return &mmpb.DetailResponse{} },
-	MapRequest: func(req *mmpb.DetailRequest) (map[string]any, error) {
-		return map[string]any{"id": fmt.Sprintf("%d", req.GetUserId())}, nil
+	MapRequest: func(_ *mmpb.DetailRequest) (map[string]any, error) {
+		return map[string]any{}, nil
 	},
 	MapResponse: func(_ *mmpb.DetailRequest, raw json.RawMessage) (*mmpb.DetailResponse, error) {
 		u, err := model.DecodeUserDetail(raw)

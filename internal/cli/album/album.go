@@ -10,7 +10,6 @@ import (
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
 	albumendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/album"
-	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // NewCommand 创建 album 命令组。
@@ -124,21 +123,12 @@ func newDetail(k *kit.Kit) *cobra.Command {
 		Use:   "detail",
 		Short: "专辑详情",
 		Args:  cobra.MaximumNArgs(1),
-		// detail 需要 id 拼进 path(/weapi/v1/album/{id}),走 RawDo。
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
 			}
-			raw, _, err := k.RawDo(k.CookieCtx(), engine.Meta{
-				Path: fmt.Sprintf("/weapi/v1/album/%d", rid), Method: "POST",
-				Crypto: engine.CryptoWeAPI, Auth: 0,
-			}, map[string]any{})
-			if err != nil {
-				return err
-			}
-			kit.PrintRaw(raw)
-			return nil
+			return kit.RenderExec(k, albumendpoint.GetAlbum, &mmpb.GetAlbumRequest{AlbumId: rid})
 		},
 	}
 	withID(c, &id)

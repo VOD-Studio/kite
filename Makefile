@@ -1,5 +1,5 @@
 .PHONY: all help install-tools install-cli fmt fmt-check tidy-check vet test lint vuln build build-server \
-        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust check ci-env clean
+        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust upstream-smoke check ci-env clean
 
 # 工具探测:优先 PATH,回退 $GOPATH/bin(GOBIN 也在 PATH 时无所谓)
 BUF           ?= $(shell command -v buf 2>/dev/null           || echo $$(go env GOPATH)/bin/buf)
@@ -129,6 +129,11 @@ proto-deps:
 docs:
 	go run cmd/kite-docs/main.go docs/cmd
 	@echo "命令参考已刷新(若 docs/cmd/ 有变化记得提交)"
+
+## upstream-smoke: 真实上游冒烟(对网易云真实接口逐个调用服务端的 service 方法,断言响应非空)
+## 手动运行,不进 make check / CI:外部依赖会让门禁「没改代码也变红」。改了 endpoint 或解码器后建议跑一次。
+upstream-smoke:
+	go test -tags upstream ./internal/service/ -run TestUpstreamSmoke -count=1 -v
 
 ## interop-rust: Rust 客户端互操作冒烟(buf 编 proto → 生成 tonic 客户端 → 对真实 kite-server 调用)
 ## 需要 cargo(工具链由 interop/rust/rust-toolchain.toml 固定);较慢,不在 make check 里。

@@ -186,13 +186,18 @@ var Fans = &engine.Endpoint[*mmpb.FansRequest, *mmpb.FansResponse]{
 	MapResponse: func(req *mmpb.FansRequest, raw json.RawMessage) (*mmpb.FansResponse, error) {
 		var resp struct {
 			Data struct {
-				FansCount int64 `json:"fansCount"` // 粉丝数
+				FansCnt   int64 `json:"fansCnt"`   // 粉丝数(现行字段名)
+				FansCount int64 `json:"fansCount"` // 粉丝数(旧字段名,上游曾叫这个;改名后只认旧名会静默得到 0)
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(raw, &resp); err != nil {
 			return nil, fmt.Errorf("解析粉丝数失败: %w", err)
 		}
-		return &mmpb.FansResponse{Fans: resp.Data.FansCount}, nil
+		fans := resp.Data.FansCnt
+		if fans == 0 {
+			fans = resp.Data.FansCount
+		}
+		return &mmpb.FansResponse{Fans: fans}, nil
 	},
 }
 
