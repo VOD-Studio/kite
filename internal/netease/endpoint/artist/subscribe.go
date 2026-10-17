@@ -19,7 +19,7 @@ var SubscribeMeta = engine.Meta{
 // SubscribeRequest 构造收藏歌手入参。
 func SubscribeRequest(req *mmpb.ArtistSubscribeRequest) map[string]any {
 	return map[string]any{
-		"artistId": fmt.Sprintf("%d", req.GetArtistId()),
+		"artistId":  fmt.Sprintf("%d", req.GetArtistId()),
 		"artistIds": fmt.Sprintf("[%d]", req.GetArtistId()),
 	}
 }

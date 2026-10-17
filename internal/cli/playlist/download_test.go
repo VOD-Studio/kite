@@ -395,7 +395,12 @@ func TestRunPlaylistDownload_SizeMatchSkips(t *testing.T) {
 	// 预置文件:size 与 fetchURL 返回的 Size 一致。
 	const size = int64(1000)
 	path := filepath.Join(dir, songdl.SongFilename(songs[0], "mp3"))
-	require := func(err error) { t.Helper(); if err != nil { t.Fatal(err) } }
+	require := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	require(os.WriteFile(path, make([]byte, size), 0o644))
 
 	downloadCalled := false
@@ -425,7 +430,12 @@ func TestRunPlaylistDownload_SizeMismatchSkipsWithWarn(t *testing.T) {
 	songs := fakeSongs(1)
 	const remoteSize = int64(5000)
 	path := filepath.Join(dir, songdl.SongFilename(songs[0], "mp3"))
-	require := func(err error) { t.Helper(); if err != nil { t.Fatal(err) } }
+	require := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	// 本地 100 字节,远端 5000 → 不符。
 	require(os.WriteFile(path, make([]byte, 100), 0o644))
 
@@ -452,7 +462,12 @@ func TestRunPlaylistDownload_ForceOverridesSize(t *testing.T) {
 	songs := fakeSongs(1)
 	const size = int64(1000)
 	path := filepath.Join(dir, songdl.SongFilename(songs[0], "mp3"))
-	require := func(err error) { t.Helper(); if err != nil { t.Fatal(err) } }
+	require := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	require(os.WriteFile(path, make([]byte, size), 0o644))
 
 	downloadCalled := false

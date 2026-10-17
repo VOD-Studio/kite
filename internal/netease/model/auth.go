@@ -15,8 +15,8 @@ type rawLoginResponse struct {
 		ID int64 `json:"id"` // 账号ID
 	} `json:"account"` // 账号信息
 	Profile struct {
-		UserID    int64  `json:"userId"`   // 用户ID
-		Nickname  string `json:"nickname"` // 昵称
+		UserID    int64  `json:"userId"`    // 用户ID
+		Nickname  string `json:"nickname"`  // 昵称
 		AvatarURL string `json:"avatarUrl"` // 头像URL
 	} `json:"profile"` // 用户资料
 }
@@ -39,7 +39,7 @@ func DecodeLoginResponse(raw json.RawMessage) (*mmpb.Session, error) {
 
 // rawQrcodeKey 是二维码 key 获取响应。
 type rawQrcodeKey struct {
-	Code   int    `json:"code"`  // 业务码
+	Code   int    `json:"code"`   // 业务码
 	UniKey string `json:"unikey"` // 二维码轮询key
 }
 

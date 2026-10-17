@@ -20,7 +20,6 @@ var (
 	qrStyle      = lipgloss.NewStyle().Padding(1, 2) // QR 周围留白
 )
 
-
 // waveCharsLen 正弦波跨多少个字符一个完整周期。值越小波越密。
 const waveCycle = 14.0
 

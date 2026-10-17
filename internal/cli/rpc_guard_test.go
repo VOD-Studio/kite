@@ -42,12 +42,12 @@ var rpcsWithoutCliAllowlist = map[string]string{}
 // 生成的 help/completion 子命令无 Annotations,在此兜底;其余叶子命令漏标一律红。
 // key 是命令名(不含父路径)。
 var noRpcAllowlist = map[string]string{
-	"help":        "cobra 自动生成,无业务",
-	"completion":  "cobra 自动生成,无业务(容器)",
-	"bash":        "cobra completion 子命令,无业务",
-	"zsh":         "cobra completion 子命令,无业务",
-	"fish":        "cobra completion 子命令,无业务",
-	"powershell":  "cobra completion 子命令,无业务",
+	"help":       "cobra 自动生成,无业务",
+	"completion": "cobra 自动生成,无业务(容器)",
+	"bash":       "cobra completion 子命令,无业务",
+	"zsh":        "cobra completion 子命令,无业务",
+	"fish":       "cobra completion 子命令,无业务",
+	"powershell": "cobra completion 子命令,无业务",
 }
 
 // allProtoFiles 是全部 proto 文件的 FileDescriptor。新增 proto service 文件时

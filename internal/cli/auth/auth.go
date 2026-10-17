@@ -191,8 +191,8 @@ func runLoginWith(k *kit.Kit, deps loginDeps) error {
 
 	// 2. bubbletea 接管终端:QR 固定 + spinner 状态行原地刷新。
 	result, err := qrtui.Run(qrtui.Deps{
-		QR:    renderQR(qrURL),
-		QRURL: qrURL,
+		QR:      renderQR(qrURL),
+		QRURL:   qrURL,
 		PollCtx: ctx,
 		Check: func(ctx context.Context) (mmpb.QrcodeCode, json.RawMessage, string, error) {
 			raw, setCookie, err := k.RawDo(ctx, authendpoint.CheckQrcode, authendpoint.CheckQrcodeRequest(&mmpb.CheckQrcodeRequest{Key: key}))

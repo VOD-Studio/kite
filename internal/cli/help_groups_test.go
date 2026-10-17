@@ -45,21 +45,21 @@ func TestHelpGroups_EveryCommandHasGroup(t *testing.T) {
 func TestHelpGroups_CommandAssignment(t *testing.T) {
 	root := NewRootCommand()
 	cases := map[string]string{
-		"login":          "quickstart",
+		"login":           "quickstart",
 		"login-cellphone": "quickstart",
-		"login-status":   "quickstart",
-		"logout":         "quickstart",
-		"search":         "quickstart",
-		"send-captcha":   "account",
-		"user":           "account",
-		"song":           "music",
-		"album":          "music",
-		"artist":         "music",
-		"playlist":       "music",
-		"recommend":      "discover",
-		"fm":             "discover",
-		"completion":     "tools",
-		"help":           "tools",
+		"login-status":    "quickstart",
+		"logout":          "quickstart",
+		"search":          "quickstart",
+		"send-captcha":    "account",
+		"user":            "account",
+		"song":            "music",
+		"album":           "music",
+		"artist":          "music",
+		"playlist":        "music",
+		"recommend":       "discover",
+		"fm":              "discover",
+		"completion":      "tools",
+		"help":            "tools",
 	}
 	cmds := map[string]string{}
 	for _, c := range root.Commands() {

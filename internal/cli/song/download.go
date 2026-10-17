@@ -21,9 +21,9 @@ import (
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
-	"github.com/VOD-Studio/kite/internal/recall"
 	"github.com/VOD-Studio/kite/internal/cli/songdl"
 	songendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/song"
+	"github.com/VOD-Studio/kite/internal/recall"
 )
 
 // newDownload 构造 song download 命令。

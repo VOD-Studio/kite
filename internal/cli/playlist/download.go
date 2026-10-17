@@ -76,13 +76,13 @@ func newDownload(k *kit.Kit) *cobra.Command {
 //   - newProgress:进度条工厂(测试可注入 io.Discard 版)
 //   - sleepJitter:风控抖动 sleep(测试可注入 noop 加速)
 type playlistDeps struct {
-	fetchTracks        func(ctx context.Context, id int64) (*mmpb.AllTracksResponse, error)
+	fetchTracks         func(ctx context.Context, id int64) (*mmpb.AllTracksResponse, error)
 	fetchPlaylistDetail func(ctx context.Context, id int64) (*mmpb.Playlist, error) // 拿歌单名(显示用)
-	fetchURL           func(ctx context.Context, id int64, level int) (*mmpb.SongURL, error)
-	downloadOne        func(ctx context.Context, song *mmpb.Song, songURL *mmpb.SongURL, opts songdl.Options) songdl.Outcome
-	newProgress        func() *kit.Progress
-	sleepJitter        func() // 风控:歌间随机 sleep 200-500ms(测试 noop)
-	now                func() time.Time
+	fetchURL            func(ctx context.Context, id int64, level int) (*mmpb.SongURL, error)
+	downloadOne         func(ctx context.Context, song *mmpb.Song, songURL *mmpb.SongURL, opts songdl.Options) songdl.Outcome
+	newProgress         func() *kit.Progress
+	sleepJitter         func() // 风控:歌间随机 sleep 200-500ms(测试 noop)
+	now                 func() time.Time
 }
 
 // defaultPlaylistDeps 生产依赖:真实网络 + songdl 核心 + 真实进度 + 真实 jitter。

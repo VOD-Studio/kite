@@ -10,16 +10,16 @@ import (
 
 // rawUserDetail 是网易云用户详情接口的响应。
 type rawUserDetail struct {
-	Code   int `json:"code"`  // 业务码
-	Level  int `json:"level"` // 用户等级
+	Code    int `json:"code"`  // 业务码
+	Level   int `json:"level"` // 用户等级
 	Profile struct {
-		UserID      int64  `json:"userId"`   // 用户ID
-		Nickname    string `json:"nickname"` // 昵称
-		AvatarURL   string `json:"avatarUrl"` // 头像URL
-		Gender      int    `json:"gender"`    // 性别（0未知 1男 2女）
-		Signature   string `json:"signature"` // 个人签名
-		Followeds   int64  `json:"followeds"` // 粉丝数
-		Follows     int64  `json:"follows"`   // 关注数
+		UserID    int64  `json:"userId"`    // 用户ID
+		Nickname  string `json:"nickname"`  // 昵称
+		AvatarURL string `json:"avatarUrl"` // 头像URL
+		Gender    int    `json:"gender"`    // 性别（0未知 1男 2女）
+		Signature string `json:"signature"` // 个人签名
+		Followeds int64  `json:"followeds"` // 粉丝数
+		Follows   int64  `json:"follows"`   // 关注数
 	} `json:"profile"` // 用户资料
 }
 
@@ -48,10 +48,10 @@ func DecodeUserDetail(raw json.RawMessage) (*mmpb.UserDetail, error) {
 // rawUserSubCount 是用户数量统计响应。
 type rawUserSubCount struct {
 	Code          int `json:"code"`           // 业务码
-	PlaylistCount int `json:"playlistCount"` // 创建的歌单数
-	DjRadioCount  int `json:"djRadiosCount"` // DJ电台数
-	MvCount       int `json:"mvCount"`       // 收藏MV数
-	ArtistCount   int `json:"artistCount"`   // 收藏歌手数
+	PlaylistCount int `json:"playlistCount"`  // 创建的歌单数
+	DjRadioCount  int `json:"djRadiosCount"`  // DJ电台数
+	MvCount       int `json:"mvCount"`        // 收藏MV数
+	ArtistCount   int `json:"artistCount"`    // 收藏歌手数
 	NewAlbumCount int `json:"newAlbumsCount"` // 收藏专辑数
 }
 
@@ -72,8 +72,8 @@ func DecodeUserSubCount(raw json.RawMessage) (*mmpb.UserSubCount, error) {
 
 // rawUserPlaylists 是用户歌单列表响应。
 type rawUserPlaylists struct {
-	Code int `json:"code"` // 业务码
-	More bool `json:"more"` // 是否还有更多
+	Code     int  `json:"code"` // 业务码
+	More     bool `json:"more"` // 是否还有更多
 	Playlist []struct {
 		ID          int64  `json:"id"`          // 歌单ID
 		Name        string `json:"name"`        // 歌单名

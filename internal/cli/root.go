@@ -17,7 +17,6 @@ import (
 	"github.com/VOD-Studio/kite/internal/cli/config"
 	"github.com/VOD-Studio/kite/internal/cli/fm"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
-	"github.com/VOD-Studio/kite/internal/localstate"
 	"github.com/VOD-Studio/kite/internal/cli/playlist"
 	"github.com/VOD-Studio/kite/internal/cli/recent"
 	"github.com/VOD-Studio/kite/internal/cli/recommend"
@@ -25,15 +24,16 @@ import (
 	"github.com/VOD-Studio/kite/internal/cli/song"
 	"github.com/VOD-Studio/kite/internal/cli/user"
 	"github.com/VOD-Studio/kite/internal/cli/version"
+	"github.com/VOD-Studio/kite/internal/localstate"
 )
 
 // NewRootCommand 创建根命令并装配所有命令组。
 //
 // 登录类命令挂顶层(高频入口),接口按领域分组(song/album/...)。
 // 登录态来源: 1. NETEASE_COOKIE 环境变量(优先,临时换号调试)
-// 2. 本地配置目录下的 session.json(login/login-cellphone 写入,logout 删除);
-//    路径见 kite doctor(macOS ~/Library/Application Support/kite/、
-//    Linux ~/.config/kite/、Windows %AppData%\kite\)。
+//  2. 本地配置目录下的 session.json(login/login-cellphone 写入,logout 删除);
+//     路径见 kite doctor(macOS ~/Library/Application Support/kite/、
+//     Linux ~/.config/kite/、Windows %AppData%\kite\)。
 func NewRootCommand() *cobra.Command {
 	k := kit.New()
 

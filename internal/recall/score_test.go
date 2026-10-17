@@ -111,7 +111,7 @@ func TestScore_TiebreakByID(t *testing.T) {
 func TestScore_RepresentativeEventPicksLatestNonEmptyName(t *testing.T) {
 	now := time.Date(2026, 7, 24, 20, 0, 0, 0, time.UTC)
 	events := []Event{
-		{ID: 1, Name: "", Artist: "", Src: SrcSearch, TS: now.Add(-2 * time.Hour)}, // 老,无 name
+		{ID: 1, Name: "", Artist: "", Src: SrcSearch, TS: now.Add(-2 * time.Hour)},      // 老,无 name
 		{ID: 1, Name: "晴天", Artist: "周杰伦", Src: SrcPlay, TS: now.Add(-5 * time.Minute)}, // 新,有 name
 	}
 	ranked := Score(events, now)

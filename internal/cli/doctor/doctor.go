@@ -40,9 +40,9 @@ func (s Status) icon() string {
 
 // Result 是单个检查项的结果。
 type Result struct {
-	Name    string `json:"name"`              // 检查项名(如「版本」「会话」)
-	Status  Status `json:"status"`            // pass/fail/warn
-	Detail  string `json:"detail"`            // 状态详情(如版本号、「未登录」)
+	Name    string `json:"name"`               // 检查项名(如「版本」「会话」)
+	Status  Status `json:"status"`             // pass/fail/warn
+	Detail  string `json:"detail"`             // 状态详情(如版本号、「未登录」)
 	FixHint string `json:"fix_hint,omitempty"` // 非 pass 时的修复指引
 }
 
