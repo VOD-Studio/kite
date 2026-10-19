@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 )
 
@@ -58,7 +59,7 @@ func (p *Pool) Append(events ...Event) error {
 	}
 	// 读现有事件(单行损坏容忍:跳过坏行)。
 	existing, _ := p.loadRaw(path)
-	all := append(existing, events...)
+	all := slices.Concat(existing, events)
 	// 裁剪到 MaxLines(drop oldest)。
 	if len(all) > MaxLines {
 		all = all[len(all)-MaxLines:]

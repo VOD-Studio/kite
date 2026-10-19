@@ -180,7 +180,7 @@ func (k *Kit) RawDo(ctx context.Context, meta engine.Meta, params map[string]any
 }
 
 // Exec 执行一个声明式 endpoint(注入当前 cookie)。执行语义见 engine.ExecuteWithCookie。
-func Exec[Req, Resp any](k *Kit, ctx context.Context, ep *engine.Endpoint[Req, Resp], req Req) (Resp, error) {
+func Exec[Req, Resp any](k *Kit, ctx context.Context, ep *engine.Endpoint[Req, Resp], req Req) (Resp, error) { //nolint:revive // Go 不支持泛型方法,与 engine.Execute 保持同一参数顺序
 	return engine.ExecuteWithCookie(k.eng, ctx, ep, req)
 }
 

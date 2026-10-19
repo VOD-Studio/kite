@@ -96,13 +96,13 @@ func RenderHuman(w io.Writer, results []Result) {
 	}
 }
 
-// RenderJSON 输出结构化 JSON(供 --json / bug report 粘贴)。
-type reportJSON struct {
+// JSONReport 是 doctor 的结构化 JSON 报告(供 --json / bug report 粘贴)。
+type JSONReport struct {
 	Results []Result `json:"results"`
 	OK      bool     `json:"ok"` // 无 fail 为 true
 }
 
 // ReportJSON 构造 JSON 报告(含 results + ok 汇总)。
-func ReportJSON(results []Result) reportJSON {
-	return reportJSON{Results: results, OK: !HasFail(results)}
+func ReportJSON(results []Result) JSONReport {
+	return JSONReport{Results: results, OK: !HasFail(results)}
 }

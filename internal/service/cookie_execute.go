@@ -16,7 +16,7 @@ import (
 // 执行语义在 engine.ExecuteWithCookie,本函数仅为 service 方法保留的短名。
 func executeOverride[Req, Resp any](
 	eng *engine.Engine,
-	ctx context.Context,
+	ctx context.Context, //nolint:revive // 与 engine.ExecuteWithCookie 保持同一参数顺序
 	ep *engine.Endpoint[Req, Resp],
 	req Req,
 ) (Resp, error) {

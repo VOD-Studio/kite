@@ -13,11 +13,11 @@ type rawPlaylistDetail struct {
 	Playlist struct {
 		ID          int64     `json:"id"`          // 歌单ID
 		Name        string    `json:"name"`        // 歌单名
-		CoverImgUrl string    `json:"coverImgUrl"` // 封面URL
+		CoverImgURL string    `json:"coverImgUrl"` // 封面URL
 		TrackCount  int       `json:"trackCount"`  // 歌曲总数
 		Creator     rawUser   `json:"creator"`     // 创建者
 		Tracks      []rawSong `json:"tracks"`      // 歌曲列表（详情返回前若干首）
-		TrackIds    []struct {
+		TrackIDs    []struct {
 			ID int64 `json:"id"` // 歌曲ID
 		} `json:"trackIds"` // 全部歌曲ID（大歌单分页拉取用）
 	} `json:"playlist"` // 歌单信息
@@ -33,7 +33,7 @@ func MapPlaylist(raw json.RawMessage) (*mmpb.Playlist, error) {
 	return &mmpb.Playlist{
 		Id:         p.ID,
 		Name:       p.Name,
-		CoverUrl:   p.CoverImgUrl,
+		CoverUrl:   p.CoverImgURL,
 		TrackCount: int32(p.TrackCount),
 		Creator:    MapUser(p.Creator),
 		Songs:      MapSongs(p.Tracks),

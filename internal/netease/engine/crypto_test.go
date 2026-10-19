@@ -61,7 +61,7 @@ func TestWeAPIEncrypt_EncSecKeyLength(t *testing.T) {
 
 	// 验证是合法十六进制
 	for _, c := range result.EncSecKey {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 			t.Errorf("encSecKey 含非十六进制字符: %c", c)
 			break
 		}
@@ -123,7 +123,7 @@ func TestEAPIEncrypt_ProducesHex(t *testing.T) {
 	}
 	// eapi 输出应是大写十六进制
 	for _, c := range result.Params {
-		if !((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')) {
+		if (c < '0' || c > '9') && (c < 'A' || c > 'F') {
 			t.Errorf("eapi params 含非大写十六进制字符: %c", c)
 			break
 		}

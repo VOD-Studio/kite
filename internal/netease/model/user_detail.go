@@ -78,7 +78,7 @@ type rawUserPlaylists struct {
 	Playlist []struct {
 		ID          int64  `json:"id"`          // 歌单ID
 		Name        string `json:"name"`        // 歌单名
-		CoverImgUrl string `json:"coverImgUrl"` // 封面URL
+		CoverImgURL string `json:"coverImgUrl"` // 封面URL
 		PlayCount   int64  `json:"playCount"`   // 播放数
 		TrackCount  int    `json:"trackCount"`  // 曲目数
 		Creator     struct {
@@ -115,7 +115,7 @@ func DecodeUserPlaylists(raw json.RawMessage, ownerUserID int64, filter mmpb.Pla
 		out = append(out, &mmpb.Playlist{
 			Id:         p.ID,
 			Name:       p.Name,
-			CoverUrl:   p.CoverImgUrl,
+			CoverUrl:   p.CoverImgURL,
 			PlayCount:  p.PlayCount,
 			TrackCount: int32(p.TrackCount),
 			Creator: &mmpb.User{

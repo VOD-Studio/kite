@@ -8,9 +8,9 @@ import (
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
-// quitCmd bubbletea v2 的 tea.Quit() 返回 Msg 而非 Cmd;包一层成 Cmd。
+// quitCmd 返回退出命令。bubbletea v2 的 tea.Quit 签名是 func() Msg,本身即 tea.Cmd。
 func quitCmd() tea.Cmd {
-	return func() tea.Msg { return tea.Quit() }
+	return tea.Quit
 }
 
 // animTick 排下一帧动画(animInterval 后)。驱动正弦波颜色扫过。

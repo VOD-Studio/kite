@@ -25,7 +25,7 @@ var Subscribe = &engine.Endpoint[*mmpb.SubscribeAlbumRequest, *mmpb.SubscribeAlb
 	MapRequest: func(req *mmpb.SubscribeAlbumRequest) (map[string]any, error) {
 		return map[string]any{"id": fmt.Sprintf("%d", req.GetAlbumId())}, nil
 	},
-	MapResponse: func(req *mmpb.SubscribeAlbumRequest, raw json.RawMessage) (*mmpb.SubscribeAlbumResponse, error) {
+	MapResponse: func(_ *mmpb.SubscribeAlbumRequest, _ json.RawMessage) (*mmpb.SubscribeAlbumResponse, error) {
 		// 响应只有 code（engine 校验），回填操作后状态。
 		return &mmpb.SubscribeAlbumResponse{Subscribed: true}, nil
 	},
@@ -42,7 +42,7 @@ var Unsubscribe = &engine.Endpoint[*mmpb.UnsubscribeAlbumRequest, *mmpb.Unsubscr
 	MapRequest: func(req *mmpb.UnsubscribeAlbumRequest) (map[string]any, error) {
 		return map[string]any{"id": fmt.Sprintf("%d", req.GetAlbumId())}, nil
 	},
-	MapResponse: func(req *mmpb.UnsubscribeAlbumRequest, raw json.RawMessage) (*mmpb.UnsubscribeAlbumResponse, error) {
+	MapResponse: func(_ *mmpb.UnsubscribeAlbumRequest, _ json.RawMessage) (*mmpb.UnsubscribeAlbumResponse, error) {
 		return &mmpb.UnsubscribeAlbumResponse{Subscribed: false}, nil
 	},
 }

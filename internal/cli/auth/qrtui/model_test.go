@@ -350,7 +350,7 @@ func TestResultFromModel_NotConfirmedStates(t *testing.T) {
 }
 
 // 确保 view 渲染不会因为状态行里的特殊字符(如 spinner 帧)panic。
-func TestView_StatusLineAllStatesNoPanic(t *testing.T) {
+func TestView_StatusLineAllStatesNoPanic(_ *testing.T) {
 	states := []state{stateInit, stateWaiting, stateScanned, stateError, stateConfirmed, stateExpired, stateTimeout}
 	fd := &fakeDeps{nowTimes: []time.Time{time.Unix(0, 0)}}
 	for _, s := range states {

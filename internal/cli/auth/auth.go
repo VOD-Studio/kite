@@ -26,7 +26,7 @@ func NewLoginCommand(k *kit.Kit) *cobra.Command {
 		Use:   "login",
 		Short: "扫码登录,cookie 持久化到本地配置目录",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return runLogin(k)
 		},
 	}
@@ -39,7 +39,7 @@ func NewSendCaptchaCommand(k *kit.Kit) *cobra.Command {
 		Use:   "send-captcha",
 		Short: "发送短信验证码",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			ctx := k.CookieCtx()
 			_, _, err := k.RawDo(ctx, authendpoint.SendCaptcha, authendpoint.SendCaptchaRequest(&mmpb.SendCaptchaRequest{Phone: phone}))
 			if err != nil {
@@ -61,7 +61,7 @@ func NewLoginCellphoneCommand(k *kit.Kit) *cobra.Command {
 		Use:   "login-cellphone",
 		Short: "手机号验证码登录",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			ctx := k.CookieCtx()
 			raw, setCookie, err := k.RawDo(ctx, authendpoint.LoginCellphone, authendpoint.LoginCellphoneRequest(&mmpb.LoginByCellphoneRequest{Phone: phone, Captcha: captcha}))
 			if err != nil {
@@ -84,7 +84,7 @@ func NewLoginStatusCommand(k *kit.Kit) *cobra.Command {
 		Use:   "login-status",
 		Short: "查看当前登录态",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			ctx := k.CookieCtx()
 			raw, _, err := k.RawDo(ctx, authendpoint.LoginStatus, authendpoint.LoginStatusRequest(nil))
 			if err != nil {
@@ -111,7 +111,7 @@ func NewLogoutCommand(k *kit.Kit) *cobra.Command {
 		Use:   "logout",
 		Short: "登出并删除本地会话文件",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			if cookie := k.CurrentCookie(); cookie != "" {
 				ctx := k.CookieCtx()
 				if _, _, err := k.RawDo(ctx, authendpoint.Logout, authendpoint.LogoutRequest(nil)); err != nil {

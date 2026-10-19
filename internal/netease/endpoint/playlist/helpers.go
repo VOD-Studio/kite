@@ -17,7 +17,7 @@ func weapiMeta(path string) engine.Meta {
 }
 
 // browseCache 构造 24h 缓存策略（带动态 key）。
-func browseCache[Req any](prefix string, keyFn func(Req) string) *engine.CachePolicy[Req] {
+func browseCache[Req any](_ string, keyFn func(Req) string) *engine.CachePolicy[Req] {
 	return &engine.CachePolicy[Req]{Key: keyFn, TTL: 24 * time.Hour}
 }
 
@@ -57,7 +57,7 @@ func parsePlaylistSlice(raw json.RawMessage) ([]*mmpb.Playlist, int32, error) {
 		Playlists []struct {
 			ID          int64  `json:"id"`          // 歌单ID
 			Name        string `json:"name"`        // 歌单名
-			CoverImgUrl string `json:"coverImgUrl"` // 封面URL
+			CoverImgURL string `json:"coverImgUrl"` // 封面URL
 			PlayCount   int64  `json:"playCount"`   // 播放数
 			TrackCount  int    `json:"trackCount"`  // 曲目数
 			Creator     struct {
@@ -73,7 +73,7 @@ func parsePlaylistSlice(raw json.RawMessage) ([]*mmpb.Playlist, int32, error) {
 	out := make([]*mmpb.Playlist, 0, len(resp.Playlists))
 	for _, p := range resp.Playlists {
 		out = append(out, &mmpb.Playlist{
-			Id: p.ID, Name: p.Name, CoverUrl: p.CoverImgUrl,
+			Id: p.ID, Name: p.Name, CoverUrl: p.CoverImgURL,
 			PlayCount: p.PlayCount, TrackCount: int32(p.TrackCount),
 			Creator: &mmpb.User{Id: p.Creator.UserID, Nickname: p.Creator.Nickname},
 		})

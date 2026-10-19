@@ -24,10 +24,10 @@ var DailyRecommendPlaylists = &engine.Endpoint[*mmpb.DailyRecommendPlaylistsRequ
 	},
 	Cache:   nil,
 	NewResp: func() *mmpb.DailyRecommendPlaylistsResponse { return &mmpb.DailyRecommendPlaylistsResponse{} },
-	MapRequest: func(req *mmpb.DailyRecommendPlaylistsRequest) (map[string]any, error) {
+	MapRequest: func(_ *mmpb.DailyRecommendPlaylistsRequest) (map[string]any, error) {
 		return map[string]any{}, nil
 	},
-	MapResponse: func(req *mmpb.DailyRecommendPlaylistsRequest, raw json.RawMessage) (*mmpb.DailyRecommendPlaylistsResponse, error) {
+	MapResponse: func(_ *mmpb.DailyRecommendPlaylistsRequest, raw json.RawMessage) (*mmpb.DailyRecommendPlaylistsResponse, error) {
 		playlists, err := model.DecodeRecommendPlaylists(raw)
 		if err != nil {
 			return nil, err
@@ -43,7 +43,7 @@ var RecommendPlaylists = &engine.Endpoint[*mmpb.RecommendPlaylistsRequest, *mmpb
 		Crypto: engine.CryptoWeAPI, Auth: session.AuthAnonymous,
 	},
 	Cache: &engine.CachePolicy[*mmpb.RecommendPlaylistsRequest]{
-		Key: func(req *mmpb.RecommendPlaylistsRequest) string {
+		Key: func(_ *mmpb.RecommendPlaylistsRequest) string {
 			return "recommend:playlists"
 		},
 		TTL: time.Hour,
@@ -56,7 +56,7 @@ var RecommendPlaylists = &engine.Endpoint[*mmpb.RecommendPlaylistsRequest, *mmpb
 		}
 		return map[string]any{"limit": limit, "total": true, "n": 1000}, nil
 	},
-	MapResponse: func(req *mmpb.RecommendPlaylistsRequest, raw json.RawMessage) (*mmpb.RecommendPlaylistsResponse, error) {
+	MapResponse: func(_ *mmpb.RecommendPlaylistsRequest, raw json.RawMessage) (*mmpb.RecommendPlaylistsResponse, error) {
 		playlists, err := model.DecodeRecommendPlaylists(raw)
 		if err != nil {
 			return nil, err
@@ -72,7 +72,7 @@ var RecommendNewSongs = &engine.Endpoint[*mmpb.RecommendNewSongsRequest, *mmpb.R
 		Crypto: engine.CryptoWeAPI, Auth: session.AuthAnonymous,
 	},
 	Cache: &engine.CachePolicy[*mmpb.RecommendNewSongsRequest]{
-		Key: func(req *mmpb.RecommendNewSongsRequest) string {
+		Key: func(_ *mmpb.RecommendNewSongsRequest) string {
 			return "recommend:newSongs"
 		},
 		TTL: time.Hour,
@@ -85,7 +85,7 @@ var RecommendNewSongs = &engine.Endpoint[*mmpb.RecommendNewSongsRequest, *mmpb.R
 		}
 		return map[string]any{"type": "recommend", "limit": limit, "areaId": 0}, nil
 	},
-	MapResponse: func(req *mmpb.RecommendNewSongsRequest, raw json.RawMessage) (*mmpb.RecommendNewSongsResponse, error) {
+	MapResponse: func(_ *mmpb.RecommendNewSongsRequest, raw json.RawMessage) (*mmpb.RecommendNewSongsResponse, error) {
 		songs, err := model.DecodeRecommendNewSongs(raw)
 		if err != nil {
 			return nil, err

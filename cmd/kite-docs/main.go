@@ -28,7 +28,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "错误: 解析输出目录:", err)
 		os.Exit(1)
 	}
-	if err := os.MkdirAll(abs, 0o755); err != nil {
+	if err := os.MkdirAll(abs, 0o750); err != nil {
 		fmt.Fprintln(os.Stderr, "错误: 创建输出目录:", err)
 		os.Exit(1)
 	}

@@ -27,7 +27,7 @@ var AlbumDynamic = &engine.Endpoint[*mmpb.AlbumDynamicRequest, *mmpb.AlbumDynami
 	MapRequest: func(req *mmpb.AlbumDynamicRequest) (map[string]any, error) {
 		return map[string]any{"id": req.GetAlbumId()}, nil
 	},
-	MapResponse: func(req *mmpb.AlbumDynamicRequest, raw json.RawMessage) (*mmpb.AlbumDynamicResponse, error) {
+	MapResponse: func(_ *mmpb.AlbumDynamicRequest, raw json.RawMessage) (*mmpb.AlbumDynamicResponse, error) {
 		var resp struct {
 			SubCount     int64 `json:"subCount"`     // 收藏数
 			CommentCount int64 `json:"commentCount"` // 评论数

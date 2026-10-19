@@ -34,7 +34,7 @@ var GetDailyRecommend = &engine.Endpoint[*mmpb.GetDailyRecommendRequest, *mmpb.G
 			"n":      1000,
 		}, nil
 	},
-	MapResponse: func(req *mmpb.GetDailyRecommendRequest, raw json.RawMessage) (*mmpb.GetDailyRecommendResponse, error) {
+	MapResponse: func(_ *mmpb.GetDailyRecommendRequest, raw json.RawMessage) (*mmpb.GetDailyRecommendResponse, error) {
 		songs, err := model.DecodeDailyRecommend(raw)
 		if err != nil {
 			return &mmpb.GetDailyRecommendResponse{}, err

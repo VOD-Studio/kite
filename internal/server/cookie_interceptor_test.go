@@ -54,7 +54,7 @@ func TestCookieInterceptor(t *testing.T) {
 				ctx = metadata.NewIncomingContext(ctx, tt.md)
 			}
 
-			handler := func(ctx context.Context, req any) (any, error) {
+			handler := func(ctx context.Context, _ any) (any, error) {
 				require.Equal(t, tt.want, engine.CookieFromContext(ctx))
 				return nil, nil
 			}

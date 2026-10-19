@@ -35,7 +35,7 @@ type Session struct {
 // 选取路径：engine 调 GetAvailable 按 AuthRequirement 取一个可用 session，
 // 调用结果通过 ReportSuccess/ReportFailure 反馈，驱动健康度/权重。
 // 创建路径：登录类接口调 Save 写入新 session，不经 GetAvailable。
-type SessionStore interface {
+type SessionStore interface { //nolint:revive // 沿用 ADR 与文档中的名称
 	// GetAvailable 按登录态需求选取一个可用 session。
 	// 全部不可用时返回 ErrNoAvailableSession。
 	GetAvailable(ctx context.Context, req AuthRequirement) (*Session, error)

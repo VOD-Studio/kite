@@ -27,7 +27,7 @@ var SimilarPlaylists = &engine.Endpoint[*mmpb.SimilarPlaylistsRequest, *mmpb.Sim
 		}
 		return map[string]any{"songid": req.GetSongId(), "limit": limit, "offset": req.GetOffset()}, nil
 	},
-	MapResponse: func(req *mmpb.SimilarPlaylistsRequest, raw json.RawMessage) (*mmpb.SimilarPlaylistsResponse, error) {
+	MapResponse: func(_ *mmpb.SimilarPlaylistsRequest, raw json.RawMessage) (*mmpb.SimilarPlaylistsResponse, error) {
 		playlists, err := parseSimilarPlaylists(raw)
 		if err != nil {
 			return nil, fmt.Errorf("解析相似歌单失败: %w", err)
@@ -55,7 +55,7 @@ var RelatedPlaylistRecommend = &engine.Endpoint[*mmpb.RelatedPlaylistRecommendRe
 			"newStyle":   "true",
 		}, nil
 	},
-	MapResponse: func(req *mmpb.RelatedPlaylistRecommendRequest, raw json.RawMessage) (*mmpb.RelatedPlaylistRecommendResponse, error) {
+	MapResponse: func(_ *mmpb.RelatedPlaylistRecommendRequest, raw json.RawMessage) (*mmpb.RelatedPlaylistRecommendResponse, error) {
 		playlists, err := parseSimilarPlaylists(raw)
 		if err != nil {
 			return nil, fmt.Errorf("解析相关歌单推荐失败: %w", err)
@@ -73,8 +73,8 @@ func parseSimilarPlaylists(raw json.RawMessage) ([]*mmpb.Playlist, error) {
 		Playlists []struct {
 			ID          int64  `json:"id"`          // 歌单ID
 			Name        string `json:"name"`        // 歌单名
-			CoverImgUrl string `json:"coverImgUrl"` // 封面URL
-			PicUrl      string `json:"picUrl"`      // 封面URL（rcmd 接口可能用 picUrl）
+			CoverImgURL string `json:"coverImgUrl"` // 封面URL
+			PicURL      string `json:"picUrl"`      // 封面URL（rcmd 接口可能用 picUrl）
 			PlayCount   int64  `json:"playCount"`   // 播放数
 			TrackCount  int    `json:"trackCount"`  // 曲目数
 			Creator     struct {
@@ -87,8 +87,8 @@ func parseSimilarPlaylists(raw json.RawMessage) ([]*mmpb.Playlist, error) {
 			Playlists []struct {
 				ID          int64  `json:"id"`          // 歌单ID
 				Name        string `json:"name"`        // 歌单名
-				CoverImgUrl string `json:"coverImgUrl"` // 封面URL
-				PicUrl      string `json:"picUrl"`      // 封面URL
+				CoverImgURL string `json:"coverImgUrl"` // 封面URL
+				PicURL      string `json:"picUrl"`      // 封面URL
 				PlayCount   int64  `json:"playCount"`   // 播放数
 				TrackCount  int    `json:"trackCount"`  // 曲目数
 				Creator     struct {
@@ -107,9 +107,9 @@ func parseSimilarPlaylists(raw json.RawMessage) ([]*mmpb.Playlist, error) {
 	}
 	out := make([]*mmpb.Playlist, 0, len(items))
 	for _, p := range items {
-		cover := p.CoverImgUrl
+		cover := p.CoverImgURL
 		if cover == "" {
-			cover = p.PicUrl
+			cover = p.PicURL
 		}
 		out = append(out, &mmpb.Playlist{
 			Id: p.ID, Name: p.Name, CoverUrl: cover,

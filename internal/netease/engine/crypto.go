@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec // 网易云 eapi 协议规定用 MD5 做签名摘要,不用于保护机密
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -33,7 +33,7 @@ const (
 	weapiModulus = "00e0b509f6259df8642dbc35662901477df22677ec152b5ff68ace615bb7b725152b3ab17a876aea8a5aa76d2e417629ec4ee341f56135fccf695280104e0312ecbda92557c93870114af6c9d05c4f7f0c3685b7a46bee255932575cce10b424d813cfe4875d3e82047b97ddef52741d546b8e289dc6935b3ece0462db0a22b8e7"
 
 	// eapiKey 是 eapi 加密的 AES key（明文字符串，16 字节）。
-	eapiKey = "e82ckenh8dichen8"
+	eapiKey = "e82ckenh8dichen8" //nolint:gosec // 网易云客户端公开的协议常量,不是本项目的凭据
 )
 
 // WeAPIEncrypted 是 weapi 加密后的请求参数。
@@ -163,7 +163,7 @@ func aesECBEncryptHex(plaintext string, key []byte) (string, error) {
 // pkcs7Pad 做 PKCS7 填充。
 func pkcs7Pad(data []byte, blockSize int) []byte {
 	padding := blockSize - len(data)%blockSize
-	padText := bytes.Repeat([]byte{byte(padding)}, padding)
+	padText := bytes.Repeat([]byte{byte(padding)}, padding) //nolint:gosec // padding 落在 [1, blockSize],AES 为 16,不会溢出
 	return append(data, padText...)
 }
 
@@ -213,6 +213,6 @@ func rsaEncryptFixed(reversedKey string) string {
 
 // md5Hex 返回字符串的 MD5 十六进制摘要。
 func md5Hex(s string) string {
-	h := md5.Sum([]byte(s))
+	h := md5.Sum([]byte(s)) //nolint:gosec // 同上:协议规定的摘要算法
 	return hex.EncodeToString(h[:])
 }

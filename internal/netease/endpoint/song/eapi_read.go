@@ -42,7 +42,7 @@ var LikedList = &engine.Endpoint[*mmpb.LikedListRequest, *mmpb.LikedListResponse
 	MapRequest: func(req *mmpb.LikedListRequest) (map[string]any, error) {
 		return map[string]any{"uid": req.GetUserId()}, nil
 	},
-	MapResponse: func(req *mmpb.LikedListRequest, raw json.RawMessage) (*mmpb.LikedListResponse, error) {
+	MapResponse: func(_ *mmpb.LikedListRequest, raw json.RawMessage) (*mmpb.LikedListResponse, error) {
 		var resp struct {
 			IDs []int64 `json:"ids"`
 		}
@@ -67,7 +67,7 @@ var QualityDetail = &engine.Endpoint[*mmpb.QualityDetailRequest, *mmpb.QualityDe
 	MapRequest: func(req *mmpb.QualityDetailRequest) (map[string]any, error) {
 		return map[string]any{"songId": req.GetSongId()}, nil
 	},
-	MapResponse: func(req *mmpb.QualityDetailRequest, raw json.RawMessage) (*mmpb.QualityDetailResponse, error) {
+	MapResponse: func(_ *mmpb.QualityDetailRequest, raw json.RawMessage) (*mmpb.QualityDetailResponse, error) {
 		// 真实结构：data 下按音质等级动态 key（h/m/l/sq/hr/db/jm/sk/vi 等），
 		// 每个含 br(比特率)/size/sr(采样率)。songId(裸数字) 和 sks(数组) 不是音质项。
 		// data 的 value 类型不统一（对象/数字/数组），用 RawMessage 逐个尝试解析。
@@ -109,7 +109,7 @@ var LikeCount = &engine.Endpoint[*mmpb.LikeCountRequest, *mmpb.LikeCountResponse
 	MapRequest: func(req *mmpb.LikeCountRequest) (map[string]any, error) {
 		return map[string]any{"songId": req.GetSongId()}, nil
 	},
-	MapResponse: func(req *mmpb.LikeCountRequest, raw json.RawMessage) (*mmpb.LikeCountResponse, error) {
+	MapResponse: func(_ *mmpb.LikeCountRequest, raw json.RawMessage) (*mmpb.LikeCountResponse, error) {
 		var resp struct {
 			Data struct {
 				Count int64 `json:"count"`
@@ -166,7 +166,7 @@ var DynamicCover = &engine.Endpoint[*mmpb.DynamicCoverRequest, *mmpb.DynamicCove
 	MapRequest: func(req *mmpb.DynamicCoverRequest) (map[string]any, error) {
 		return map[string]any{"songId": req.GetSongId()}, nil
 	},
-	MapResponse: func(req *mmpb.DynamicCoverRequest, raw json.RawMessage) (*mmpb.DynamicCoverResponse, error) {
+	MapResponse: func(_ *mmpb.DynamicCoverRequest, raw json.RawMessage) (*mmpb.DynamicCoverResponse, error) {
 		var resp struct {
 			Data struct {
 				URL string `json:"url"`
@@ -193,7 +193,7 @@ var ChorusTime = &engine.Endpoint[*mmpb.ChorusTimeRequest, *mmpb.ChorusTimeRespo
 		// ids 用 stringified JSON 数组形式（网易云 chorus 接口约定）。
 		return map[string]any{"ids": fmt.Sprintf("[%d]", req.GetSongId())}, nil
 	},
-	MapResponse: func(req *mmpb.ChorusTimeRequest, raw json.RawMessage) (*mmpb.ChorusTimeResponse, error) {
+	MapResponse: func(_ *mmpb.ChorusTimeRequest, raw json.RawMessage) (*mmpb.ChorusTimeResponse, error) {
 		// 真实结构：data[].{startTime, endTime}（毫秒），字段名是 startTime/endTime 非 start/end。
 		var resp struct {
 			Data []struct {
@@ -227,7 +227,7 @@ var CreatorInfo = &engine.Endpoint[*mmpb.CreatorInfoRequest, *mmpb.CreatorInfoRe
 	MapRequest: func(req *mmpb.CreatorInfoRequest) (map[string]any, error) {
 		return map[string]any{"songId": req.GetSongId()}, nil
 	},
-	MapResponse: func(req *mmpb.CreatorInfoRequest, raw json.RawMessage) (*mmpb.CreatorInfoResponse, error) {
+	MapResponse: func(_ *mmpb.CreatorInfoRequest, raw json.RawMessage) (*mmpb.CreatorInfoResponse, error) {
 		// 真实结构：data.songCreatorsRoleVos[].{roleName, creatorMetaVOS[].{artistId, artistName}}
 		var resp struct {
 			Data struct {

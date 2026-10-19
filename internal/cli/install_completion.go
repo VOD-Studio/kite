@@ -126,10 +126,10 @@ func writeCompletionScript(shell string, script []byte) (bool, string, error) {
 	if existing, rerr := os.ReadFile(path); rerr == nil && bytes.Equal(existing, script) {
 		return false, path, nil // 内容一致,幂等
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { //nolint:gosec // shell 补全目录的惯例权限,常与系统目录共用
 		return false, "", err
 	}
-	if err := os.WriteFile(path, script, 0o644); err != nil {
+	if err := os.WriteFile(path, script, 0o644); err != nil { //nolint:gosec // 补全脚本由 shell 读取,惯例权限 0644
 		return false, "", err
 	}
 	return true, path, nil

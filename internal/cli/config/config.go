@@ -56,7 +56,7 @@ func NewCommand(k *kit.Kit) *cobra.Command {
 }
 
 // newConfigCommand 用注入 deps 构造(测试替身入口)。
-func newConfigCommand(k *kit.Kit, d deps) *cobra.Command {
+func newConfigCommand(_ *kit.Kit, d deps) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "config",
 		Short: "查看与写入用户偏好(config.toml)",

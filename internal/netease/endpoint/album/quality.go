@@ -29,7 +29,7 @@ var AlbumSongQuality = &engine.Endpoint[*mmpb.AlbumSongQualityRequest, *mmpb.Alb
 	MapRequest: func(req *mmpb.AlbumSongQualityRequest) (map[string]any, error) {
 		return map[string]any{"id": req.GetAlbumId()}, nil
 	},
-	MapResponse: func(req *mmpb.AlbumSongQualityRequest, raw json.RawMessage) (*mmpb.AlbumSongQualityResponse, error) {
+	MapResponse: func(_ *mmpb.AlbumSongQualityRequest, raw json.RawMessage) (*mmpb.AlbumSongQualityResponse, error) {
 		var resp struct {
 			Songs []struct {
 				ID         int64 `json:"id"`

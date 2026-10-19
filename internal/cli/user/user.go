@@ -60,7 +60,7 @@ func newAccount(k *kit.Kit) *cobra.Command {
 		Use:   "account",
 		Short: "当前账号信息(登录态)",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := k.RequireLogin(); err != nil {
 				return err
 			}
@@ -75,7 +75,7 @@ func newDetail(k *kit.Kit) *cobra.Command {
 		Use:   "detail",
 		Short: "用户详情",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, userendpoint.Detail, &mmpb.DetailRequest{UserId: uid})
 		},
 	}
@@ -89,7 +89,7 @@ func newDetailByName(k *kit.Kit) *cobra.Command {
 		Use:   "detail-by-name",
 		Short: "按昵称查用户 ID",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, userendpoint.DetailByName, &mmpb.DetailByNameRequest{Nickname: nickname})
 		},
 	}
@@ -103,7 +103,7 @@ func newSubCount(k *kit.Kit) *cobra.Command {
 		Use:   "sub-count",
 		Short: "当前用户计数(登录态)",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := k.RequireLogin(); err != nil {
 				return err
 			}
@@ -118,7 +118,7 @@ func newPlaylists(k *kit.Kit) *cobra.Command {
 		Use:   "playlists",
 		Short: "用户歌单",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, userendpoint.UserPlaylist, &mmpb.UserPlaylistRequest{UserId: uid})
 		},
 	}
@@ -133,7 +133,7 @@ func newFollows(k *kit.Kit) *cobra.Command {
 		Use:   "follows",
 		Short: "用户关注列表",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, userendpoint.Follows, &mmpb.FollowsRequest{UserId: uid, Limit: int32(limit), Offset: int32(offset)}) //nolint:gosec // 命令行分页参数,取值范围远小于 int32
 		},
 	}
@@ -150,7 +150,7 @@ func newFolloweds(k *kit.Kit) *cobra.Command {
 		Use:   "followeds",
 		Short: "用户粉丝列表",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, userendpoint.Followeds, &mmpb.FollowedsRequest{UserId: uid, Limit: int32(limit), Offset: int32(offset)})
 		},
 	}
@@ -166,7 +166,7 @@ func newFollowEachOther(k *kit.Kit) *cobra.Command {
 		Use:   "follow-each-other",
 		Short: "是否互相关注",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			req := &mmpb.FollowEachOtherRequest{UserId: uid, TargetUserId: target}
 			return kit.RenderExec(k, userendpoint.FollowEachOther, req)
 		},
@@ -184,7 +184,7 @@ func newRecord(k *kit.Kit) *cobra.Command {
 		Use:   "record",
 		Short: "听歌排行",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, userendpoint.Record, &mmpb.RecordRequest{UserId: uid, Type: int32(typ)})
 		},
 	}
@@ -200,7 +200,7 @@ func newEvents(k *kit.Kit) *cobra.Command {
 		Use:   "events",
 		Short: "用户动态",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, userendpoint.Events, &mmpb.EventsRequest{UserId: uid, Limit: int32(limit), LastEventId: lastID})
 		},
 	}
@@ -216,7 +216,7 @@ func newLevel(k *kit.Kit) *cobra.Command {
 		Use:   "level",
 		Short: "用户等级",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, userendpoint.Level, &mmpb.LevelRequest{UserId: uid})
 		},
 	}
@@ -230,7 +230,7 @@ func newSimilar(k *kit.Kit) *cobra.Command {
 		Use:   "similar",
 		Short: "相似用户(按歌曲)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err

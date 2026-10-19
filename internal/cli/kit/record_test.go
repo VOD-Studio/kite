@@ -43,7 +43,7 @@ func TestRecord_WritesEventToPool(t *testing.T) {
 	}
 }
 
-func TestRecord_NilPool_NoOp(t *testing.T) {
+func TestRecord_NilPool_NoOp(_ *testing.T) {
 	k := &Kit{pool: nil}
 	// 不应 panic。
 	k.Record(1, "x", "y", recall.SrcPlay)

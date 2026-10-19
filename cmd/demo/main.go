@@ -42,13 +42,13 @@ func main() {
 		fs := flag.NewFlagSet("demo single", flag.ExitOnError)
 		jsonMode := fs.Bool("json", false, "模拟全局 --json(进度静默)")
 		speed := fs.Float64("speed", 1.0, "下载速度倍率(<1 慢动作)")
-		fs.Parse(os.Args[2:])
+		_ = fs.Parse(os.Args[2:]) // ExitOnError:解析失败直接退出,不会返回错误
 		runSingle(*jsonMode, *speed)
 	case "multi":
 		fs := flag.NewFlagSet("demo multi", flag.ExitOnError)
 		jsonMode := fs.Bool("json", false, "模拟全局 --json(进度静默)")
 		speed := fs.Float64("speed", 1.0, "下载速度倍率")
-		fs.Parse(os.Args[2:])
+		_ = fs.Parse(os.Args[2:]) // ExitOnError:解析失败直接退出,不会返回错误
 		runMulti(*jsonMode, *speed)
 	default:
 		fmt.Fprintf(os.Stderr, "未知命令 %q\n", cmd)

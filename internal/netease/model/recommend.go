@@ -46,8 +46,8 @@ func DecodePersonalFM(raw json.RawMessage) ([]*mmpb.Song, error) {
 type rawRecommendPlaylist struct {
 	ID          int64   `json:"id"`          // 歌单ID
 	Name        string  `json:"name"`        // 歌单名
-	PicUrl      string  `json:"picUrl"`      // 封面URL
-	CoverImgUrl string  `json:"coverImgUrl"` // 封面URL（部分接口用此字段名）
+	PicURL      string  `json:"picUrl"`      // 封面URL
+	CoverImgURL string  `json:"coverImgUrl"` // 封面URL（部分接口用此字段名）
 	PlayCount   float64 `json:"playCount"`   // 播放数（网易云大数字用科学计数法，float64 容纳）
 	TrackCount  int     `json:"trackCount"`  // 曲目数
 	Creator     struct {
@@ -77,9 +77,9 @@ func DecodeRecommendPlaylists(raw json.RawMessage) ([]*mmpb.Playlist, error) {
 	}
 	out := make([]*mmpb.Playlist, 0, len(items))
 	for _, p := range items {
-		cover := p.PicUrl
+		cover := p.PicURL
 		if cover == "" {
-			cover = p.CoverImgUrl
+			cover = p.CoverImgURL
 		}
 		out = append(out, &mmpb.Playlist{
 			Id: p.ID, Name: p.Name, CoverUrl: cover,
@@ -107,7 +107,7 @@ type rawRecommendSong struct {
 	Album struct {
 		ID     int64  `json:"id"`     // 专辑ID
 		Name   string `json:"name"`   // 专辑名
-		PicUrl string `json:"picUrl"` // 封面URL
+		PicURL string `json:"picUrl"` // 封面URL
 	} `json:"album"` // 专辑（全名，非 al）
 	Duration int64 `json:"duration"` // 时长毫秒（全名，非 dt）
 	Fee      int   `json:"fee"`      // 付费类型
@@ -134,7 +134,7 @@ func DecodeRecommendNewSongs(raw json.RawMessage) ([]*mmpb.Song, error) {
 		}
 		out = append(out, &mmpb.Song{
 			Id: s.ID, Name: s.Name, Artists: artists,
-			Album:      &mmpb.Album{Id: s.Album.ID, Name: s.Album.Name, PicUrl: s.Album.PicUrl},
+			Album:      &mmpb.Album{Id: s.Album.ID, Name: s.Album.Name, PicUrl: s.Album.PicURL},
 			DurationMs: s.Duration, Fee: int32(s.Fee),
 		})
 	}

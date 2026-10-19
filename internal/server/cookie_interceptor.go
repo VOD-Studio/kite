@@ -22,7 +22,7 @@ const cookieMetadataKey = "x-netease-cookie"
 // CookieInterceptor 从 incoming metadata 提取网易云 cookie，注入 context。
 //
 // 无 metadata 或无 cookie key 时注入空字符串——engine 据此走 session 池选取。
-func CookieInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+func CookieInterceptor(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	cookie := ""
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if vals := md.Get(cookieMetadataKey); len(vals) > 0 {

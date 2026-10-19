@@ -39,7 +39,7 @@ var Detail = &engine.Endpoint[*mmpb.GetSongDetailRequest, *mmpb.GetSongDetailRes
 			"ids": fmt.Sprintf("[%s]", idStr),
 		}, nil
 	},
-	MapResponse: func(req *mmpb.GetSongDetailRequest, raw json.RawMessage) (*mmpb.GetSongDetailResponse, error) {
+	MapResponse: func(_ *mmpb.GetSongDetailRequest, raw json.RawMessage) (*mmpb.GetSongDetailResponse, error) {
 		songs, err := model.DecodeSongDetail(raw)
 		if err != nil {
 			return &mmpb.GetSongDetailResponse{}, err

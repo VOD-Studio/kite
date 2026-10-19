@@ -17,7 +17,7 @@ func NewCommand(k *kit.Kit) *cobra.Command {
 		Use:   "search",
 		Short: "搜索(默认单曲)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			kw, err := kit.ResolveKeyword(keyword, args)
 			if err != nil {
 				return err
@@ -57,7 +57,7 @@ func newSuggest(k *kit.Kit) *cobra.Command {
 		Use:   "suggest",
 		Short: "搜索建议",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			kw, err := kit.ResolveKeyword(keyword, args)
 			if err != nil {
 				return err
@@ -74,7 +74,7 @@ func newHot(k *kit.Kit) *cobra.Command {
 		Use:   "hot",
 		Short: "热搜列表",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, searchendpoint.Hot, &mmpb.HotRequest{})
 		},
 	}
@@ -85,7 +85,7 @@ func newHotDetail(k *kit.Kit) *cobra.Command {
 		Use:   "hot-detail",
 		Short: "热搜详情",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, searchendpoint.HotDetail, &mmpb.HotDetailRequest{})
 		},
 	}
@@ -96,7 +96,7 @@ func newDefaultKeyword(k *kit.Kit) *cobra.Command {
 		Use:   "default-keyword",
 		Short: "默认搜索关键词",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, searchendpoint.DefaultKeyword, &mmpb.DefaultKeywordRequest{})
 		},
 	}

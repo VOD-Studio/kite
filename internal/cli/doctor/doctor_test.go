@@ -107,7 +107,7 @@ func TestSessionChecker_Valid_Pass(t *testing.T) {
 
 func TestCompletionChecker_Installed_Pass(t *testing.T) {
 	t.Parallel()
-	c := CompletionChecker("/bin/zsh", func(shell string) (string, bool) {
+	c := CompletionChecker("/bin/zsh", func(_ string) (string, bool) {
 		return "/home/u/.zsh/completions/_kite", true
 	})
 	r := c.Check()
@@ -121,7 +121,7 @@ func TestCompletionChecker_Installed_Pass(t *testing.T) {
 func TestCompletionChecker_BashInstalled_NoFixHint(t *testing.T) {
 	t.Parallel()
 	// bash 自动加载,已装无需 fpath 排查提示。
-	c := CompletionChecker("/bin/bash", func(shell string) (string, bool) {
+	c := CompletionChecker("/bin/bash", func(_ string) (string, bool) {
 		return "/home/u/.local/share/bash-completion/completions/kite", true
 	})
 	r := c.Check()

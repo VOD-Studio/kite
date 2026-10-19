@@ -94,7 +94,7 @@ func (v *vtSim) feed(s string) {
 		case c == 0x1b && i+1 < len(s) && s[i+1] == '[':
 			// CSI:参数直到终结字母
 			j := i + 2
-			for j < len(s) && !((s[j] >= 'A' && s[j] <= 'Z') || (s[j] >= 'a' && s[j] <= 'z')) {
+			for j < len(s) && (s[j] < 'A' || s[j] > 'Z') && (s[j] < 'a' || s[j] > 'z') {
 				j++
 			}
 			if j >= len(s) {

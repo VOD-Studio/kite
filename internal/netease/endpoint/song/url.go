@@ -42,7 +42,7 @@ var URL = &engine.Endpoint[*mmpb.GetSongURLRequest, *mmpb.GetSongURLResponse]{
 			"encodeType": "flac",
 		}, nil
 	},
-	MapResponse: func(req *mmpb.GetSongURLRequest, raw json.RawMessage) (*mmpb.GetSongURLResponse, error) {
+	MapResponse: func(_ *mmpb.GetSongURLRequest, raw json.RawMessage) (*mmpb.GetSongURLResponse, error) {
 		var resp struct {
 			Code int `json:"code"`
 			Data []struct {

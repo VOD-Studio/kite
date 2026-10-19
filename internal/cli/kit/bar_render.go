@@ -121,7 +121,7 @@ func renderProgressBar(b *Bar, totalWidth int, color bool) string {
 		}
 	}
 	if ew := runewidth.StringWidth(extra); ew < metaExtraW {
-		extra = extra + strings.Repeat(" ", metaExtraW-ew)
+		extra += strings.Repeat(" ", metaExtraW-ew)
 	}
 
 	// 4. meta 总宽 = 计数 + 1 + 百分比 + 1 + 速度/ETA。
@@ -156,7 +156,7 @@ func displayWidth(s string) int {
 	for i := 0; i < len(s); {
 		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
 			j := i + 2
-			for j < len(s) && !((s[j] >= 'A' && s[j] <= 'Z') || (s[j] >= 'a' && s[j] <= 'z')) {
+			for j < len(s) && (s[j] < 'A' || s[j] > 'Z') && (s[j] < 'a' || s[j] > 'z') {
 				j++
 			}
 			i = j + 1
@@ -213,5 +213,5 @@ func diffWrite(out writeFlusher, prev, next []string) {
 	if len(next) < len(prev) {
 		buf.WriteString("\x1b[J")
 	}
-	out.WriteString(buf.String())
+	_, _ = out.WriteString(buf.String())
 }

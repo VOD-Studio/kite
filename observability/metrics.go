@@ -68,7 +68,7 @@ func (m *Metrics) SetCookieHealth(userID string, healthy bool) {
 }
 
 // newMetrics 构造 Metrics 并可选注册到指定 registry。
-func newMetrics(register bool, reg prometheus.Registerer) *Metrics {
+func newMetrics(register bool, _ prometheus.Registerer) *Metrics {
 	m := &Metrics{
 		RequestTotal: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "kite_request_total",

@@ -64,8 +64,7 @@ func NewRootCommand() *cobra.Command {
 		// --help-verbose 是普通 flag(非 cobra --help),需在此显式转发到 help func。
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if flagBool(cmd, "help-verbose") {
-				cmd.Help()
-				return nil
+				return cmd.Help()
 			}
 			// 走 cmd 的 stderr writer(支持 2> 重定向;测试可 SetErr 静音)。
 			renderOnboarding(cmd.ErrOrStderr(), k.CurrentCookie() != "", time.Now())
@@ -365,10 +364,10 @@ func handleVersion() bool {
 		if !strings.HasPrefix(a, "-") {
 			break // 第一个非 flag 参数 = 子命令,停止(version 是 root flag)
 		}
-		switch {
-		case a == "--version" || a == "--version=true":
+		switch a {
+		case "--version", "--version=true":
 			wantVersion = true
-		case a == "--json" || a == "--json=true":
+		case "--json", "--json=true":
 			wantJSON = true
 		}
 	}

@@ -44,7 +44,7 @@ var WordLyricEP = &engine.Endpoint[*mmpb.GetWordLyricRequest, *mmpb.GetWordLyric
 			"yrv": 0,
 		}, nil
 	},
-	MapResponse: func(req *mmpb.GetWordLyricRequest, raw json.RawMessage) (*mmpb.GetWordLyricResponse, error) {
+	MapResponse: func(_ *mmpb.GetWordLyricRequest, raw json.RawMessage) (*mmpb.GetWordLyricResponse, error) {
 		var resp struct {
 			Yrc struct {
 				Lyric string `json:"lyric"`

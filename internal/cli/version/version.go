@@ -6,12 +6,12 @@ import (
 	"runtime/debug"
 )
 
-// VersionInfo 是 kite 的构建信息,经 debug.ReadBuildInfo() 读取。
+// Info 是 kite 的构建信息,经 debug.ReadBuildInfo() 读取。
 //
 // go install 安装时自动嵌入 module version + vcs revision/time;非 install 构建
 // (如 go run / 本地 go build 无 vcs)则 version 为 (devel)、vcs 字段缺失。
 // doctor(#41)的「版本」检查项复用本类型与读取函数。
-type VersionInfo struct {
+type Info struct {
 	Version   string `json:"version"`              // module version(go install 嵌入,否则 (devel))
 	Commit    string `json:"commit,omitempty"`     // vcs.revision(短哈希)
 	BuildTime string `json:"build_time,omitempty"` // vcs.time(RFC3339)
@@ -30,9 +30,9 @@ var readBuildInfo = debug.ReadBuildInfo
 //   - info.GoVersion:编译用的 Go 版本。
 //
 // commit 取短哈希(前 7 位,与 git 默认一致)。
-func LoadVersion() VersionInfo {
+func LoadVersion() Info {
 	info, ok := readBuildInfo()
-	v := VersionInfo{GoVersion: info.GoVersion}
+	v := Info{GoVersion: info.GoVersion}
 	if !ok {
 		// 无 build info(理论上不会,main 包总有)——返回最小可用值。
 		v.Version = "(unknown)"
@@ -60,7 +60,7 @@ func LoadVersion() VersionInfo {
 // String 渲染人类可读的单行版本信息(供 cobra Version 模板用)。
 // 例:`kite v0.1.0 (commit: 4a8047b, built: 2026-07-24, go: go1.25.0)`
 // 无 vcs 信息时:`kite (devel, no vcs info)`
-func (v VersionInfo) String() string {
+func (v Info) String() string {
 	if v.Commit == "" {
 		modified := ""
 		if v.Modified {
@@ -81,7 +81,7 @@ func (v VersionInfo) String() string {
 }
 
 // JSONString 渲染结构化 JSON(--json 模式用)。
-func (v VersionInfo) JSONString() (string, error) {
+func (v Info) JSONString() (string, error) {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return "", err

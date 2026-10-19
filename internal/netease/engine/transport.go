@@ -209,11 +209,12 @@ func setCommonHeaders(req *http.Request, cookie, ua string) {
 	// __remember_me=true 是网易云判断"非恶意请求"的标志 cookie(缺失则返回空 body)。
 	// 参考 chaunsin/netease-cloud-music:所有请求默认带此 cookie。
 	// 调用方传入的 cookie 若已含则不重复;否则补上。
-	if cookie == "" {
+	switch {
+	case cookie == "":
 		req.Header.Set("Cookie", "__remember_me=true")
-	} else if !strings.Contains(cookie, "__remember_me") {
+	case !strings.Contains(cookie, "__remember_me"):
 		req.Header.Set("Cookie", cookie+"; __remember_me=true")
-	} else {
+	default:
 		req.Header.Set("Cookie", cookie)
 	}
 }

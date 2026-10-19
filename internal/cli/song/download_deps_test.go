@@ -28,7 +28,7 @@ func TestRunDownload_VIPNoSource(t *testing.T) {
 	t.Parallel()
 	k, _, _ := newTestKit()
 	deps := downloadDeps{
-		fetchURL: func(ctx context.Context, id int64, level int) (*mmpb.SongURL, error) {
+		fetchURL: func(_ context.Context, _ int64, _ int) (*mmpb.SongURL, error) {
 			return &mmpb.SongURL{Url: ""}, nil // 空 Url = VIP/无音源
 		},
 	}
@@ -90,7 +90,7 @@ func TestRunDownload_MetadataFailureWarnf(t *testing.T) {
 		fetchDetail: func(context.Context, int64) (*mmpb.Song, error) {
 			return &mmpb.Song{Id: 1, Name: "test", Artists: []*mmpb.Artist{{Name: "artist"}}}, nil
 		},
-		download: func(ctx context.Context, url string, total int64, path, label string) (int64, error) {
+		download: func(_ context.Context, _ string, _ int64, path, _ string) (int64, error) {
 			// 模拟下载:写一个空文件让元数据有目标可写(会失败因为不是真 mp3)。
 			if err := os.WriteFile(path, []byte("fake"), 0o644); err != nil {
 				return 0, err
@@ -163,7 +163,7 @@ func TestRunDownload_OutMkdir(t *testing.T) {
 		fetchDetail: func(context.Context, int64) (*mmpb.Song, error) {
 			return &mmpb.Song{Id: 1, Name: "t"}, nil
 		},
-		download: func(ctx context.Context, url string, total int64, path, label string) (int64, error) {
+		download: func(_ context.Context, _ string, _ int64, path, _ string) (int64, error) {
 			// 确认父目录已被 MkdirAll 创建。
 			if _, err := os.Stat(filepath.Dir(path)); err != nil {
 				return 0, err
@@ -193,7 +193,7 @@ func TestRunDownload_FLACFormat(t *testing.T) {
 		fetchDetail: func(context.Context, int64) (*mmpb.Song, error) {
 			return &mmpb.Song{Id: 1, Name: "flac歌", Artists: []*mmpb.Artist{{Name: "艺人"}}}, nil
 		},
-		download: func(ctx context.Context, url string, total int64, path, label string) (int64, error) {
+		download: func(_ context.Context, _ string, _ int64, path, _ string) (int64, error) {
 			if !strings.HasSuffix(path, ".flac") {
 				t.Errorf("flac 文件应以 .flac 结尾,got %s", path)
 			}
@@ -263,7 +263,7 @@ func TestRunDownload_NoMetadata(t *testing.T) {
 		fetchDetail: func(context.Context, int64) (*mmpb.Song, error) {
 			return &mmpb.Song{Id: 1, Name: "t", Artists: []*mmpb.Artist{{Name: "a"}}}, nil
 		},
-		download: func(ctx context.Context, url string, total int64, path, label string) (int64, error) {
+		download: func(_ context.Context, _ string, _ int64, path, _ string) (int64, error) {
 			return 4, os.WriteFile(path, []byte("data"), 0o644)
 		},
 		writeMeta: func(string, *mmpb.Song) error {
@@ -300,7 +300,7 @@ func TestRunDownload_FilenameTemplate(t *testing.T) {
 		fetchDetail: func(context.Context, int64) (*mmpb.Song, error) {
 			return &mmpb.Song{Id: 347230, Name: "晴天", Artists: []*mmpb.Artist{{Name: "周杰伦"}}}, nil
 		},
-		download: func(ctx context.Context, url string, total int64, path, label string) (int64, error) {
+		download: func(_ context.Context, _ string, _ int64, path, _ string) (int64, error) {
 			gotPath = path
 			return 4, os.WriteFile(path, []byte("data"), 0o644)
 		},

@@ -68,7 +68,7 @@ var SubCount = &engine.Endpoint[*mmpb.SubCountRequest, *mmpb.SubCountResponse]{
 		TTL: 24 * time.Hour,
 	},
 	NewResp: func() *mmpb.SubCountResponse { return &mmpb.SubCountResponse{} },
-	MapRequest: func(req *mmpb.SubCountRequest) (map[string]any, error) {
+	MapRequest: func(_ *mmpb.SubCountRequest) (map[string]any, error) {
 		// SubCount 需登录态查自己，此处传 userId 给上游。
 		return map[string]any{}, nil
 	},
