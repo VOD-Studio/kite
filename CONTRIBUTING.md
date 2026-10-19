@@ -29,6 +29,7 @@ go vet ./...              # 检查
 - **Rust 互操作冒烟**:`Rust Interop` job 跑 `make interop-rust`(`scripts/rust-interop.sh`):`buf` 把 proto 编成描述符,`interop/rust` 据此生成 tonic 客户端,对真实运行的 `kite-server` 验证健康检查、令牌鉴权和 `ErrorInfo`。`docs/` 里的 Rust 示例与 `interop/rust/src/*.rs` 逐字一致(有测试守护):改示例先改文档,再原样同步。本地需要 `cargo`,较慢,不在 `make check` 里。
 - **真实上游冒烟**:`make upstream-smoke` 对真实上游逐个调用只读 RPC,断言响应不是空消息(专抓「成功但返回空」)。手动运行、不进 CI——外部服务的状态会让门禁漂移。endpoint 的 MapResponse 单测应优先用从真实上游抓取的响应(`testdata/`,裁剪并去除个人信息),而不是手写夹具。
 - **BSR 发布**:release 成功后 `bsr` job 调用 `bsr.yml`,把 `proto/` 推送到 `buf.build/vod-studio/kite`(版本 tag 作标签;`main` 标签只跟随最新正式版,补推旧版本不会让它倒退),供其它语言的项目直接依赖。令牌只在最后的推送一步可见,手动补推只接受已发布 release 的版本号。需要 BSR 上已有组织 `vod-studio` 和仓库 secret `BUF_TOKEN`;未配置时只给提示、跳过,不影响发布。手动补推:Actions → `BSR` → Run workflow(填 tag)。
+- **生产部署**:release 成功后 `deploy` job 调用 `deploy.yml`,经 SSH 把新镜像部署到与 violet 同机的服务器(失败自动回滚)。服务器侧一次性安装、需要的仓库 secret、手动部署 / 回滚见 [`docs/deploy.md`](docs/deploy.md);未配置部署 secret 时只给提示、跳过,不影响发布。
 - **发布**:release PR 合并后,`release-please.yml` 在同一 workflow 内直接调用 `release.yml`(release-please 用 `GITHUB_TOKEN` 打的 tag 不会触发 `on: push: tags`)。手动补发某个 tag 的产物:Actions → `Release` → Run workflow。
 
 ## 工作流(分支与提交)
