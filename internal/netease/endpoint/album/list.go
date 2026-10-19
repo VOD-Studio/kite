@@ -45,14 +45,14 @@ func areaToString(area mmpb.AlbumArea) string {
 var NewestAlbums = &engine.Endpoint[*mmpb.NewestAlbumsRequest, *mmpb.NewestAlbumsResponse]{
 	Meta: anonymousWeapiMeta("/weapi/discovery/newAlbum"),
 	Cache: &engine.CachePolicy[*mmpb.NewestAlbumsRequest]{
-		Key: func(req *mmpb.NewestAlbumsRequest) string { return "album:newest" },
+		Key: func(_ *mmpb.NewestAlbumsRequest) string { return "album:newest" },
 		TTL: time.Hour,
 	},
 	NewResp: func() *mmpb.NewestAlbumsResponse { return &mmpb.NewestAlbumsResponse{} },
-	MapRequest: func(req *mmpb.NewestAlbumsRequest) (map[string]any, error) {
+	MapRequest: func(_ *mmpb.NewestAlbumsRequest) (map[string]any, error) {
 		return map[string]any{}, nil
 	},
-	MapResponse: func(req *mmpb.NewestAlbumsRequest, raw json.RawMessage) (*mmpb.NewestAlbumsResponse, error) {
+	MapResponse: func(_ *mmpb.NewestAlbumsRequest, raw json.RawMessage) (*mmpb.NewestAlbumsResponse, error) {
 		albums, err := model.DecodeAlbumList(raw)
 		if err != nil {
 			return &mmpb.NewestAlbumsResponse{}, err
@@ -83,7 +83,7 @@ var AllNewAlbums = &engine.Endpoint[*mmpb.AllNewAlbumsRequest, *mmpb.AllNewAlbum
 			"area":   areaToString(req.GetArea()),
 		}, nil
 	},
-	MapResponse: func(req *mmpb.AllNewAlbumsRequest, raw json.RawMessage) (*mmpb.AllNewAlbumsResponse, error) {
+	MapResponse: func(_ *mmpb.AllNewAlbumsRequest, raw json.RawMessage) (*mmpb.AllNewAlbumsResponse, error) {
 		albums, total, err := model.DecodeAlbumListWithTotal(raw)
 		if err != nil {
 			return &mmpb.AllNewAlbumsResponse{}, err
@@ -131,7 +131,7 @@ var NewAlbumShelf = &engine.Endpoint[*mmpb.NewAlbumShelfRequest, *mmpb.NewAlbumS
 			"rcmd":   true,
 		}, nil
 	},
-	MapResponse: func(req *mmpb.NewAlbumShelfRequest, raw json.RawMessage) (*mmpb.NewAlbumShelfResponse, error) {
+	MapResponse: func(_ *mmpb.NewAlbumShelfRequest, raw json.RawMessage) (*mmpb.NewAlbumShelfResponse, error) {
 		albums, hasMore, err := model.DecodeAlbumListWithMore(raw)
 		if err != nil {
 			return &mmpb.NewAlbumShelfResponse{}, err
@@ -159,7 +159,7 @@ var SubscribedAlbums = &engine.Endpoint[*mmpb.SubscribedAlbumsRequest, *mmpb.Sub
 			"total":  true,
 		}, nil
 	},
-	MapResponse: func(req *mmpb.SubscribedAlbumsRequest, raw json.RawMessage) (*mmpb.SubscribedAlbumsResponse, error) {
+	MapResponse: func(_ *mmpb.SubscribedAlbumsRequest, raw json.RawMessage) (*mmpb.SubscribedAlbumsResponse, error) {
 		albums, total, err := model.DecodeAlbumListWithTotal(raw)
 		if err != nil {
 			return &mmpb.SubscribedAlbumsResponse{}, err

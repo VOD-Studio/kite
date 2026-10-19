@@ -60,7 +60,7 @@ func newDetail(k *kit.Kit) *cobra.Command {
 		Use:   "detail",
 		Short: "歌手详情",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -79,7 +79,7 @@ func newSongs(k *kit.Kit) *cobra.Command {
 		Use:   "songs",
 		Short: "歌手全部歌曲",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -99,7 +99,7 @@ func newTopSongs(k *kit.Kit) *cobra.Command {
 		Use:   "top-songs",
 		Short: "歌手热门歌曲",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -118,7 +118,7 @@ func newAlbums(k *kit.Kit) *cobra.Command {
 		Use:   "albums",
 		Short: "歌手专辑列表",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -138,7 +138,7 @@ func newDesc(k *kit.Kit) *cobra.Command {
 		Use:   "desc",
 		Short: "歌手简介",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -156,7 +156,7 @@ func newSimilar(k *kit.Kit) *cobra.Command {
 		Use:   "similar",
 		Short: "相似歌手",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -174,7 +174,7 @@ func newFans(k *kit.Kit) *cobra.Command {
 		Use:   "fans",
 		Short: "歌手粉丝",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -192,7 +192,7 @@ func newToplist(k *kit.Kit) *cobra.Command {
 		Use:   "toplist",
 		Short: "歌手榜",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, artistendpoint.TopArtists, &mmpb.TopArtistsRequest{Limit: int32(limit), Offset: int32(offset)})
 		},
 	}
@@ -207,7 +207,7 @@ func newSubscribe(k *kit.Kit) *cobra.Command {
 		Use:   "subscribe",
 		Short: "收藏/取消收藏歌手(写操作,登录态)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err

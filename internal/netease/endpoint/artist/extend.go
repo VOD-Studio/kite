@@ -40,7 +40,7 @@ var AllSongs = &engine.Endpoint[*mmpb.AllSongsRequest, *mmpb.AllSongsResponse]{
 			"private_cloud": "true", "work_type": 1, "order": "hot",
 		}, nil
 	},
-	MapResponse: func(req *mmpb.AllSongsRequest, raw json.RawMessage) (*mmpb.AllSongsResponse, error) {
+	MapResponse: func(_ *mmpb.AllSongsRequest, raw json.RawMessage) (*mmpb.AllSongsResponse, error) {
 		return parseArtistSongs(raw)
 	},
 }
@@ -56,7 +56,7 @@ var TopSongs = &engine.Endpoint[*mmpb.TopSongsRequest, *mmpb.TopSongsResponse]{
 	MapRequest: func(req *mmpb.TopSongsRequest) (map[string]any, error) {
 		return map[string]any{"id": fmt.Sprintf("%d", req.GetArtistId())}, nil
 	},
-	MapResponse: func(req *mmpb.TopSongsRequest, raw json.RawMessage) (*mmpb.TopSongsResponse, error) {
+	MapResponse: func(_ *mmpb.TopSongsRequest, raw json.RawMessage) (*mmpb.TopSongsResponse, error) {
 		resp, err := parseArtistSongs(raw)
 		if err != nil {
 			return nil, err
@@ -87,12 +87,12 @@ var Albums = &engine.Endpoint[*mmpb.AlbumsRequest, *mmpb.AlbumsResponse]{
 		}
 		return map[string]any{"limit": limit, "offset": req.GetOffset(), "total": true}, nil
 	},
-	MapResponse: func(req *mmpb.AlbumsRequest, raw json.RawMessage) (*mmpb.AlbumsResponse, error) {
+	MapResponse: func(_ *mmpb.AlbumsRequest, raw json.RawMessage) (*mmpb.AlbumsResponse, error) {
 		var resp struct {
 			HotAlbums []struct {
 				ID          int64  `json:"id"`          // 专辑ID
 				Name        string `json:"name"`        // 专辑名
-				PicUrl      string `json:"picUrl"`      // 封面URL
+				PicURL      string `json:"picUrl"`      // 封面URL
 				PublishTime int64  `json:"publishTime"` // 发行时间(毫秒时间戳)
 				Artist      struct {
 					ID   int64  `json:"id"`   // 歌手ID
@@ -112,7 +112,7 @@ var Albums = &engine.Endpoint[*mmpb.AlbumsRequest, *mmpb.AlbumsResponse]{
 				publishTime = time.UnixMilli(a.PublishTime).Format("2006-01-02")
 			}
 			out.Albums = append(out.Albums, &mmpb.Album{
-				Id: a.ID, Name: a.Name, PicUrl: a.PicUrl, PublishTime: publishTime,
+				Id: a.ID, Name: a.Name, PicUrl: a.PicURL, PublishTime: publishTime,
 				Artist: &mmpb.Artist{Id: a.Artist.ID, Name: a.Artist.Name},
 			})
 		}
@@ -131,7 +131,7 @@ var Desc = &engine.Endpoint[*mmpb.DescRequest, *mmpb.DescResponse]{
 	MapRequest: func(req *mmpb.DescRequest) (map[string]any, error) {
 		return map[string]any{"id": fmt.Sprintf("%d", req.GetArtistId())}, nil
 	},
-	MapResponse: func(req *mmpb.DescRequest, raw json.RawMessage) (*mmpb.DescResponse, error) {
+	MapResponse: func(_ *mmpb.DescRequest, raw json.RawMessage) (*mmpb.DescResponse, error) {
 		var resp struct {
 			BriefDesc string `json:"briefDesc"` // 详细描述
 		}
@@ -153,12 +153,12 @@ var Similar = &engine.Endpoint[*mmpb.SimilarRequest, *mmpb.SimilarResponse]{
 	MapRequest: func(req *mmpb.SimilarRequest) (map[string]any, error) {
 		return map[string]any{"artistid": fmt.Sprintf("%d", req.GetArtistId())}, nil
 	},
-	MapResponse: func(req *mmpb.SimilarRequest, raw json.RawMessage) (*mmpb.SimilarResponse, error) {
+	MapResponse: func(_ *mmpb.SimilarRequest, raw json.RawMessage) (*mmpb.SimilarResponse, error) {
 		var resp struct {
 			Artists []struct {
 				ID     int64  `json:"id"`        // 歌手ID
 				Name   string `json:"name"`      // 歌手名
-				PicUrl string `json:"img1v1Url"` // 1:1头像
+				PicURL string `json:"img1v1Url"` // 1:1头像
 			} `json:"artists"`
 		}
 		if err := json.Unmarshal(raw, &resp); err != nil {
@@ -166,7 +166,7 @@ var Similar = &engine.Endpoint[*mmpb.SimilarRequest, *mmpb.SimilarResponse]{
 		}
 		out := &mmpb.SimilarResponse{}
 		for _, a := range resp.Artists {
-			out.Artists = append(out.Artists, &mmpb.Artist{Id: a.ID, Name: a.Name, PicUrl: a.PicUrl})
+			out.Artists = append(out.Artists, &mmpb.Artist{Id: a.ID, Name: a.Name, PicUrl: a.PicURL})
 		}
 		return out, nil
 	},
@@ -183,7 +183,7 @@ var Fans = &engine.Endpoint[*mmpb.FansRequest, *mmpb.FansResponse]{
 	MapRequest: func(req *mmpb.FansRequest) (map[string]any, error) {
 		return map[string]any{"id": fmt.Sprintf("%d", req.GetArtistId())}, nil
 	},
-	MapResponse: func(req *mmpb.FansRequest, raw json.RawMessage) (*mmpb.FansResponse, error) {
+	MapResponse: func(_ *mmpb.FansRequest, raw json.RawMessage) (*mmpb.FansResponse, error) {
 		var resp struct {
 			Data struct {
 				FansCnt   int64 `json:"fansCnt"`   // 粉丝数(现行字段名)
@@ -218,12 +218,12 @@ var TopArtists = &engine.Endpoint[*mmpb.TopArtistsRequest, *mmpb.TopArtistsRespo
 		}
 		return map[string]any{"limit": limit, "offset": req.GetOffset()}, nil
 	},
-	MapResponse: func(req *mmpb.TopArtistsRequest, raw json.RawMessage) (*mmpb.TopArtistsResponse, error) {
+	MapResponse: func(_ *mmpb.TopArtistsRequest, raw json.RawMessage) (*mmpb.TopArtistsResponse, error) {
 		var resp struct {
 			Artists []struct {
 				ID     int64  `json:"id"`        // 歌手ID
 				Name   string `json:"name"`      // 歌手名
-				PicUrl string `json:"img1v1Url"` // 1:1头像
+				PicURL string `json:"img1v1Url"` // 1:1头像
 			} `json:"artists"`
 		}
 		if err := json.Unmarshal(raw, &resp); err != nil {
@@ -231,7 +231,7 @@ var TopArtists = &engine.Endpoint[*mmpb.TopArtistsRequest, *mmpb.TopArtistsRespo
 		}
 		out := &mmpb.TopArtistsResponse{}
 		for _, a := range resp.Artists {
-			out.Artists = append(out.Artists, &mmpb.Artist{Id: a.ID, Name: a.Name, PicUrl: a.PicUrl})
+			out.Artists = append(out.Artists, &mmpb.Artist{Id: a.ID, Name: a.Name, PicUrl: a.PicURL})
 		}
 		return out, nil
 	},
@@ -250,7 +250,7 @@ func parseArtistSongs(raw json.RawMessage) (*mmpb.AllSongsResponse, error) {
 			Al struct {
 				ID     int64  `json:"id"`     // 专辑ID
 				Name   string `json:"name"`   // 专辑名
-				PicUrl string `json:"picUrl"` // 封面URL
+				PicURL string `json:"picUrl"` // 封面URL
 			} `json:"al"` // 专辑
 			Dt  int64 `json:"dt"`  // 时长毫秒
 			Fee int   `json:"fee"` // 付费类型(0免费 1VIP 4付费专辑 8低音质免费)
@@ -268,7 +268,7 @@ func parseArtistSongs(raw json.RawMessage) (*mmpb.AllSongsResponse, error) {
 		}
 		out.Songs = append(out.Songs, &mmpb.Song{
 			Id: s.ID, Name: s.Name, Artists: artists,
-			Album:      &mmpb.Album{Id: s.Al.ID, Name: s.Al.Name, PicUrl: s.Al.PicUrl},
+			Album:      &mmpb.Album{Id: s.Al.ID, Name: s.Al.Name, PicUrl: s.Al.PicURL},
 			DurationMs: s.Dt,
 			Fee:        int32(s.Fee),
 		})

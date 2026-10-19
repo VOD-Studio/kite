@@ -49,7 +49,7 @@ func newDownload(k *kit.Kit) *cobra.Command {
 		Use:   "download",
 		Short: "下载整个歌单(批量,带元数据)",
 		Args:  cobra.MaximumNArgs(1), // 位置参数:playlist download 12345 ≡ --id 12345
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -117,7 +117,7 @@ func defaultPlaylistDeps(k *kit.Kit) playlistDeps {
 		},
 		newProgress: func() *kit.Progress { return k.NewProgress() },
 		sleepJitter: func() {
-			time.Sleep(time.Duration(200+rand.IntN(300)) * time.Millisecond)
+			time.Sleep(time.Duration(200+rand.IntN(300)) * time.Millisecond) //nolint:gosec // 请求间隔抖动,不涉及安全
 		},
 		now: time.Now,
 	}
@@ -169,7 +169,7 @@ func runPlaylistDownload(k *kit.Kit, id int64, level int, out string, workers in
 	}
 
 	// 3. mkdir。
-	if err := os.MkdirAll(out, 0o755); err != nil {
+	if err := os.MkdirAll(out, 0o755); err != nil { //nolint:gosec // 音乐目录需要让媒体服务器等其它用户的进程读取
 		return fmt.Errorf("目录 %s 不可写: %v", out, err)
 	}
 

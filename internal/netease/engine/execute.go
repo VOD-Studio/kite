@@ -63,7 +63,7 @@ type CachePolicy[Req any] struct {
 // per-endpoint policy 驱动 + 类型相关序列化横切关注点，policy 和具体 Resp 类型都在手边，
 // 无需注册表查 FullMethod→CachePolicy、无需 reflection 反序列化，
 // 也消灭了「缓存命中漏鉴权」的拦截器顺序 footgun。
-func Execute[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoint[Req, Resp], req Req) (Resp, error) {
+func Execute[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoint[Req, Resp], req Req) (Resp, error) { //nolint:revive // Go 不支持泛型方法,Engine 只能作首参
 	var zero Resp
 
 	// 缓存 key 与可缓存性在调用前一次算定:需要登录态的接口按凭据隔离,池路径不缓存。

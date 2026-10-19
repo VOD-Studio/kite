@@ -31,12 +31,12 @@ var SimilarUsers = &engine.Endpoint[*mmpb.SimilarUsersRequest, *mmpb.SimilarUser
 		}
 		return map[string]any{"songid": req.GetSongId(), "limit": limit, "offset": req.GetOffset()}, nil
 	},
-	MapResponse: func(req *mmpb.SimilarUsersRequest, raw json.RawMessage) (*mmpb.SimilarUsersResponse, error) {
+	MapResponse: func(_ *mmpb.SimilarUsersRequest, raw json.RawMessage) (*mmpb.SimilarUsersResponse, error) {
 		var resp struct {
 			Userprofiles []struct {
 				UserID    int64  `json:"userId"`    // 用户ID
 				Nickname  string `json:"nickname"`  // 昵称
-				AvatarUrl string `json:"avatarUrl"` // 头像URL
+				AvatarURL string `json:"avatarUrl"` // 头像URL
 			} `json:"userprofiles"`
 		}
 		if err := json.Unmarshal(raw, &resp); err != nil {
@@ -45,7 +45,7 @@ var SimilarUsers = &engine.Endpoint[*mmpb.SimilarUsersRequest, *mmpb.SimilarUser
 		out := make([]*mmpb.User, 0, len(resp.Userprofiles))
 		for _, u := range resp.Userprofiles {
 			out = append(out, &mmpb.User{
-				Id: u.UserID, Nickname: u.Nickname, AvatarUrl: u.AvatarUrl,
+				Id: u.UserID, Nickname: u.Nickname, AvatarUrl: u.AvatarURL,
 			})
 		}
 		return &mmpb.SimilarUsersResponse{Users: out}, nil

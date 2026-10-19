@@ -20,6 +20,18 @@ linters:
       - std-error-handling
       - common-false-positives
     warn-unused: true
+    rules:
+      # 测试代码不进产物:临时文件权限、固定测试密钥等安全规则在测试里没有意义。
+      - path: _test\.go
+        linters: [gosec]
+      # cmd/demo 是终端组件演示脚本,不发布(见 AGENTS.md);用随机数模拟下载速度。
+      - path: ^cmd/demo/
+        linters: [gosec]
+      # proto 计数 / 分页字段是 int32,Go 侧(cobra flag、上游 JSON 解码)用 int。
+      # 这些值(条数、偏移、播放次数、付费类型)远小于 int32 上限;改成按 int32 解码反而会让
+      # 上游偶发的大值把整条响应变成解码失败。只豁免 int -> int32,其它窄化转换照常检查。
+      - linters: [gosec]
+        text: "G115: integer overflow conversion int -> int32"
   settings:
     staticcheck:
       checks: ["all", "-ST1000"]   # 关掉 package doc 强制

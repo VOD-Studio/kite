@@ -30,7 +30,7 @@ var Suggest = &engine.Endpoint[*mmpb.SuggestRequest, *mmpb.SuggestResponse]{
 	MapRequest: func(req *mmpb.SuggestRequest) (map[string]any, error) {
 		return map[string]any{"s": req.GetKeyword()}, nil
 	},
-	MapResponse: func(req *mmpb.SuggestRequest, raw json.RawMessage) (*mmpb.SuggestResponse, error) {
+	MapResponse: func(_ *mmpb.SuggestRequest, raw json.RawMessage) (*mmpb.SuggestResponse, error) {
 		var resp struct {
 			Result struct {
 				Songs []struct {
@@ -83,7 +83,7 @@ var Hot = &engine.Endpoint[*mmpb.HotRequest, *mmpb.HotResponse]{
 	MapRequest: func(*mmpb.HotRequest) (map[string]any, error) {
 		return map[string]any{"type": 1111}, nil
 	},
-	MapResponse: func(req *mmpb.HotRequest, raw json.RawMessage) (*mmpb.HotResponse, error) {
+	MapResponse: func(_ *mmpb.HotRequest, raw json.RawMessage) (*mmpb.HotResponse, error) {
 		// 真机响应: {"code":200,"result":{"hots":[{"first":"薛之谦","second":1,"iconType":1}]}}
 		// first=热搜词 second=排名;无 iconUrl 字段。
 		var resp struct {
@@ -123,14 +123,14 @@ var HotDetail = &engine.Endpoint[*mmpb.HotDetailRequest, *mmpb.HotDetailResponse
 	MapRequest: func(*mmpb.HotDetailRequest) (map[string]any, error) {
 		return map[string]any{}, nil
 	},
-	MapResponse: func(req *mmpb.HotDetailRequest, raw json.RawMessage) (*mmpb.HotDetailResponse, error) {
+	MapResponse: func(_ *mmpb.HotDetailRequest, raw json.RawMessage) (*mmpb.HotDetailResponse, error) {
 		var resp struct {
 			Data []struct {
 				SearchWord string `json:"searchWord"`
 				Score      int32  `json:"score"`
 				Position   int32  `json:"position"`
-				CoverUrl   string `json:"coverImgUrl"`
-				IconUrl    string `json:"iconUrl"`
+				CoverURL   string `json:"coverImgUrl"`
+				IconURL    string `json:"iconUrl"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(raw, &resp); err != nil {
@@ -140,7 +140,7 @@ var HotDetail = &engine.Endpoint[*mmpb.HotDetailRequest, *mmpb.HotDetailResponse
 		for _, d := range resp.Data {
 			out.Details = append(out.Details, &mmpb.HotDetail{
 				SearchWord: d.SearchWord, Score: d.Score, Position: d.Position,
-				CoverUrl: d.CoverUrl, IconUrl: d.IconUrl,
+				CoverUrl: d.CoverURL, IconUrl: d.IconURL,
 			})
 		}
 		return out, nil
@@ -163,7 +163,7 @@ var DefaultKeyword = &engine.Endpoint[*mmpb.DefaultKeywordRequest, *mmpb.Default
 	MapRequest: func(*mmpb.DefaultKeywordRequest) (map[string]any, error) {
 		return map[string]any{}, nil
 	},
-	MapResponse: func(req *mmpb.DefaultKeywordRequest, raw json.RawMessage) (*mmpb.DefaultKeywordResponse, error) {
+	MapResponse: func(_ *mmpb.DefaultKeywordRequest, raw json.RawMessage) (*mmpb.DefaultKeywordResponse, error) {
 		var resp struct {
 			Data struct {
 				Keyword string `json:"realkeyword"`

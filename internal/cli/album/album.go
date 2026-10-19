@@ -80,7 +80,7 @@ func newShelf(k *kit.Kit) *cobra.Command {
 		Use:   "shelf",
 		Short: "新碟上架",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, albumendpoint.NewAlbumShelf, &mmpb.NewAlbumShelfRequest{Area: strToArea(area), Limit: int32(limit)})
 		},
 	}
@@ -94,7 +94,7 @@ func newNewest(k *kit.Kit) *cobra.Command {
 		Use:   "newest",
 		Short: "最新专辑",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, albumendpoint.NewestAlbums, &mmpb.NewestAlbumsRequest{})
 		},
 	}
@@ -107,7 +107,7 @@ func newAll(k *kit.Kit) *cobra.Command {
 		Use:   "all",
 		Short: "全部新碟",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, albumendpoint.AllNewAlbums, &mmpb.AllNewAlbumsRequest{Area: strToArea(area), Limit: int32(limit), Offset: int32(offset)})
 		},
 	}
@@ -123,7 +123,7 @@ func newDetail(k *kit.Kit) *cobra.Command {
 		Use:   "detail",
 		Short: "专辑详情",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -141,7 +141,7 @@ func newDynamic(k *kit.Kit) *cobra.Command {
 		Use:   "dynamic",
 		Short: "专辑动态信息(收藏数等)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -159,7 +159,7 @@ func newSongQuality(k *kit.Kit) *cobra.Command {
 		Use:   "song-quality",
 		Short: "专辑歌曲音质",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -177,7 +177,7 @@ func newSubscribe(k *kit.Kit) *cobra.Command {
 		Use:   "subscribe",
 		Short: "收藏专辑(写操作,登录态)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -201,7 +201,7 @@ func newUnsubscribe(k *kit.Kit) *cobra.Command {
 		Use:   "unsubscribe",
 		Short: "取消收藏专辑(写操作,登录态)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -225,7 +225,7 @@ func newSubscribed(k *kit.Kit) *cobra.Command {
 		Use:   "subscribed",
 		Short: "已收藏专辑列表(登录态)",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := k.RequireLogin(); err != nil {
 				return err
 			}

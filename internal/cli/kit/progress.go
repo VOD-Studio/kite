@@ -236,7 +236,7 @@ func (p *Progress) Start() {
 	}
 	p.started = true
 	if p.tty {
-		io.WriteString(p.out, "\x1b[?25l") // 隐藏光标
+		_, _ = io.WriteString(p.out, "\x1b[?25l") // 隐藏光标
 	}
 	p.ticker = time.NewTicker(100 * time.Millisecond)
 	p.done = make(chan struct{})
@@ -269,7 +269,7 @@ func (p *Progress) Wait() {
 	// 最终渲染(final=true):无论 TTY 与否都输出终态(脚本看最终结果)。
 	p.renderOnce(true)
 	if p.tty {
-		io.WriteString(p.out, "\x1b[?25h") // 恢复光标
+		_, _ = io.WriteString(p.out, "\x1b[?25h") // 恢复光标
 	}
 }
 
@@ -339,7 +339,7 @@ func (p *Progress) renderOnceInternal() {
 			rows += (w + p.rawWidth - 1) / p.rawWidth
 		}
 		if rows > 0 {
-			io.WriteString(p.out, "\x1b["+strconv.Itoa(rows)+"A\x1b[J")
+			_, _ = io.WriteString(p.out, "\x1b["+strconv.Itoa(rows)+"A\x1b[J")
 		}
 		p.prev = nil
 	}

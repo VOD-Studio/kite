@@ -90,7 +90,7 @@ func newDetail(k *kit.Kit) *cobra.Command {
 		Use:   "detail",
 		Short: "歌单详情",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -108,7 +108,7 @@ func newTracks(k *kit.Kit) *cobra.Command {
 		Use:   "tracks",
 		Short: "歌单全部歌曲",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -126,7 +126,7 @@ func newSubscribers(k *kit.Kit) *cobra.Command {
 		Use:   "subscribers",
 		Short: "歌单收藏者",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -145,7 +145,7 @@ func newHighQuality(k *kit.Kit) *cobra.Command {
 		Use:   "highquality",
 		Short: "精品歌单",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, playlistendpoint.HighQuality, &mmpb.HighQualityRequest{Cat: cat, Limit: int32(limit)})
 		},
 	}
@@ -159,7 +159,7 @@ func newHighQualityTags(k *kit.Kit) *cobra.Command {
 		Use:   "highquality-tags",
 		Short: "精品歌单标签",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, playlistendpoint.HighQualityTags, &mmpb.HighQualityTagsRequest{})
 		},
 	}
@@ -170,7 +170,7 @@ func newCatList(k *kit.Kit) *cobra.Command {
 		Use:   "catlist",
 		Short: "歌单分类列表",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, playlistendpoint.CatList, &mmpb.CatListRequest{})
 		},
 	}
@@ -181,7 +181,7 @@ func newHot(k *kit.Kit) *cobra.Command {
 		Use:   "hot",
 		Short: "热门歌单",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, playlistendpoint.BrowseHot, &mmpb.BrowseHotRequest{})
 		},
 	}
@@ -193,7 +193,7 @@ func newSimilar(k *kit.Kit) *cobra.Command {
 		Use:   "similar",
 		Short: "相似歌单(按歌曲)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -211,7 +211,7 @@ func newRelated(k *kit.Kit) *cobra.Command {
 		Use:   "related",
 		Short: "相关歌单推荐",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -229,7 +229,7 @@ func newSubscribe(k *kit.Kit) *cobra.Command {
 		Use:   "subscribe",
 		Short: "收藏/取消收藏歌单(写操作,登录态)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -254,7 +254,7 @@ func newCreate(k *kit.Kit) *cobra.Command {
 		Use:   "create",
 		Short: "创建歌单(写操作,登录态)",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := k.RequireLogin(); err != nil {
 				return err
 			}
@@ -276,7 +276,7 @@ func newDelete(k *kit.Kit) *cobra.Command {
 		Use:   "delete",
 		Short: "删除歌单(写操作,登录态)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -305,7 +305,7 @@ func newUpdateName(k *kit.Kit) *cobra.Command {
 		Use:   "update-name",
 		Short: "歌单改名(写操作,登录态)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -336,7 +336,7 @@ func newUpdateDesc(k *kit.Kit) *cobra.Command {
 		Use:   "update-desc",
 		Short: "修改歌单描述(写操作,登录态)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -367,7 +367,7 @@ func newUpdateTags(k *kit.Kit) *cobra.Command {
 		Use:   "update-tags",
 		Short: "修改歌单标签(写操作,登录态)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -398,7 +398,7 @@ func newUpdateTracks(k *kit.Kit) *cobra.Command {
 		Use:   "update-tracks",
 		Short: "歌单增删歌曲(写操作,登录态)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err

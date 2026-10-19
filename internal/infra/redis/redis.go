@@ -35,7 +35,7 @@ func New(cfg config.RedisConfig) (*redis.Client, error) {
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		_ = rdb.Close()
-		return nil, fmt.Errorf("Redis 健康检查失败: %w", err)
+		return nil, fmt.Errorf("redis 健康检查失败: %w", err)
 	}
 
 	return rdb, nil

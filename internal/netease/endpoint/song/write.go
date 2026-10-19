@@ -32,7 +32,7 @@ var Like = &engine.Endpoint[*mmpb.LikeRequest, *mmpb.LikeResponse]{
 			"time":    "3",
 		}, nil
 	},
-	MapResponse: func(req *mmpb.LikeRequest, raw json.RawMessage) (*mmpb.LikeResponse, error) {
+	MapResponse: func(req *mmpb.LikeRequest, _ json.RawMessage) (*mmpb.LikeResponse, error) {
 		// 响应仅 code（engine 校验），回填请求里的 like 作为操作后状态。
 		return &mmpb.LikeResponse{Liked: req.GetLike()}, nil
 	},
@@ -50,7 +50,7 @@ var Trash = &engine.Endpoint[*mmpb.TrashRequest, *mmpb.TrashResponse]{
 			"time":   25,
 		}, nil
 	},
-	MapResponse: func(req *mmpb.TrashRequest, raw json.RawMessage) (*mmpb.TrashResponse, error) {
+	MapResponse: func(_ *mmpb.TrashRequest, _ json.RawMessage) (*mmpb.TrashResponse, error) {
 		return &mmpb.TrashResponse{}, nil
 	},
 }
@@ -68,7 +68,7 @@ var DisallowRecommend = &engine.Endpoint[*mmpb.DisallowRecommendRequest, *mmpb.D
 			"sceneType": 1,
 		}, nil
 	},
-	MapResponse: func(req *mmpb.DisallowRecommendRequest, raw json.RawMessage) (*mmpb.DisallowRecommendResponse, error) {
+	MapResponse: func(_ *mmpb.DisallowRecommendRequest, _ json.RawMessage) (*mmpb.DisallowRecommendResponse, error) {
 		return &mmpb.DisallowRecommendResponse{}, nil
 	},
 }

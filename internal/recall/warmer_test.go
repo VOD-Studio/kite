@@ -10,7 +10,9 @@ var errFetchFailed = errors.New("simulated fetch failure")
 
 func TestNeedsRemoteRefresh_NoRemoteEvents(t *testing.T) {
 	p, _ := newTestPool(t)
-	p.Append(Event{ID: 1, Src: SrcPlay}) // 只有 play,无 remote
+	if err := p.Append(Event{ID: 1, Src: SrcPlay}); err != nil { // 只有 play,无 remote
+		t.Fatal(err)
+	}
 	if !NeedsRemoteRefresh(p) {
 		t.Error("无 remote 事件应需刷新")
 	}
@@ -20,7 +22,9 @@ func TestNeedsRemoteRefresh_RecentRemoteWithinTTL(t *testing.T) {
 	p, _ := newTestPool(t)
 	// remote 事件在 now 前 1 小时(TTL 24h 内)。
 	now := p.now()
-	p.Append(Event{ID: 1, Src: SrcRemote, TS: now.Add(-1 * time.Hour)})
+	if err := p.Append(Event{ID: 1, Src: SrcRemote, TS: now.Add(-1 * time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
 	if NeedsRemoteRefresh(p) {
 		t.Error("TTL 内的 remote 事件不应刷新")
 	}
@@ -29,7 +33,9 @@ func TestNeedsRemoteRefresh_RecentRemoteWithinTTL(t *testing.T) {
 func TestNeedsRemoteRefresh_StaleRemoteBeyondTTL(t *testing.T) {
 	p, _ := newTestPool(t)
 	now := p.now()
-	p.Append(Event{ID: 1, Src: SrcRemote, TS: now.Add(-25 * time.Hour)}) // 超 TTL
+	if err := p.Append(Event{ID: 1, Src: SrcRemote, TS: now.Add(-25 * time.Hour)}); err != nil { // 超 TTL
+		t.Fatal(err)
+	}
 	if !NeedsRemoteRefresh(p) {
 		t.Error("超 TTL 的 remote 事件应刷新")
 	}

@@ -37,7 +37,7 @@ func InitLogger(env string) *slog.Logger {
 		handler = slog.NewJSONHandler(os.Stdout, opts)
 	} else {
 		// 开发：tint 彩色文本
-		handler = tint.NewHandler(os.Stderr, &tint.Options{
+		handler = tint.NewTextHandler(os.Stderr, &tint.Options{
 			Level:     LevelVar,
 			AddSource: true,
 		})

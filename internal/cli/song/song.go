@@ -63,13 +63,13 @@ func annotateSongRpcs(c *cobra.Command) {
 }
 
 // simple 构造一个单 --id 参数的读命令(--id 或位置参数二选一,#38)。
-func simple(k *kit.Kit, use, short string, run func(id int64) error) *cobra.Command {
+func simple(_ *kit.Kit, use, short string, run func(id int64) error) *cobra.Command {
 	var id int64
 	c := &cobra.Command{
 		Use:   use,
 		Short: short,
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -94,7 +94,7 @@ func newURL(k *kit.Kit) *cobra.Command {
 		Use:   "url",
 		Short: "歌曲播放地址",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -168,7 +168,7 @@ func newLike(k *kit.Kit) *cobra.Command {
 		Use:   "like",
 		Short: "红心/取消红心(写操作,登录态)",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err
@@ -221,7 +221,7 @@ func newLikedList(k *kit.Kit) *cobra.Command {
 		Use:   "liked-list",
 		Short: "红心歌曲列表(登录态)",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := k.RequireLogin(); err != nil {
 				return err
 			}

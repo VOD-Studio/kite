@@ -36,12 +36,12 @@ import (
 // 新增 proto rpc 时:要么接 CLI 命令,要么在此登记理由,否则 TestGuard_RpcsWithoutCliAreAllowlisted 红。
 var rpcsWithoutCliAllowlist = map[string]string{}
 
-// noRpcAllowlist 登记允许「不打 rpc 注解」的叶子命令。
+// noRPCAllowlist 登记允许「不打 rpc 注解」的叶子命令。
 //
 // 正常所有叶子命令都应通过 kit.AnnotateRpcs 打标(哪怕标空表示无 rpc)。cobra 自动
 // 生成的 help/completion 子命令无 Annotations,在此兜底;其余叶子命令漏标一律红。
 // key 是命令名(不含父路径)。
-var noRpcAllowlist = map[string]string{
+var noRPCAllowlist = map[string]string{
 	"help":       "cobra 自动生成,无业务",
 	"completion": "cobra 自动生成,无业务(容器)",
 	"bash":       "cobra completion 子命令,无业务",
@@ -89,7 +89,7 @@ func allRpcsFromProto(t *testing.T) map[string]bool {
 type rpcCmd struct {
 	// path 是完整命令路径(如 "kite song play"),用于失败信息定位。
 	path string
-	// name 是命令名(不含父路径),用于查 noRpcAllowlist。
+	// name 是命令名(不含父路径),用于查 noRPCAllowlist。
 	name string
 	// rpcs 是注解里声明的 rpc 列表(已用 kit.ParseRpcs 解析);nil 表示未打标。
 	rpcs []string
@@ -191,7 +191,7 @@ func TestGuard_RpcsWithoutCliAreAllowlisted(t *testing.T) {
 }
 
 // TestGuard_LeafCmdHasRpcsAnnotation 守护(漏标):叶子命令必须打 RpcsAnnotationKey 注解
-// (哪怕标空表示无 rpc),或在 noRpcAllowlist 登记理由(cobra 自动生成的 help/completion)。
+// (哪怕标空表示无 rpc),或在 noRPCAllowlist 登记理由(cobra 自动生成的 help/completion)。
 //
 // 拦截:新增 rpc 命令忘打标(会导致反向 diff 误判该 rpc 无 CLI)。
 // 容器命令(有子命令)不打标,本测试不涉及。
@@ -207,7 +207,7 @@ func TestGuard_LeafCmdHasRpcsAnnotation(t *testing.T) {
 		if rc.annotated {
 			continue
 		}
-		if _, allowed := noRpcAllowlist[rc.name]; allowed {
+		if _, allowed := noRPCAllowlist[rc.name]; allowed {
 			continue
 		}
 		unannotated = append(unannotated, rc.path)

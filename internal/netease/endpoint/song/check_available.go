@@ -33,7 +33,7 @@ var CheckAvailable = &engine.Endpoint[*mmpb.CheckAvailableRequest, *mmpb.CheckAv
 			"br":  999000,
 		}, nil
 	},
-	MapResponse: func(req *mmpb.CheckAvailableRequest, raw json.RawMessage) (*mmpb.CheckAvailableResponse, error) {
+	MapResponse: func(_ *mmpb.CheckAvailableRequest, raw json.RawMessage) (*mmpb.CheckAvailableResponse, error) {
 		var resp struct {
 			Code int `json:"code"`
 			Data []struct {

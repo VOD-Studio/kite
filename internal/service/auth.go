@@ -111,7 +111,7 @@ func (s *AuthServer) LoginStatus(ctx context.Context, req *mmpb.LoginStatusReque
 
 	sess, err := model.DecodeLoginResponse(raw)
 	if err != nil {
-		return &mmpb.LoginStatusResponse{}, nil // 未登录不算错误
+		return &mmpb.LoginStatusResponse{}, nil //nolint:nilerr // 未登录不算错误,session 为空即表示未登录
 	}
 	sess.Cookie = engine.CookieFromContext(ctx)
 

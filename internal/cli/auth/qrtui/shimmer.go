@@ -153,7 +153,7 @@ func shimmerText(s string, timeMs int64, p compiledPalette) string {
 			return
 		}
 		var seq tierSeq
-		switch tier(runTier) {
+		switch runTier {
 		case tierLow:
 			seq = p.low
 		case tierMid:
@@ -225,11 +225,4 @@ func itoa(n int) string {
 		n /= 10
 	}
 	return string(buf[i:])
-}
-
-func absFloat(x float64) float64 {
-	if x < 0 {
-		return -x
-	}
-	return x
 }

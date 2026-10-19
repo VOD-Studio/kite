@@ -39,7 +39,7 @@ func newDownload(k *kit.Kit) *cobra.Command {
 		Use:   "download",
 		Short: "下载歌曲到本地(带元数据)",
 		Args:  cobra.MaximumNArgs(1), // 位置参数:song download 347230 ≡ --id 347230
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			rid, err := kit.ResolveID(id, args)
 			if err != nil {
 				return err

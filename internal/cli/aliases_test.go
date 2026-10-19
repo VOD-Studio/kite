@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -46,7 +47,7 @@ func TestExpand_EmptyArgs(t *testing.T) {
 	if ok {
 		t.Error("空 args 应 miss")
 	}
-	if got != nil && len(got) != 0 {
+	if len(got) != 0 {
 		t.Errorf("空 args 应返回空,got %v", got)
 	}
 }
@@ -142,13 +143,5 @@ func TestAliasList_ExpandsMatchTable(t *testing.T) {
 
 // --- sliceEq 测试辅助 ---
 func sliceEq(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
+	return slices.Equal(a, b)
 }

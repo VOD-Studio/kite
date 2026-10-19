@@ -34,7 +34,7 @@ var Lyric = &engine.Endpoint[*mmpb.GetLyricRequest, *mmpb.GetLyricResponse]{
 			"tv": -1,
 		}, nil
 	},
-	MapResponse: func(req *mmpb.GetLyricRequest, raw json.RawMessage) (*mmpb.GetLyricResponse, error) {
+	MapResponse: func(_ *mmpb.GetLyricRequest, raw json.RawMessage) (*mmpb.GetLyricResponse, error) {
 		var resp struct {
 			Lrc struct {
 				Lyric string `json:"lyric"`

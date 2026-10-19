@@ -56,7 +56,7 @@ func walk(cmd *cobra.Command, visit func(*cobra.Command)) {
 // completeID 返回召回池候选的补全函数。候选格式「<id>\t<歌名> - <艺人>」,
 // 按 frecency 排序;补全绝不触发网络(召回池本地读)。空池返回空候选(不报错)。
 func completeID(k *Kit) func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return func(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return func(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		pool := k.RecallPool()
 		if pool == nil {
 			return nil, cobra.ShellCompDirectiveNoFileComp

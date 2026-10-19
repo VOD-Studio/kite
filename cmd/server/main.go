@@ -64,9 +64,9 @@ func main() {
 	slog.InfoContext(startupCtx, "shutting down server...")
 
 	ctx, cancel := context.WithTimeout(startupCtx, 5*time.Second)
-	defer cancel()
-
-	if err := app.Shutdown(ctx); err != nil {
+	err = app.Shutdown(ctx)
+	cancel() // 显式调用:下面的 os.Exit 不会执行 defer
+	if err != nil {
 		slog.ErrorContext(startupCtx, "server forced to shutdown", slog.String("error", err.Error()))
 		os.Exit(1)
 	}

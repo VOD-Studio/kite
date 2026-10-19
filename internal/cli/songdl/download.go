@@ -144,7 +144,7 @@ func DownloadOne(ctx context.Context, song *mmpb.Song, songURL *mmpb.SongURL, op
 		}
 	}
 
-	if err := os.MkdirAll(opts.Out, 0o755); err != nil {
+	if err := os.MkdirAll(opts.Out, 0o755); err != nil { //nolint:gosec // 音乐目录需要让媒体服务器等其它用户的进程读取
 		return Outcome{
 			Status: StatusFailed,
 			SongID: song.Id,
@@ -238,7 +238,7 @@ func DownloadToFile(ctx context.Context, k *kit.Kit, url string, total int64, pa
 		openMode |= os.O_TRUNC // 新下或 Range 被忽略:覆盖 .part
 		offset = 0             // 重置 offset(进度条从 0 算)
 	}
-	f, err := os.OpenFile(partPath, openMode, 0o644)
+	f, err := os.OpenFile(partPath, openMode, 0o644) //nolint:gosec // 音乐文件需要让播放器 / 媒体服务器读取
 	if err != nil {
 		return 0, fmt.Errorf("创建文件 %s 失败: %v", partPath, err)
 	}

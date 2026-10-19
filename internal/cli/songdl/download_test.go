@@ -33,7 +33,8 @@ func TestProxyReader_IncrsBar(t *testing.T) {
 	if n, err := pr.Read(buf); err != nil || n != 4 {
 		t.Fatalf("首次 Read got %d bytes, err %v", n, err)
 	}
-	io.Copy(io.Discard, pr)
+	_, err := io.Copy(io.Discard, pr)
+	require.NoError(t, err)
 	require.Equal(t, int64(11), bar.Current, "读完 11 字节后 bar.Current 应为 11")
 }
 
@@ -67,7 +68,7 @@ func TestDownloadOne_Success(t *testing.T) {
 
 	var downloadCalled bool
 	deps := Deps{
-		download: func(ctx context.Context, u string, total int64, path, label string) (int64, error) {
+		download: func(_ context.Context, u string, total int64, path, label string) (int64, error) {
 			downloadCalled = true
 			require.Equal(t, url.Url, u)
 			require.Equal(t, int64(100), total)
@@ -79,7 +80,7 @@ func TestDownloadOne_Success(t *testing.T) {
 			}
 			return 8, nil
 		},
-		writeMeta: func(path string, s *mmpb.Song) error {
+		writeMeta: func(_ string, s *mmpb.Song) error {
 			require.Equal(t, song, s)
 			return nil
 		},
@@ -131,7 +132,7 @@ func TestDownloadOne_ConflictFallback(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "周杰伦 - 晴天.mp3"), []byte("x"), 0o644))
 
 	deps := Deps{
-		download: func(ctx context.Context, u string, total int64, path, label string) (int64, error) {
+		download: func(_ context.Context, _ string, _ int64, path, _ string) (int64, error) {
 			require.Contains(t, path, "周杰伦 - 晴天 (347230).mp3", "应用回退名")
 			return 0, os.WriteFile(path, []byte("x"), 0o644)
 		},
@@ -152,7 +153,7 @@ func TestDownloadOne_MetaFailureNonBlocking(t *testing.T) {
 	url := fakeSongURL("mp3", 100)
 
 	deps := Deps{
-		download: func(ctx context.Context, u string, total int64, path, label string) (int64, error) {
+		download: func(_ context.Context, _ string, _ int64, path, _ string) (int64, error) {
 			return 8, os.WriteFile(path, []byte("x"), 0o644)
 		},
 		writeMeta: func(string, *mmpb.Song) error {
@@ -215,7 +216,7 @@ func TestDownloadOne_Force(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "周杰伦 - 晴天.mp3"), []byte("old"), 0o644))
 
 	deps := Deps{
-		download: func(ctx context.Context, u string, total int64, path, label string) (int64, error) {
+		download: func(_ context.Context, _ string, _ int64, path, _ string) (int64, error) {
 			require.Contains(t, path, "周杰伦 - 晴天.mp3", "force 用默认名覆盖")
 			return 8, os.WriteFile(path, []byte("new"), 0o644)
 		},

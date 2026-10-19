@@ -84,7 +84,9 @@ func TestRun_LimitTruncates(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got []rankedJSON
-	json.Unmarshal(out.Bytes(), &got)
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("解析 JSON 输出失败: %v", err)
+	}
 	if len(got) != 3 {
 		t.Errorf("limit=3 应返回 3,got %d", len(got))
 	}

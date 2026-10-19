@@ -31,7 +31,7 @@ var SimilarSongs = &engine.Endpoint[*mmpb.SimilarSongsRequest, *mmpb.SimilarSong
 		}
 		return map[string]any{"songid": req.GetSongId(), "limit": limit, "offset": req.GetOffset()}, nil
 	},
-	MapResponse: func(req *mmpb.SimilarSongsRequest, raw json.RawMessage) (*mmpb.SimilarSongsResponse, error) {
+	MapResponse: func(_ *mmpb.SimilarSongsRequest, raw json.RawMessage) (*mmpb.SimilarSongsResponse, error) {
 		var resp struct {
 			Songs []rawSimilarSong `json:"songs"`
 		}
@@ -57,7 +57,7 @@ type rawSimilarSong struct {
 	Album struct {
 		ID     int64  `json:"id"`     // 专辑ID
 		Name   string `json:"name"`   // 专辑名
-		PicUrl string `json:"picUrl"` // 封面URL
+		PicURL string `json:"picUrl"` // 封面URL
 	} `json:"album"` // 专辑（注意是 album 不是 al）
 	Duration int64 `json:"duration"` // 时长毫秒（注意是 duration 不是 dt）
 	Fee      int   `json:"fee"`      // 付费类型
@@ -71,7 +71,7 @@ func (s rawSimilarSong) toProto() *mmpb.Song {
 	}
 	return &mmpb.Song{
 		Id: s.ID, Name: s.Name, Artists: artists,
-		Album:      &mmpb.Album{Id: s.Album.ID, Name: s.Album.Name, PicUrl: s.Album.PicUrl},
+		Album:      &mmpb.Album{Id: s.Album.ID, Name: s.Album.Name, PicUrl: s.Album.PicURL},
 		DurationMs: s.Duration, Fee: int32(s.Fee),
 	}
 }

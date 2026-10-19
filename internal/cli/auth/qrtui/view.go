@@ -20,9 +20,6 @@ var (
 	qrStyle      = lipgloss.NewStyle().Padding(1, 2) // QR 周围留白
 )
 
-// waveCharsLen 正弦波跨多少个字符一个完整周期。值越小波越密。
-const waveCycle = 14.0
-
 // View 纯函数:QR 块固定 + 状态行(正弦波颜色扫过)+ URL + 帮助。
 // 屏幕过小(width<minWidth 或 height<minHeight)给居中提示,不堆积状态行。
 func (m model) View() tea.View {

@@ -48,7 +48,7 @@ func mapBodyCode(body []byte) error {
 	var resp neteaseCodeResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		// 不是 JSON 或没有 code 字段，视为成功（有些端点返回数组）
-		return nil
+		return nil //nolint:nilerr // 解析失败即「无业务码」,交给 MapResponse 判定
 	}
 
 	switch resp.Code {

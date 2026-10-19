@@ -90,7 +90,7 @@ func migrateLegacySession(errOut io.Writer) error {
 	oldPath, err := legacySessionPath()
 	if err != nil {
 		// 主目录都拿不到,迁移无从谈起;新路径本就无文件,按未登录处理。
-		return nil
+		return nil //nolint:nilerr // 无法迁移不是错误,见上
 	}
 	if _, err := os.Stat(oldPath); err != nil {
 		if !os.IsNotExist(err) {

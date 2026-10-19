@@ -157,7 +157,7 @@ func parseSearchSongs(raw json.RawMessage) []*mmpb.Song {
 		Album struct {
 			ID     int64  `json:"id"`
 			Name   string `json:"name"`
-			PicUrl string `json:"img1v1Url"`
+			PicURL string `json:"img1v1Url"`
 		} `json:"album"`
 		Duration int64 `json:"duration"`
 		Fee      int   `json:"fee"` // 0免费 1VIP 4付费专辑 8低音质免费(客户端 VIP/付费标识的数据源)
@@ -173,7 +173,7 @@ func parseSearchSongs(raw json.RawMessage) []*mmpb.Song {
 		}
 		out = append(out, &mmpb.Song{
 			Id: s.ID, Name: s.Name, Artists: artists,
-			Album:      &mmpb.Album{Id: s.Album.ID, Name: s.Album.Name, PicUrl: s.Album.PicUrl},
+			Album:      &mmpb.Album{Id: s.Album.ID, Name: s.Album.Name, PicUrl: s.Album.PicURL},
 			DurationMs: s.Duration,
 			Fee:        int32(s.Fee),
 		})
@@ -186,7 +186,7 @@ func parseSearchAlbums(raw json.RawMessage) []*mmpb.Album {
 	var albums []struct {
 		ID          int64  `json:"id"`
 		Name        string `json:"name"`
-		PicUrl      string `json:"img1v1Url"`
+		PicURL      string `json:"img1v1Url"`
 		PublishTime int64  `json:"publishTime"` // 发行时间(毫秒时间戳)
 		Artist      struct {
 			ID   int64  `json:"id"`
@@ -204,7 +204,7 @@ func parseSearchAlbums(raw json.RawMessage) []*mmpb.Album {
 			publishTime = time.UnixMilli(a.PublishTime).Format("2006-01-02")
 		}
 		out = append(out, &mmpb.Album{
-			Id: a.ID, Name: a.Name, PicUrl: a.PicUrl, PublishTime: publishTime,
+			Id: a.ID, Name: a.Name, PicUrl: a.PicURL, PublishTime: publishTime,
 			Artist: &mmpb.Artist{Id: a.Artist.ID, Name: a.Artist.Name},
 		})
 	}
@@ -216,7 +216,7 @@ func parseSearchArtists(raw json.RawMessage) []*mmpb.Artist {
 	var artists []struct {
 		ID     int64    `json:"id"`
 		Name   string   `json:"name"`
-		PicUrl string   `json:"img1v1Url"`
+		PicURL string   `json:"img1v1Url"`
 		Alias  []string `json:"alias"`
 	}
 	if json.Unmarshal(raw, &artists) != nil {
@@ -224,7 +224,7 @@ func parseSearchArtists(raw json.RawMessage) []*mmpb.Artist {
 	}
 	out := make([]*mmpb.Artist, 0, len(artists))
 	for _, a := range artists {
-		out = append(out, &mmpb.Artist{Id: a.ID, Name: a.Name, PicUrl: a.PicUrl, Alias: a.Alias})
+		out = append(out, &mmpb.Artist{Id: a.ID, Name: a.Name, PicUrl: a.PicURL, Alias: a.Alias})
 	}
 	return out
 }
@@ -234,7 +234,7 @@ func parseSearchPlaylists(raw json.RawMessage) []*mmpb.SearchPlaylist {
 	var pls []struct {
 		ID          int64  `json:"id"`
 		Name        string `json:"name"`
-		CoverImgUrl string `json:"coverImgUrl"`
+		CoverImgURL string `json:"coverImgUrl"`
 		PlayCount   int64  `json:"playCount"`
 		TrackCount  int    `json:"trackCount"`
 		Creator     struct {
@@ -247,7 +247,7 @@ func parseSearchPlaylists(raw json.RawMessage) []*mmpb.SearchPlaylist {
 	out := make([]*mmpb.SearchPlaylist, 0, len(pls))
 	for _, p := range pls {
 		out = append(out, &mmpb.SearchPlaylist{
-			Id: p.ID, Name: p.Name, CoverUrl: p.CoverImgUrl,
+			Id: p.ID, Name: p.Name, CoverUrl: p.CoverImgURL,
 			PlayCount: p.PlayCount, TrackCount: int32(p.TrackCount),
 			Creator: p.Creator.Nickname,
 		})

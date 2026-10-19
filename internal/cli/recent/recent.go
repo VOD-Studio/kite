@@ -30,7 +30,7 @@ func NewCommand(k *kit.Kit) *cobra.Command {
 数据来自本地召回池(播放/下载/搜索自动累积,红心/歌单后台同步),
 不触发网络请求。空召回池(新用户)输出为空。`,
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return run(k, limit)
 		},
 	}

@@ -348,7 +348,7 @@ func TestRunPlaylistDownload_VIPNoSourceDoesNotThrottle(t *testing.T) {
 		func(context.Context, int64, int) (*mmpb.SongURL, error) {
 			return &mmpb.SongURL{Url: ""}, nil // VIP 无音源(非网络失败)
 		},
-		func(_ context.Context, song *mmpb.Song, _ *mmpb.SongURL, _ songdl.Options) songdl.Outcome {
+		func(_ context.Context, _ *mmpb.Song, _ *mmpb.SongURL, _ songdl.Options) songdl.Outcome {
 			return songdl.Outcome{Status: songdl.StatusSuccess}
 		},
 	)

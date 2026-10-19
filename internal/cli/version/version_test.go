@@ -68,7 +68,7 @@ func TestLoadVersion_ShortCommitNotTruncated(t *testing.T) {
 }
 
 func TestVersionString_WithVCS(t *testing.T) {
-	v := VersionInfo{
+	v := Info{
 		Version:   "v0.1.0",
 		Commit:    "a1f961a",
 		BuildTime: "2026-07-24T10:00:00Z",
@@ -82,7 +82,7 @@ func TestVersionString_WithVCS(t *testing.T) {
 }
 
 func TestVersionString_NoVCS(t *testing.T) {
-	v := VersionInfo{Version: "(devel)", GoVersion: "go1.25.6"}
+	v := Info{Version: "(devel)", GoVersion: "go1.25.6"}
 	s := v.String()
 	require.Contains(t, s, "(devel)")
 	require.Contains(t, s, "no vcs info")
@@ -90,12 +90,12 @@ func TestVersionString_NoVCS(t *testing.T) {
 }
 
 func TestVersionString_DirtyFlag(t *testing.T) {
-	v := VersionInfo{Version: "v0.1.0", Commit: "a1f961a", BuildTime: "2026-07-24", Modified: true}
+	v := Info{Version: "v0.1.0", Commit: "a1f961a", BuildTime: "2026-07-24", Modified: true}
 	require.Contains(t, v.String(), "dirty")
 }
 
 func TestVersionJSON_AllFields(t *testing.T) {
-	v := VersionInfo{
+	v := Info{
 		Version:   "v0.1.0",
 		Commit:    "a1f961a",
 		BuildTime: "2026-07-24T10:00:00Z",
@@ -104,14 +104,14 @@ func TestVersionJSON_AllFields(t *testing.T) {
 	}
 	out, err := v.JSONString()
 	require.NoError(t, err)
-	var got VersionInfo
+	var got Info
 	require.NoError(t, json.Unmarshal([]byte(out), &got))
 	require.Equal(t, v, got, "JSON 往返应一致")
 }
 
 func TestVersionJSON_OmitsEmptyFields(t *testing.T) {
 	// 无 vcs 信息时 commit/build_time/modified 应 omitempty 不出现。
-	v := VersionInfo{Version: "(devel)", GoVersion: "go1.25.6"}
+	v := Info{Version: "(devel)", GoVersion: "go1.25.6"}
 	out, _ := v.JSONString()
 	require.NotContains(t, out, "commit", "空 commit 应 omitempty")
 	require.NotContains(t, out, "build_time")
@@ -120,7 +120,7 @@ func TestVersionJSON_OmitsEmptyFields(t *testing.T) {
 
 // handleVersion 是 root-level 行为,通过 os.Args 注入测试。但 handleVersion 直接
 // os.Exit,不便单测——它的核心逻辑(扫 flag + 按 JSON 渲染)由 LoadVersion/
-// VersionInfo.String/JSONString 覆盖,handleVersion 本身是薄胶水层(扫 argv)。
+// Info.String/JSONString 覆盖,handleVersion 本身是薄胶水层(扫 argv)。
 // 这里仅验证 flag 扫描不误判子命令的 --version。
 func TestHandleVersion_NotTriggeredBySubcommandArg(t *testing.T) {
 	// 间接验证:song 子命令的 --id(非 version flag)不应让 handleVersion 触发。

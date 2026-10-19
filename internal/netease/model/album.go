@@ -26,7 +26,7 @@ type rawAlbumDetail struct {
 	Album struct {
 		ID          int64       `json:"id"`          // 专辑ID
 		Name        string      `json:"name"`        // 专辑名
-		PicUrl      string      `json:"picUrl"`      // 封面URL
+		PicURL      string      `json:"picUrl"`      // 封面URL
 		PublishTime int64       `json:"publishTime"` // 发行时间(毫秒级 Unix 时间戳;曾误声明为 string,真实响应一解析就报错)
 		Artists     []rawArtist `json:"artists"`     // 歌手数组
 	} `json:"album"` // 专辑信息
@@ -82,7 +82,7 @@ func DecodeAlbumDetail(raw json.RawMessage) (*mmpb.Album, []*mmpb.Song, error) {
 	album := &mmpb.Album{
 		Id:          a.ID,
 		Name:        a.Name,
-		PicUrl:      a.PicUrl,
+		PicUrl:      a.PicURL,
 		PublishTime: formatPublishTime(a.PublishTime),
 		Artist:      albumArtist,
 	}

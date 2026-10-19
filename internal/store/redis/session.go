@@ -52,7 +52,7 @@ var _ session.SessionStore = (*SessionStore)(nil)
 //
 // 地基阶段 AuthAnonymous 和 AuthLoggedIn 共用同一 cookie 池（网易云匿名接口用任意
 // 登录态 cookie 即可），后续 AuthRequirement 可驱动不同池。
-func (s *SessionStore) GetAvailable(ctx context.Context, req session.AuthRequirement) (*session.Session, error) {
+func (s *SessionStore) GetAvailable(ctx context.Context, _ session.AuthRequirement) (*session.Session, error) {
 	userIDs, err := s.ListAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("列出 session 失败: %w", err)
@@ -80,7 +80,7 @@ func (s *SessionStore) GetAvailable(ctx context.Context, req session.AuthRequire
 	}
 
 	// round-robin 选取。
-	idx := int(s.counter.Add(1)-1) % len(available)
+	idx := (s.counter.Add(1) - 1) % uint64(len(available))
 	selected := available[idx]
 
 	cookie, err := s.rdb.Get(ctx, sessionKeyPrefix+selected).Result()

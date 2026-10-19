@@ -125,7 +125,7 @@ func probeCompletionInstalled(shell string) (path string, ok bool) {
 		return "", false
 	}
 	for _, p := range candidates {
-		if info, err := os.Stat(p); err == nil && !info.IsDir() {
+		if info, err := os.Stat(p); err == nil && !info.IsDir() { //nolint:gosec // 候选路径是固定的补全安装位置,只做存在性检查
 			return p, true
 		}
 	}

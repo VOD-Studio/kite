@@ -43,7 +43,7 @@ func newPlaylists(k *kit.Kit) *cobra.Command {
 		Use:   "playlists",
 		Short: "推荐歌单",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, recommendendpoint.RecommendPlaylists, &mmpb.RecommendPlaylistsRequest{Limit: int32(limit)})
 		},
 	}
@@ -57,7 +57,7 @@ func newNewSongs(k *kit.Kit) *cobra.Command {
 		Use:   "new-songs",
 		Short: "推荐新歌",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, recommendendpoint.RecommendNewSongs, &mmpb.RecommendNewSongsRequest{Limit: int32(limit)})
 		},
 	}
@@ -70,7 +70,7 @@ func newDailyPlaylists(k *kit.Kit) *cobra.Command {
 		Use:   "daily-playlists",
 		Short: "每日推荐歌单(登录态)",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := k.RequireLogin(); err != nil {
 				return err
 			}
@@ -84,7 +84,7 @@ func newDailySongs(k *kit.Kit) *cobra.Command {
 		Use:   "daily-songs",
 		Short: "每日推荐歌曲",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return kit.RenderExec(k, recommendendpoint.GetDailyRecommend, &mmpb.GetDailyRecommendRequest{})
 		},
 	}
