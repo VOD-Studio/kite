@@ -42,6 +42,7 @@ cmd/*
 - **共享边界是 engine + endpoint,不是 service。** 三个前端都消费 endpoint 声明;执行语义只在 `engine.Execute` / `engine.ExecuteWithCookie` 定义,**调用方不得拷贝**。决策与取舍见 [ADR](docs/adr/shared-boundary-engine.md)。
 - **`internal/service` 是 gRPC adapter**:方法恒一行调 engine,不放业务逻辑,不被 CLI / TUI 引用。
 - **CLI 与 TUI 平行不耦合**:两者共用的东西必须先提到 CLI 之外(如 `localstate`、`recall`),再各自引用。禁止 `tui → cli`。
+- **`internal/cli/mcp`(`kite mcp`)只暴露只读工具**:与 CLI 一样直连 engine + endpoint;不得绑定写类 / 登录类 endpoint,工具表与 `docs/mcp.md` 一致。由 `internal/cli/mcp/server_test.go` 守护。
 - **`internal/cli/kit` 只做 CLI 呈现**:渲染、进度、Kit 装配。与前端无关的东西(文件路径、会话、配置、召回池)不要放进来。
 - **proto 是 RPC 契约的唯一真相**(`proto/netease/music/v1/`)。改 RPC 先改 proto 再 `make proto`;不要手写与 proto 冲突的类型。
 - **proto ↔ CLI 一一对应由 `internal/cli/rpc_guard_test.go` 守护**:新增 rpc 要么接 CLI 命令,要么在 `rpcsWithoutCliAllowlist` 登记理由。

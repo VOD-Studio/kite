@@ -17,6 +17,7 @@ import (
 	"github.com/VOD-Studio/kite/internal/cli/config"
 	"github.com/VOD-Studio/kite/internal/cli/fm"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/cli/mcp"
 	"github.com/VOD-Studio/kite/internal/cli/playlist"
 	"github.com/VOD-Studio/kite/internal/cli/recent"
 	"github.com/VOD-Studio/kite/internal/cli/recommend"
@@ -183,6 +184,9 @@ func NewRootCommand() *cobra.Command {
 	installCompCmd := newInstallCompletionCommand()
 	installCompCmd.GroupID = "tools"
 	root.AddCommand(installCompCmd)
+	mcpCmd := mcp.NewCommand(k)
+	mcpCmd.GroupID = "tools"
+	root.AddCommand(mcpCmd)
 	for _, c := range root.Commands() {
 		if c.Name() == "completion" || c.Name() == "help" {
 			c.GroupID = "tools"

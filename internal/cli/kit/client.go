@@ -72,6 +72,9 @@ func New() *Kit {
 	}
 }
 
+// Engine 返回 Kit 持有的 engine(已应用 --proxy 等配置),供不经 Render 的 CLI 子命令(如 kite mcp)直接执行 endpoint。
+func (k *Kit) Engine() *engine.Engine { return k.eng }
+
 // UseProxy 注入显式代理:engine 的 API 路径与下载路径同时生效(PRD-0018 的
 // 双路径不变式)。source 记录来源供 doctor 展示。调用方(root)已保证
 // flag > config 解析出唯一 URL——决策单一来源。
