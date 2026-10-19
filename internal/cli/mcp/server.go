@@ -9,6 +9,7 @@ package mcp
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -63,6 +64,11 @@ func readTool[In any, Req proto.Message, Resp proto.Message](
 		add: func(s *mcp.Server, d Deps) {
 			mcp.AddTool(s, &mcp.Tool{Name: name, Description: desc, Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 				func(ctx context.Context, _ *mcp.CallToolRequest, in In) (*mcp.CallToolResult, any, error) {
+					if v, ok := any(in).(validator); ok {
+						if err := v.validate(); err != nil {
+							return nil, nil, err
+						}
+					}
 					resp, err := engine.ExecuteWithCookie(d.Engine, engine.WithCookie(ctx, d.Cookie()), ep, build(in))
 					if err != nil {
 						return nil, nil, err
@@ -77,11 +83,14 @@ func readTool[In any, Req proto.Message, Resp proto.Message](
 	}
 }
 
+// validator 由需要校验取值的参数实现;返回的错误作为工具错误交给 AI,而不是悄悄换成默认值。
+type validator interface{ validate() error }
+
 // 工具参数。没有 omitempty 的字段是必填。
 type (
 	searchIn struct {
 		Keyword string `json:"keyword" jsonschema:"搜索关键词,如歌名、歌手名"`
-		Limit   int32  `json:"limit,omitempty" jsonschema:"返回条数,默认 30"`
+		Limit   int32  `json:"limit,omitempty" jsonschema:"返回条数,默认 10"`
 		Offset  int32  `json:"offset,omitempty" jsonschema:"分页偏移,默认 0"`
 	}
 	songIn struct {
@@ -112,6 +121,13 @@ var songLevels = map[string]mmpb.SongLevel{
 	"exhigh":   mmpb.SongLevel_SONG_LEVEL_EXHIGH,
 	"lossless": mmpb.SongLevel_SONG_LEVEL_LOSSLESS,
 	"hires":    mmpb.SongLevel_SONG_LEVEL_HRES,
+}
+
+func (in songURLIn) validate() error {
+	if _, ok := songLevels[in.Level]; in.Level != "" && !ok {
+		return fmt.Errorf("不支持的音质 %q,可选 standard / exhigh / lossless / hires", in.Level)
+	}
+	return nil
 }
 
 // tools 是全部工具。只读:新增工具只能用查询类 endpoint(server_test.go 校验)。

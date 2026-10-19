@@ -128,6 +128,11 @@ func TestTools_CallThroughEngine(t *testing.T) {
 	require.Contains(t, text(res), "https://m801.music.126.net/x.mp3")
 	require.Contains(t, lastCookie.Load(), "MUSIC_U=vip")
 
+	// 音质写错:作为工具错误告诉 AI 可选值,而不是悄悄按 standard 返回。
+	res = call("get_song_url", map[string]any{"song_id": 186016, "level": "flac"})
+	require.True(t, res.IsError)
+	require.Contains(t, text(res), "不支持的音质")
+
 	// 上游报未登录:作为工具错误返回给 AI(而不是协议错误),消息可读。
 	cookie = ""
 	res = call("daily_recommend", nil)
