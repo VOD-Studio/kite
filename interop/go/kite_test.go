@@ -43,4 +43,8 @@ func TestReasonOfNonKiteError(t *testing.T) {
 	if got := Reason(errors.New("plain")); got != "" {
 		t.Fatalf("非 kite 错误应返回空串,实际 %q", got)
 	}
+	// 成功路径:调用成功时 err 为 nil,Reason 必须返回空串而不是 panic(DailySongs 先调 Reason 再判 err)。
+	if got := Reason(nil); got != "" {
+		t.Fatalf("nil 错误应返回空串,实际 %q", got)
+	}
 }
