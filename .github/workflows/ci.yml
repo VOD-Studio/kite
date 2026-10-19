@@ -208,6 +208,17 @@ jobs:
           restore-keys: rust-interop-${{ runner.os }}-
       - run: make interop-rust
 
+  # Go 互操作冒烟:用 BSR 上生成的 SDK(接入方的真实路径)对真实运行的 kite-server
+  # 编译 / 运行 docs/integration.md 的 Go 示例。不访问上游网易云。
+  go-interop:
+    name: Go Interop
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: make interop-go
+
   # 发布配置的合并前校验:goreleaser 配置错误、跨平台构建失败原本要到打 tag 才暴露。
   # 跳过 docker / 签名 / 发布(需要 buildx、OIDC 与 registry 凭据);镜像构建由 Docker Build job 覆盖。
   release-check:
@@ -263,7 +274,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [hygiene, lint, test, cross-build, proto, vuln, docker, rust-interop, release-check, pr-title]
+    needs: [hygiene, lint, test, cross-build, proto, vuln, docker, rust-interop, go-interop, release-check, pr-title]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
