@@ -144,17 +144,16 @@ func NewLoginRefreshCommand(k *kit.Kit) *cobra.Command {
 			if sess.Cookie == "" {
 				return fmt.Errorf("没有本地会话:先运行 kite login")
 			}
-			ctx := engine.WithCookie(context.Background(), sess.Cookie)
-			_, setCookie, err := k.RawDo(ctx, authendpoint.RefreshLogin, authendpoint.RefreshLoginRequest(nil))
+			cookie, renewed, err := authendpoint.Refresh(engine.WithCookie(context.Background(), sess.Cookie), k.RawDo)
 			if err != nil {
 				return err
 			}
-			sess.Cookie = engine.MergeCookies(sess.Cookie, setCookie)
+			sess.Cookie = cookie
 			sess.SavedAt = time.Now().Format(time.RFC3339)
 			if err := k.SaveSession(sess); err != nil {
 				return fmt.Errorf("刷新成功但保存会话失败: %w", err)
 			}
-			if setCookie == "" {
+			if !renewed {
 				fmt.Println("登录态有效,上游未下发新 cookie")
 			} else {
 				fmt.Println("登录态已刷新")

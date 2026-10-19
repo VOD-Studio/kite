@@ -130,12 +130,12 @@ func (s *AuthServer) Logout(ctx context.Context, req *mmpb.LogoutRequest) (*mmpb
 // RefreshLogin 刷新登录态,返回合并了上游新下发值的完整 cookie。
 //
 // 响应体不含用户信息,拿不到 UserID,所以不写 session 池;cookie 由调用方保存(与登录接口一致)。
-func (s *AuthServer) RefreshLogin(ctx context.Context, req *mmpb.RefreshLoginRequest) (*mmpb.RefreshLoginResponse, error) {
-	_, setCookie, err := s.eng.RawDoWithCookieAndInput(ctx, authendpoint.RefreshLogin, authendpoint.RefreshLoginRequest(req))
+func (s *AuthServer) RefreshLogin(ctx context.Context, _ *mmpb.RefreshLoginRequest) (*mmpb.RefreshLoginResponse, error) {
+	cookie, _, err := authendpoint.Refresh(ctx, s.eng.RawDoWithCookieAndInput)
 	if err != nil {
 		return nil, err
 	}
-	return &mmpb.RefreshLoginResponse{Cookie: engine.MergeCookies(engine.CookieFromContext(ctx), setCookie)}, nil
+	return &mmpb.RefreshLoginResponse{Cookie: cookie}, nil
 }
 
 // saveSession 把登录态 cookie 存入 session 池（UserID 用数字转字符串）。
