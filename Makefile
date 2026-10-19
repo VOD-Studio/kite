@@ -69,7 +69,7 @@ vet:
 test:
 	go test -race -coverprofile=coverage.out -covermode=atomic ./...
 
-## lint: golangci-lint(本地全量;CI 用 only-new-issues 只报新增)
+## lint: golangci-lint 全量检查(与 CI 一致)
 lint:
 	@command -v $(GOLANGCI_LINT) >/dev/null 2>&1 || { \
 		echo "✗ 未找到 golangci-lint,跑 'make install-tools' 安装"; exit 1; }
