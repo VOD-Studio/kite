@@ -39,6 +39,11 @@ var (
 	Logout = engine.Meta{
 		Path: "/weapi/logout", Method: "POST", Crypto: engine.CryptoWeAPI, Auth: session.AuthAnonymous,
 	}
+	// RefreshLogin 刷新登录态:新的 MUSIC_U 等经 Set-Cookie 下发(只有 weapi 回传 Set-Cookie);
+	// cookie 失效时上游返回 code=301(映射为未授权)。
+	RefreshLogin = engine.Meta{
+		Path: "/weapi/login/token/refresh", Method: "POST", Crypto: engine.CryptoWeAPI, Auth: session.AuthAnonymous,
+	}
 )
 
 // MapRequest 集合：各 auth 接口的入参构造。
@@ -76,6 +81,11 @@ func LoginStatusRequest(_ *mmpb.LoginStatusRequest) map[string]any {
 
 // LogoutRequest 构造登出入参。
 func LogoutRequest(_ *mmpb.LogoutRequest) map[string]any {
+	return map[string]any{}
+}
+
+// RefreshLoginRequest 构造刷新登录态入参(无业务参数,凭据只在 cookie 里)。
+func RefreshLoginRequest(_ *mmpb.RefreshLoginRequest) map[string]any {
 	return map[string]any{}
 }
 

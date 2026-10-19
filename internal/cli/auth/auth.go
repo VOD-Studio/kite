@@ -4,7 +4,9 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"time"
 
@@ -122,6 +124,41 @@ func NewLogoutCommand(k *kit.Kit) *cobra.Command {
 				fmt.Fprintf(os.Stderr, "删除本地会话失败: %v\n", err)
 			}
 			fmt.Println("已登出,本地会话已清除")
+			return nil
+		},
+	}
+}
+
+// NewLoginRefreshCommand 刷新登录态,把续期后的 cookie 写回本地会话文件。
+// 只刷新会话文件里的登录态;NETEASE_COOKIE 环境变量的 cookie 由调用方自己保存,不在此处理。
+func NewLoginRefreshCommand(k *kit.Kit) *cobra.Command {
+	return &cobra.Command{
+		Use:   "login-refresh",
+		Short: "刷新登录态,延长本地会话的有效期",
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			sess, err := k.LoadSession()
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			if sess.Cookie == "" {
+				return fmt.Errorf("没有本地会话:先运行 kite login")
+			}
+			ctx := engine.WithCookie(context.Background(), sess.Cookie)
+			_, setCookie, err := k.RawDo(ctx, authendpoint.RefreshLogin, authendpoint.RefreshLoginRequest(nil))
+			if err != nil {
+				return err
+			}
+			sess.Cookie = engine.MergeCookies(sess.Cookie, setCookie)
+			sess.SavedAt = time.Now().Format(time.RFC3339)
+			if err := k.SaveSession(sess); err != nil {
+				return fmt.Errorf("刷新成功但保存会话失败: %w", err)
+			}
+			if setCookie == "" {
+				fmt.Println("登录态有效,上游未下发新 cookie")
+			} else {
+				fmt.Println("登录态已刷新")
+			}
 			return nil
 		},
 	}
