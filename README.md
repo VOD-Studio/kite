@@ -1,8 +1,14 @@
 # kite
 
-Go 实现的网易云能力服务 + 命令行工具。
+Go 实现的网易云能力服务 + 命令行工具 + MCP 服务。
 
-两个产物共享同一套网易云核心(`internal/netease/`):一个 gRPC + grpc-gateway 服务,一个直连 engine 的 CLI。
+三种用法共享同一套网易云核心(`internal/netease/`):
+
+- **在你的项目里调用**:gRPC + REST 服务 `kite-server`,见 [接入指南](docs/integration.md)。
+- **在终端里用**:命令行工具 `kite`,见 [使用手册](docs/kite-guide.md)。
+- **在 AI 客户端里用**:`kite mcp` 把只读接口暴露给 Claude / Cursor 等,见 [MCP](docs/mcp.md)。
+
+给 AI 工具的项目索引见 [`llms.txt`](llms.txt)。
 
 ## 产物
 
@@ -17,8 +23,11 @@ gRPC(强类型 RPC,默认 `127.0.0.1:3722`)+ grpc-gateway(REST 暴露,默认 `12
 ```bash
 go run ./cmd/server      # 直接运行(仅本机可访问,无需令牌)
 air                      # 热重载开发(.air.toml)
-docker build -t kite .   # 容器镜像(仅 Dockerfile,无 compose);运行时必须设置 KITE_SERVER_AUTH_TOKEN
+docker build -t kite .   # 本地构建镜像(仅 Dockerfile,无 compose);运行时必须设置 KITE_SERVER_AUTH_TOKEN
 ```
+
+发布的镜像是公开的:`ghcr.io/vod-studio/kite-server:<版本>`(运行方式见 [服务部署与访问控制](docs/server-security.md))。
+调用方怎么带令牌、网易云 cookie 怎么传与续期、错误怎么分支,见 [接入指南](docs/integration.md)。
 
 ```bash
 curl localhost:3721/healthz
@@ -37,6 +46,14 @@ kite song download 347230 --level 3   # 下载单曲(1标准 2较高 3无损 4Hi
 ```
 
 上手流程见 [使用手册](docs/kite-guide.md);全命令参数查 `kite <命令> --help` 或 [生成参考](docs/cmd/)。
+
+### MCP(`kite mcp`)
+
+以 stdio MCP 服务运行,让 AI 客户端调用搜索、歌词、播放链接、歌单 / 专辑 / 歌手、热搜、每日推荐等**只读**工具。在本机运行,用本机的 `kite login` 登录态,不经过任何第三方服务器。
+
+```bash
+claude mcp add kite -- kite mcp    # Claude Code;Claude Desktop / Cursor 的配置见 docs/mcp.md
+```
 
 ## 架构
 
@@ -80,6 +97,9 @@ Go 版本以 `go.mod` 为准。若环境缺 Go,`make` 无提示直接失败。
 
 ## 文档
 
+- [接入指南](docs/integration.md) —— 在你的项目里调用 kite-server(接口清单、令牌、cookie、续期、Go 示例)
+- [MCP](docs/mcp.md) —— 在 Claude / Cursor 等 AI 客户端里使用 kite
+- [错误契约](docs/grpc-errors.md) · [服务部署与访问控制](docs/server-security.md) · [生产部署](docs/deploy.md)
 - [使用手册](docs/kite-guide.md) —— 上手流程(安装 / 登录 / 常用操作)
 - [CLI 设计](docs/kite-cli-design.md) —— 架构决策与输出层设计
 - [功能路线图](docs/kite-roadmap.md) —— 各 Phase 状态与规划

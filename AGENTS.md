@@ -65,6 +65,7 @@ cmd/*
 - **`make docs`** —— 改命令树后刷新 `docs/cmd/`。`TestDocsFreshness` 依赖它,不跑会红。
 - **`make upstream-smoke`** —— 真实上游冒烟(需要外网,手动运行,不进 CI):对网易云真实接口逐个调用服务端 RPC,断言响应非空。**改了 endpoint 路径 / 解码器后必跑**——单元测试的夹具与解码器出自同一个假设,上游改了路径 / 字段名 / 类型都发现不了。
 - **`make interop-rust`** —— Rust 客户端互操作冒烟(需要 `cargo`,较慢,CI 的 `Rust Interop` job 跑它)。改 proto、鉴权或错误契约后建议本地跑一次。
+- **`make interop-go`** —— Go 互操作冒烟(需要访问 buf.build,CI 的 `Go Interop` job 跑它):用 BSR 上生成的 SDK 对真实 kite-server 运行 `docs/integration.md` 的示例。示例与 `interop/go/kite.go` 逐字一致(测试守护),改示例先改文档再同步。
 - **`make clean`** —— 清本地构建产物(`tmp/`、`bin/`)。不清 `gen/`。
 
 ```bash
@@ -84,6 +85,7 @@ CI 的约定(唯一门禁 `CI OK`、工具版本来源、发布流程)见 [`CONT
 ## 文档
 
 - **`docs/cmd/` 是生成物,不要手改**,改命令树后跑 `make docs`。命令语法唯一真相是 `kite <命令> --help`;其它文档指向 `--help` 或生成参考,**不要复制命令手册**(复制即第二份真相)。
+- 接入方(其它项目 / AI 工具):[`docs/integration.md`](docs/integration.md) · [`docs/mcp.md`](docs/mcp.md) · [`llms.txt`](llms.txt)(链接由测试校验存在)
 - 上手:[`docs/kite-guide.md`](docs/kite-guide.md) · CLI 设计:[`docs/kite-cli-design.md`](docs/kite-cli-design.md) · 路线图:[`docs/kite-roadmap.md`](docs/kite-roadmap.md)
 - 对外契约:[`docs/grpc-errors.md`](docs/grpc-errors.md)(gRPC/REST 错误映射;改 `internal/server/errors.go` 的 reason 必须同步)· [`docs/server-security.md`](docs/server-security.md)(监听地址 / 访问令牌 / 健康检查;改 `internal/server/auth.go` 或 `config` 的 `KITE_SERVER_*` 必须同步) · [`docs/deploy.md`](docs/deploy.md)(生产部署链路;改 `scripts/deploy-*.sh` 后须在服务器重跑安装脚本)
 - 领域术语与决策索引:[`CONTEXT.md`](CONTEXT.md) · ADR:[`docs/adr/`](docs/adr/) · PRD:[`docs/prd/`](docs/prd/)

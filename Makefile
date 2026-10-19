@@ -1,5 +1,5 @@
 .PHONY: all help install-tools install-cli fmt fmt-check tidy-check vet test lint vuln build build-server \
-        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust upstream-smoke check ci-env clean
+        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust interop-go upstream-smoke check ci-env clean
 
 # 工具探测:优先 PATH,回退 $GOPATH/bin(GOBIN 也在 PATH 时无所谓)
 BUF           ?= $(shell command -v buf 2>/dev/null           || echo $$(go env GOPATH)/bin/buf)
@@ -139,6 +139,10 @@ upstream-smoke:
 ## 需要 cargo(工具链由 interop/rust/rust-toolchain.toml 固定);较慢,不在 make check 里。
 interop-rust:
 	BUF=$(BUF) scripts/rust-interop.sh
+
+## interop-go: Go 互操作冒烟——用 BSR 上生成的 SDK 对真实运行的 kite-server 跑 docs/integration.md 的示例(需要访问 buf.build)
+interop-go:
+	scripts/go-interop.sh
 
 ## scripts-check: scripts/*.sh 的 shellcheck 与单元测试(release PR 的 CI 保障逻辑等)
 scripts-check:
