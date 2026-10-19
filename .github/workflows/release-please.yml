@@ -94,3 +94,15 @@ jobs:
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
     secrets: inherit
+
+  # release 成功后把新镜像部署到生产服务器(与 bsr 并行,互不影响)。未配置部署 secret 时只给提示、跳过。
+  deploy:
+    needs: [release-please, release]
+    if: needs.release-please.outputs.release_created == 'true'
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/deploy.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets: inherit

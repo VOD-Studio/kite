@@ -144,6 +144,8 @@ interop-rust:
 scripts-check:
 	@if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh; else echo "(未安装 shellcheck,跳过静态检查)"; fi
 	scripts/release-pr-ci_test.sh
+	scripts/deploy-server_test.sh
+	scripts/pick-runner_test.sh
 
 ## check: push 前一键自检(镜像 CI 的主要检查;vuln / verify-gen 依赖网络,按需单独跑)
 check: fmt-check tidy-check scripts-check vet test lint proto-lint
