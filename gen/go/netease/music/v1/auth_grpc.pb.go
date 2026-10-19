@@ -25,6 +25,7 @@ const (
 	AuthService_CheckQrcode_FullMethodName      = "/netease.music.v1.AuthService/CheckQrcode"
 	AuthService_LoginStatus_FullMethodName      = "/netease.music.v1.AuthService/LoginStatus"
 	AuthService_Logout_FullMethodName           = "/netease.music.v1.AuthService/Logout"
+	AuthService_RefreshLogin_FullMethodName     = "/netease.music.v1.AuthService/RefreshLogin"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -45,6 +46,9 @@ type AuthServiceClient interface {
 	LoginStatus(ctx context.Context, in *LoginStatusRequest, opts ...grpc.CallOption) (*LoginStatusResponse, error)
 	// Logout 登出当前会话。
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
+	// RefreshLogin 刷新登录态,延长 cookie 的有效期。
+	// cookie 已失效时返回 LOGIN_REQUIRED,调用方应引导重新登录。
+	RefreshLogin(ctx context.Context, in *RefreshLoginRequest, opts ...grpc.CallOption) (*RefreshLoginResponse, error)
 }
 
 type authServiceClient struct {
@@ -115,6 +119,16 @@ func (c *authServiceClient) Logout(ctx context.Context, in *LogoutRequest, opts 
 	return out, nil
 }
 
+func (c *authServiceClient) RefreshLogin(ctx context.Context, in *RefreshLoginRequest, opts ...grpc.CallOption) (*RefreshLoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RefreshLoginResponse)
+	err := c.cc.Invoke(ctx, AuthService_RefreshLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations should embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -133,6 +147,9 @@ type AuthServiceServer interface {
 	LoginStatus(context.Context, *LoginStatusRequest) (*LoginStatusResponse, error)
 	// Logout 登出当前会话。
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
+	// RefreshLogin 刷新登录态,延长 cookie 的有效期。
+	// cookie 已失效时返回 LOGIN_REQUIRED,调用方应引导重新登录。
+	RefreshLogin(context.Context, *RefreshLoginRequest) (*RefreshLoginResponse, error)
 }
 
 // UnimplementedAuthServiceServer should be embedded to have
@@ -159,6 +176,9 @@ func (UnimplementedAuthServiceServer) LoginStatus(context.Context, *LoginStatusR
 }
 func (UnimplementedAuthServiceServer) Logout(context.Context, *LogoutRequest) (*LogoutResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Logout not implemented")
+}
+func (UnimplementedAuthServiceServer) RefreshLogin(context.Context, *RefreshLoginRequest) (*RefreshLoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RefreshLogin not implemented")
 }
 func (UnimplementedAuthServiceServer) testEmbeddedByValue() {}
 
@@ -288,6 +308,24 @@ func _AuthService_Logout_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_RefreshLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RefreshLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).RefreshLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_RefreshLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).RefreshLogin(ctx, req.(*RefreshLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -318,6 +356,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Logout",
 			Handler:    _AuthService_Logout_Handler,
+		},
+		{
+			MethodName: "RefreshLogin",
+			Handler:    _AuthService_RefreshLogin_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

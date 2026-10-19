@@ -930,6 +930,39 @@
         ]
       }
     },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "summary": "RefreshLogin 刷新登录态,延长 cookie 的有效期。\ncookie 已失效时返回 LOGIN_REQUIRED,调用方应引导重新登录。",
+        "operationId": "AuthService_RefreshLogin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RefreshLoginResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RefreshLoginRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
     "/api/v1/auth/status": {
       "get": {
         "summary": "LoginStatus 查询当前登录态。",
@@ -2407,7 +2440,7 @@
     },
     "/api/v1/songs/{songId}/url": {
       "get": {
-        "summary": "GetSongURL 获取歌曲播放直链。level 控制音质。",
+        "summary": "GetSongURL 获取歌曲播放直链。level 控制音质。\n可选登录:不带 cookie 按匿名取(VIP / 版权受限的歌 url 为空);\n经 metadata x-netease-cookie 带了 cookie 就按该账号的权益取。",
         "operationId": "SongService_GetSongURL",
         "responses": {
           "200": {
@@ -4172,6 +4205,20 @@
         }
       },
       "title": "Record 响应。"
+    },
+    "v1RefreshLoginRequest": {
+      "type": "object",
+      "title": "RefreshLogin 请求(cookie 经 metadata \"x-netease-cookie\" 传入,不在此 message)。"
+    },
+    "v1RefreshLoginResponse": {
+      "type": "object",
+      "properties": {
+        "cookie": {
+          "type": "string",
+          "title": "刷新后的完整 cookie:传入的 cookie 中被上游重新下发的项已替换为新值。\n调用方应用它替换保存的旧 cookie;上游没有下发新值时与传入的相同。"
+        }
+      },
+      "title": "RefreshLogin 响应。"
     },
     "v1RelatedPlaylistRecommendResponse": {
       "type": "object",

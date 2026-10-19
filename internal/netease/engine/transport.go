@@ -241,3 +241,46 @@ func extractCookies(resp *http.Response) string {
 	}
 	return strings.Join(parts, "; ")
 }
+
+// MergeCookies 把上游下发的新 cookie(update,extractCookies 的输出格式)合并进已有 cookie(base):
+// 同名项替换为新值并保留原位置,新出现的项追加在末尾。update 为空时原样返回 base。
+//
+// 刷新登录态时上游只下发变化的项(如 MUSIC_U),调用方需要的是能继续使用的完整 cookie。
+func MergeCookies(base, update string) string {
+	if update == "" {
+		return base
+	}
+	type item struct{ name, value string }
+	parse := func(s string) []item {
+		var out []item
+		for _, part := range strings.Split(s, ";") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			name, value, _ := strings.Cut(part, "=")
+			out = append(out, item{name: strings.TrimSpace(name), value: value})
+		}
+		return out
+	}
+
+	merged := parse(base)
+	pos := make(map[string]int, len(merged))
+	for i, it := range merged {
+		pos[it.name] = i
+	}
+	for _, it := range parse(update) {
+		if i, ok := pos[it.name]; ok {
+			merged[i].value = it.value
+			continue
+		}
+		pos[it.name] = len(merged)
+		merged = append(merged, it)
+	}
+
+	parts := make([]string, 0, len(merged))
+	for _, it := range merged {
+		parts = append(parts, it.name+"="+it.value)
+	}
+	return strings.Join(parts, "; ")
+}

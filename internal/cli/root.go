@@ -142,7 +142,8 @@ func NewRootCommand() *cobra.Command {
 	}
 
 	for _, c := range []*cobra.Command{
-		auth.NewSendCaptchaCommand(k), // 登录辅助(验证码),归账号
+		auth.NewSendCaptchaCommand(k),  // 登录辅助(验证码),归账号
+		auth.NewLoginRefreshCommand(k), // 登录态续期,归账号
 		user.NewCommand(k),
 	} {
 		c.GroupID = "account"
@@ -189,7 +190,7 @@ func NewRootCommand() *cobra.Command {
 	}
 
 	// 顶层命令打 rpc 注解(PRD-0014 #B 命令树守护)。
-	// auth 5 命令 + 本地命令(doctor/install-completion)在此集中打标;
+	// auth 6 命令 + 本地命令(doctor/install-completion)在此集中打标;
 	// login 消费 LoginQrcode(取 key)+ CheckQrcode(轮询);recent/version/completion/
 	// help 由各自包或 cobra 生成,这里只处理未打标的顶层命令。
 	for _, c := range root.Commands() {
@@ -204,6 +205,8 @@ func NewRootCommand() *cobra.Command {
 			kit.AnnotateRpcs(c, "AuthService/Logout")
 		case "send-captcha":
 			kit.AnnotateRpcs(c, "AuthService/SendCaptcha")
+		case "login-refresh":
+			kit.AnnotateRpcs(c, "AuthService/RefreshLogin")
 		case "doctor":
 			// doctor 探活会发一次 LoginStatus,但非业务 rpc;按本地命令标空。
 			kit.AnnotateRpcs(c)

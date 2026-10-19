@@ -17,6 +17,8 @@ service SongService {
   }
 
   // GetSongURL 获取歌曲播放直链。level 控制音质。
+  // 可选登录:不带 cookie 按匿名取(VIP / 版权受限的歌 url 为空);
+  // 经 metadata x-netease-cookie 带了 cookie 就按该账号的权益取。
   rpc GetSongURL(GetSongURLRequest) returns (GetSongURLResponse) {
     option (google.api.http) = {
       get: "/api/v1/songs/{song_id}/url"

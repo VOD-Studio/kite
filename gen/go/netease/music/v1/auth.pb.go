@@ -754,6 +754,90 @@ func (*LogoutResponse) Descriptor() ([]byte, []int) {
 	return file_netease_music_v1_auth_proto_rawDescGZIP(), []int{13}
 }
 
+// RefreshLogin 请求(cookie 经 metadata "x-netease-cookie" 传入,不在此 message)。
+type RefreshLoginRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshLoginRequest) Reset() {
+	*x = RefreshLoginRequest{}
+	mi := &file_netease_music_v1_auth_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshLoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshLoginRequest) ProtoMessage() {}
+
+func (x *RefreshLoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_netease_music_v1_auth_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshLoginRequest.ProtoReflect.Descriptor instead.
+func (*RefreshLoginRequest) Descriptor() ([]byte, []int) {
+	return file_netease_music_v1_auth_proto_rawDescGZIP(), []int{14}
+}
+
+// RefreshLogin 响应。
+type RefreshLoginResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 刷新后的完整 cookie:传入的 cookie 中被上游重新下发的项已替换为新值。
+	// 调用方应用它替换保存的旧 cookie;上游没有下发新值时与传入的相同。
+	Cookie        string `protobuf:"bytes,1,opt,name=cookie,proto3" json:"cookie,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshLoginResponse) Reset() {
+	*x = RefreshLoginResponse{}
+	mi := &file_netease_music_v1_auth_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshLoginResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshLoginResponse) ProtoMessage() {}
+
+func (x *RefreshLoginResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_netease_music_v1_auth_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshLoginResponse.ProtoReflect.Descriptor instead.
+func (*RefreshLoginResponse) Descriptor() ([]byte, []int) {
+	return file_netease_music_v1_auth_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RefreshLoginResponse) GetCookie() string {
+	if x != nil {
+		return x.Cookie
+	}
+	return ""
+}
+
 var File_netease_music_v1_auth_proto protoreflect.FileDescriptor
 
 const file_netease_music_v1_auth_proto_rawDesc = "" +
@@ -790,21 +874,25 @@ const file_netease_music_v1_auth_proto_rawDesc = "" +
 	"\x13LoginStatusResponse\x123\n" +
 	"\asession\x18\x01 \x01(\v2\x19.netease.music.v1.SessionR\asession\"\x0f\n" +
 	"\rLogoutRequest\"\x10\n" +
-	"\x0eLogoutResponse*\x93\x01\n" +
+	"\x0eLogoutResponse\"\x15\n" +
+	"\x13RefreshLoginRequest\".\n" +
+	"\x14RefreshLoginResponse\x12\x16\n" +
+	"\x06cookie\x18\x01 \x01(\tR\x06cookie*\x93\x01\n" +
 	"\n" +
 	"QrcodeCode\x12\x1b\n" +
 	"\x17QRCODE_CODE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x13QRCODE_CODE_EXPIRED\x10\xa0\x06\x12\x18\n" +
 	"\x13QRCODE_CODE_WAITING\x10\xa1\x06\x12\x18\n" +
 	"\x13QRCODE_CODE_SCANNED\x10\xa2\x06\x12\x1a\n" +
-	"\x15QRCODE_CODE_CONFIRMED\x10\xa3\x062\x8a\x06\n" +
+	"\x15QRCODE_CODE_CONFIRMED\x10\xa3\x062\x8a\a\n" +
 	"\vAuthService\x12{\n" +
 	"\vSendCaptcha\x12$.netease.music.v1.SendCaptchaRequest\x1a%.netease.music.v1.SendCaptchaResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/auth/captcha\x12\x92\x01\n" +
 	"\x10LoginByCellphone\x12).netease.music.v1.LoginByCellphoneRequest\x1a*.netease.music.v1.LoginByCellphoneResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/auth/login/cellphone\x12}\n" +
 	"\vLoginQrcode\x12$.netease.music.v1.LoginQrcodeRequest\x1a%.netease.music.v1.LoginQrcodeResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/api/v1/auth/login/qrcode\x12\x83\x01\n" +
 	"\vCheckQrcode\x12$.netease.music.v1.CheckQrcodeRequest\x1a%.netease.music.v1.CheckQrcodeResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/auth/login/qrcode/check\x12w\n" +
 	"\vLoginStatus\x12$.netease.music.v1.LoginStatusRequest\x1a%.netease.music.v1.LoginStatusResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/v1/auth/status\x12k\n" +
-	"\x06Logout\x12\x1f.netease.music.v1.LogoutRequest\x1a .netease.music.v1.LogoutResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/auth/logoutB\xbf\x01\n" +
+	"\x06Logout\x12\x1f.netease.music.v1.LogoutRequest\x1a .netease.music.v1.LogoutResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/auth/logout\x12~\n" +
+	"\fRefreshLogin\x12%.netease.music.v1.RefreshLoginRequest\x1a&.netease.music.v1.RefreshLoginResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/auth/refreshB\xbf\x01\n" +
 	"\x14com.netease.music.v1B\tAuthProtoP\x01Z:github.com/VOD-Studio/kite/gen/go/netease/music/v1;musicv1\xa2\x02\x03NMX\xaa\x02\x10Netease.Music.V1\xca\x02\x10Netease\\Music\\V1\xe2\x02\x1cNetease\\Music\\V1\\GPBMetadata\xea\x02\x12Netease::Music::V1b\x06proto3"
 
 var (
@@ -820,7 +908,7 @@ func file_netease_music_v1_auth_proto_rawDescGZIP() []byte {
 }
 
 var file_netease_music_v1_auth_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_netease_music_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_netease_music_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_netease_music_v1_auth_proto_goTypes = []any{
 	(QrcodeCode)(0),                  // 0: netease.music.v1.QrcodeCode
 	(*Session)(nil),                  // 1: netease.music.v1.Session
@@ -837,6 +925,8 @@ var file_netease_music_v1_auth_proto_goTypes = []any{
 	(*LoginStatusResponse)(nil),      // 12: netease.music.v1.LoginStatusResponse
 	(*LogoutRequest)(nil),            // 13: netease.music.v1.LogoutRequest
 	(*LogoutResponse)(nil),           // 14: netease.music.v1.LogoutResponse
+	(*RefreshLoginRequest)(nil),      // 15: netease.music.v1.RefreshLoginRequest
+	(*RefreshLoginResponse)(nil),     // 16: netease.music.v1.RefreshLoginResponse
 }
 var file_netease_music_v1_auth_proto_depIdxs = []int32{
 	1,  // 0: netease.music.v1.LoginByCellphoneResponse.session:type_name -> netease.music.v1.Session
@@ -850,14 +940,16 @@ var file_netease_music_v1_auth_proto_depIdxs = []int32{
 	9,  // 8: netease.music.v1.AuthService.CheckQrcode:input_type -> netease.music.v1.CheckQrcodeRequest
 	11, // 9: netease.music.v1.AuthService.LoginStatus:input_type -> netease.music.v1.LoginStatusRequest
 	13, // 10: netease.music.v1.AuthService.Logout:input_type -> netease.music.v1.LogoutRequest
-	3,  // 11: netease.music.v1.AuthService.SendCaptcha:output_type -> netease.music.v1.SendCaptchaResponse
-	5,  // 12: netease.music.v1.AuthService.LoginByCellphone:output_type -> netease.music.v1.LoginByCellphoneResponse
-	8,  // 13: netease.music.v1.AuthService.LoginQrcode:output_type -> netease.music.v1.LoginQrcodeResponse
-	10, // 14: netease.music.v1.AuthService.CheckQrcode:output_type -> netease.music.v1.CheckQrcodeResponse
-	12, // 15: netease.music.v1.AuthService.LoginStatus:output_type -> netease.music.v1.LoginStatusResponse
-	14, // 16: netease.music.v1.AuthService.Logout:output_type -> netease.music.v1.LogoutResponse
-	11, // [11:17] is the sub-list for method output_type
-	5,  // [5:11] is the sub-list for method input_type
+	15, // 11: netease.music.v1.AuthService.RefreshLogin:input_type -> netease.music.v1.RefreshLoginRequest
+	3,  // 12: netease.music.v1.AuthService.SendCaptcha:output_type -> netease.music.v1.SendCaptchaResponse
+	5,  // 13: netease.music.v1.AuthService.LoginByCellphone:output_type -> netease.music.v1.LoginByCellphoneResponse
+	8,  // 14: netease.music.v1.AuthService.LoginQrcode:output_type -> netease.music.v1.LoginQrcodeResponse
+	10, // 15: netease.music.v1.AuthService.CheckQrcode:output_type -> netease.music.v1.CheckQrcodeResponse
+	12, // 16: netease.music.v1.AuthService.LoginStatus:output_type -> netease.music.v1.LoginStatusResponse
+	14, // 17: netease.music.v1.AuthService.Logout:output_type -> netease.music.v1.LogoutResponse
+	16, // 18: netease.music.v1.AuthService.RefreshLogin:output_type -> netease.music.v1.RefreshLoginResponse
+	12, // [12:19] is the sub-list for method output_type
+	5,  // [5:12] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -874,7 +966,7 @@ func file_netease_music_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_netease_music_v1_auth_proto_rawDesc), len(file_netease_music_v1_auth_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

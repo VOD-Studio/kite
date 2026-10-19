@@ -17,12 +17,15 @@ import (
 // 走 eapi(客户端接口)而非 weapi:2026 年网易云对 weapi 返回的 URL 做了 CDN 限制
 // (m704 等节点 jdymusic 路径链接回源鉴权 403,X-AUTH-MSG: auth failed - origin failed),
 // 网页播放器已不可用;同参数 eapi(/api/song/enhance/player/url/v1)返回的链接正常。
+//
+// 可选登录:匿名只能拿到免费歌的链接(VIP / 版权受限的歌 url 为空),
+// 调用方带了 cookie(gRPC metadata x-netease-cookie)就按该账号的权益取链接。
 var URL = &engine.Endpoint[*mmpb.GetSongURLRequest, *mmpb.GetSongURLResponse]{
 	Meta: engine.Meta{
 		Path:   "/eapi/song/enhance/player/url/v1",
 		Method: "POST",
 		Crypto: engine.CryptoEAPI,
-		Auth:   session.AuthAnonymous,
+		Auth:   session.AuthOptional,
 		// 移动端 UA:网易云按 UA 分配 CDN 节点,桌面 UA 拿到的 x04 节点链接
 		// 回源鉴权 403(m704/m804),移动端 UA 的 x01 节点(m701/m801)正常。
 		UserAgent: engine.MobileUserAgent,

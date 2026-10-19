@@ -34,7 +34,7 @@ kite login-cellphone    # 手机号 + 短信验证码(先 kite send-captcha)
 - 登录后 cookie 落本地配置目录的 `session.json`(macOS `~/Library/Application Support/kite/`、
   Linux `~/.config/kite/`、Windows `%AppData%\kite\`),后续命令自动携带。
 - 临时换号:设环境变量 `NETEASE_COOKIE`,优先级高于会话文件。
-- 查看当前登录态:`kite login-status`;登出:`kite logout`。
+- 查看当前登录态:`kite login-status`;续期登录态:`kite login-refresh`;登出:`kite logout`。
 
 ## 常用操作
 

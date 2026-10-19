@@ -164,15 +164,16 @@ func callEndpoint[Req, Resp any](e *Engine, ctx context.Context, ep *Endpoint[Re
 //     不同用户互不命中；指纹而非原始 cookie，避免凭据进入 Redis key / 日志。
 //   - 需要登录态但 ctx 没有 cookie（走 session 池）：身份在选 session 之前未知，
 //     无法安全地区分用户，直接不缓存。
+//   - 可选登录的接口：带 cookie 时同登录态（按凭据指纹隔离），不带时同匿名（共享）。
 //
 // 这样「接口作者忘了在 key 里带用户」不再可能造成跨用户串数据。
 func scopedCacheKey(ctx context.Context, auth session.AuthRequirement, base string) (string, bool) {
-	if auth != session.AuthLoggedIn {
+	if auth != session.AuthLoggedIn && auth != session.AuthOptional {
 		return base, true
 	}
 	cookie := CookieFromContext(ctx)
 	if cookie == "" {
-		return "", false
+		return base, auth == session.AuthOptional
 	}
 	sum := sha256.Sum256([]byte(cookie))
 	return base + "|u:" + hex.EncodeToString(sum[:8]), true

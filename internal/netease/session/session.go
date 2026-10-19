@@ -20,6 +20,10 @@ const (
 	AuthAnonymous AuthRequirement = iota
 	// AuthLoggedIn 用已登录 cookie 池（需登录态的接口，含健康度/权重选取）。
 	AuthLoggedIn
+	// AuthOptional 有登录态就用、没有就匿名：调用方经 ctx 带了 cookie 则携带，否则按匿名请求。
+	// 用于结果随账号变化、但匿名也有意义的接口（如播放直链：VIP 账号拿完整音源，匿名只有免费歌）。
+	// 不取会话池——池的账号选取与按账号隔离缓存在接入会话池时再定。
+	AuthOptional
 )
 
 // Session 是一个登录态凭证。

@@ -52,6 +52,15 @@ service AuthService {
       body: "*"
     };
   }
+
+  // RefreshLogin 刷新登录态,延长 cookie 的有效期。
+  // cookie 已失效时返回 LOGIN_REQUIRED,调用方应引导重新登录。
+  rpc RefreshLogin(RefreshLoginRequest) returns (RefreshLoginResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/auth/refresh"
+      body: "*"
+    };
+  }
 }
 
 // 登录会话凭证。
@@ -152,3 +161,13 @@ message LogoutRequest {}
 
 // Logout 响应。
 message LogoutResponse {}
+
+// RefreshLogin 请求(cookie 经 metadata "x-netease-cookie" 传入,不在此 message)。
+message RefreshLoginRequest {}
+
+// RefreshLogin 响应。
+message RefreshLoginResponse {
+  // 刷新后的完整 cookie:传入的 cookie 中被上游重新下发的项已替换为新值。
+  // 调用方应用它替换保存的旧 cookie;上游没有下发新值时与传入的相同。
+  string cookie = 1;
+}
