@@ -167,6 +167,42 @@ func TestExecute_LoggedIn_PoolPathBypassesCache(t *testing.T) {
 	require.Zero(t, c.sets, "池路径不应写缓存")
 }
 
+// 可选登录的接口:带 cookie 按凭据隔离缓存,不带 cookie 共享匿名缓存,两者互不命中——
+// 否则匿名调用方会拿到某个 VIP 账号的链接,或带 cookie 的调用方拿到匿名的空链接。
+func TestExecute_Optional_CacheScopedByCredential(t *testing.T) {
+	t.Parallel()
+	up := newRecordingUpstream(t)
+	c := &countingCache{}
+	eng := engine.New(engine.WithBaseURL(up.srv.URL), engine.WithCache(c))
+	ep := makeSongDetailEndpoint()
+	ep.Meta.Auth = session.AuthOptional
+	req := &mmpb.GetSongDetailRequest{SongId: 1}
+
+	alice := engine.WithCookie(context.Background(), "MUSIC_U=alice")
+	anon := context.Background()
+
+	_, err := engine.Execute(eng, anon, ep, req)
+	require.NoError(t, err)
+	require.NotContains(t, up.lastCookie(), "MUSIC_U", "没有 cookie 时按匿名请求")
+	_, err = engine.Execute(eng, alice, ep, req)
+	require.NoError(t, err)
+	require.Equal(t, int32(2), up.calls.Load(), "带 cookie 不应命中匿名缓存")
+	require.Contains(t, up.lastCookie(), "MUSIC_U=alice", "ctx 里的 cookie 应发往上游")
+
+	_, err = engine.Execute(eng, anon, ep, req)
+	require.NoError(t, err)
+	_, err = engine.Execute(eng, alice, ep, req)
+	require.NoError(t, err)
+	require.Equal(t, int32(2), up.calls.Load(), "匿名与同一账号的第二次都应命中各自的缓存")
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	require.Len(t, c.store, 2)
+	for k := range c.store {
+		require.NotContains(t, k, "MUSIC_U", "缓存 key 不能含原始 cookie: %s", k)
+	}
+}
+
 // 匿名接口的缓存 key 保持不变(各用户共享),且不会把 ctx 里的 cookie 发给上游。
 func TestExecute_Anonymous_CacheSharedAndNoCookieSent(t *testing.T) {
 	t.Parallel()

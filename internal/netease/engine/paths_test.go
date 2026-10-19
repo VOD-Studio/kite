@@ -214,6 +214,15 @@ func TestCredential_PolicyMatrix(t *testing.T) {
 		{"登录接口 + 什么凭据都没有", session.AuthLoggedIn, false, false,
 			merrors.ErrUnauthorized, 0, "", // 池路径:本地拒绝,不打上游
 			1, ""}, // ctx 路径:照常请求(由上游判定)
+		{"可选登录 + ctx cookie", session.AuthOptional, true, false,
+			nil, 1, ctxCookie, // 池路径:带着 ctx cookie
+			1, ctxCookie},
+		{"可选登录 + 只有会话池", session.AuthOptional, false, true,
+			nil, 1, "", // 池路径:不取池,按匿名请求
+			1, ""},
+		{"可选登录 + 什么凭据都没有", session.AuthOptional, false, false,
+			nil, 1, "", // 池路径:不报未授权,按匿名请求
+			1, ""},
 	}
 
 	for _, r := range rows {

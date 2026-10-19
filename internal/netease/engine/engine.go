@@ -123,8 +123,8 @@ type credentialPolicy int
 
 const (
 	// credFromPool 是会话池路径(RawDo / RawDoWithCookie / Execute):
-	// 只有 AuthLoggedIn 的接口才带凭据,ctx 里的 cookie 优先,否则取会话池;
-	// 匿名接口不携带任何用户 cookie。池里取出的 session 失效时上报。
+	// AuthLoggedIn 的接口 ctx 里的 cookie 优先,否则取会话池;AuthOptional 只带 ctx 里的 cookie,
+	// 没有就匿名;匿名接口不携带任何用户 cookie。池里取出的 session 失效时上报。
 	credFromPool credentialPolicy = iota
 	// credFromContext 是 ctx cookie 路径(RawDoWithCookieAndInput / ExecuteWithCookie):
 	// 无条件使用 ctx 里的 cookie(哪怕是匿名接口),从不碰会话池,也不上报。
@@ -214,8 +214,13 @@ func (e *Engine) resolveCredential(ctx context.Context, meta Meta, policy creden
 		return CookieFromContext(ctx), nil, nil
 	}
 
-	// 会话池路径:匿名接口不携带任何用户 cookie。
-	if meta.Auth != session.AuthLoggedIn {
+	// 会话池路径:匿名接口不携带任何用户 cookie;可选登录的接口只认 ctx cookie,没有就匿名。
+	switch meta.Auth {
+	case session.AuthLoggedIn:
+		// 往下走:ctx cookie 优先,否则取会话池。
+	case session.AuthOptional:
+		return CookieFromContext(ctx), nil, nil
+	default:
 		return "", nil, nil
 	}
 	// 需要登录态的接口:调用方经 ctx 自带的 cookie(gRPC 拦截器注入)优先,否则从 session 池选取。

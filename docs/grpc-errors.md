@@ -59,6 +59,9 @@ grpc-gateway 把 status 序列化为 JSON,`details` 里就是 `ErrorInfo`:
 
 缺失或失效时返回 `LOGIN_REQUIRED`。
 
+少数接口是**可选登录**(如 `SongService/GetSongURL`,以 proto 注释为准):不带 cookie 按匿名执行、不报
+`LOGIN_REQUIRED`,带了 cookie 就按该账号的权益执行(例如 VIP 账号才能拿到 VIP 歌的播放链接)。
+
 这与调用本服务所需的访问令牌(`authorization: Bearer ...`)是两回事:令牌决定「谁能调用 kite」,
 cookie 决定「以哪个网易云账号执行」。两者的错误分别是 `SERVER_AUTH_FAILED` 与 `LOGIN_REQUIRED`。
 

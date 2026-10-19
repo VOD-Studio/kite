@@ -2407,7 +2407,7 @@
     },
     "/api/v1/songs/{songId}/url": {
       "get": {
-        "summary": "GetSongURL 获取歌曲播放直链。level 控制音质。",
+        "summary": "GetSongURL 获取歌曲播放直链。level 控制音质。\n可选登录:不带 cookie 按匿名取(VIP / 版权受限的歌 url 为空);\n经 metadata x-netease-cookie 带了 cookie 就按该账号的权益取。",
         "operationId": "SongService_GetSongURL",
         "responses": {
           "200": {
