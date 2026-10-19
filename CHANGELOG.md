@@ -7,6 +7,14 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## [0.4.0](https://github.com/VOD-Studio/kite/compare/v0.3.1...v0.4.0) (2026-10-19)
+
+
+### Features
+
+* **cli:** 新增 kite mcp,以 stdio MCP 服务暴露只读接口 ([#84](https://github.com/VOD-Studio/kite/issues/84)) ([c329322](https://github.com/VOD-Studio/kite/commit/c32932211ba9a0228f52c203b047d7dcaa1a7455))
+* **netease:** 播放链接可选登录与 RefreshLogin 登录态续期 ([#82](https://github.com/VOD-Studio/kite/issues/82)) ([6545ec3](https://github.com/VOD-Studio/kite/commit/6545ec3e968fb2a4915937d5409ea3ec1ffe703c))
+
 ## [0.3.1](https://github.com/VOD-Studio/kite/compare/v0.3.0...v0.3.1) (2026-10-17)
 
 
