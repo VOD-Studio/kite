@@ -22,7 +22,9 @@ case "$1" in
       *Labels*) [ -n "${FAKE_PREVIOUS}" ] && echo "v0.0.1" || exit 125 ;;
       *IPAddress*) echo "10.0.0.5" ;;
     esac ;;
-  run) echo "${@: -1}" >"${STATE}/current" ;;
+  run)
+    if [ -n "${FAKE_RUN_FAIL:-}" ] && grep -Eq "${FAKE_RUN_FAIL}" <<<"${@: -1}"; then exit 125; fi
+    echo "${@: -1}" >"${STATE}/current" ;;
   rm|logs) ;;
   *) echo "unexpected podman call: $*" >&2; exit 99 ;;
 esac
@@ -42,7 +44,7 @@ fail=0
 deploy() { # ref previous healthy_regex token
   rm -rf "${tmp}/state" && mkdir -p "${tmp}/state"
   : >"${tmp}/calls.log"
-  printf '%s\n' "$4" | PODMAN="${tmp}/podman" CURL="${tmp}/curl" CALLS="${tmp}/calls.log" STATE="${tmp}/state" \
+  printf '%s\n' "$4" | FAKE_RUN_FAIL="${FAKE_RUN_FAIL:-}" PODMAN="${tmp}/podman" CURL="${tmp}/curl" CALLS="${tmp}/calls.log" STATE="${tmp}/state" \
     STATE_DIR="${tmp}/state" FAKE_DIGEST=new FAKE_PREVIOUS="$2" FAKE_HEALTHY="$3" \
     HEALTH_TRIES=2 HEALTH_SLEEP=0 "${here}/deploy-server.sh" "$1" >"${tmp}/out.log" 2>&1
 }
@@ -66,6 +68,9 @@ grep -q "^login" "${tmp}/calls.log" && { echo "FAIL 没有令牌时不应登录"
 deploy "${ref}" "${old}" "sha256:old" ""
 expect "新版本不健康 → 回滚到旧镜像" 1 $? "@sha256:old$"
 [ ! -e "${tmp}/state/deploy-history" ] || { echo "FAIL 失败的部署不应记录历史"; fail=1; }
+
+FAKE_RUN_FAIL="sha256:new" deploy "${ref}" "${old}" "sha256:old" ""
+expect "新容器启动失败(旧容器已删除)→ 仍回滚到旧镜像" 1 $? "@sha256:old$"
 
 deploy "${ref}" "" "never" ""
 expect "首次部署失败 → 退出 1,不回滚" 1 $? ""

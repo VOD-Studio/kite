@@ -7,7 +7,8 @@
 #   1. 建系统用户 kite-deploy(无密码),authorized_keys 只允许执行 deploy-ssh-gate.sh(restrict:无 shell、无转发);
 #   2. 安装 deploy-ssh-gate.sh / deploy-server.sh 到 /usr/local/libexec/kite/(root 所有);
 #   3. sudoers 只放行 kite-deploy 以 root 执行 deploy-server.sh 这一个命令;
-#   4. 没有 podman secret kite-auth-token 时生成访问令牌(32 字节随机数),副本存 /srv/kite/auth-token(0600),
+#   4. 启用 podman-restart.service:--restart=always 只管容器退出,开机拉起 restart=always 的容器靠它;
+#   5. 没有 podman secret kite-auth-token 时生成访问令牌(32 字节随机数),副本存 /srv/kite/auth-token(0600),
 #      供同机的调用方(violet)配置;已有则保留,不轮换。
 set -euo pipefail
 
@@ -41,6 +42,9 @@ install -d -m 0700 -o "${USER_NAME}" -g "${USER_NAME}" "${home}/.ssh"
 printf 'restrict,command="%s" %s\n' "${LIBEXEC}/deploy-ssh-gate.sh" "${pubkey}" >"${home}/.ssh/authorized_keys"
 chown "${USER_NAME}:${USER_NAME}" "${home}/.ssh/authorized_keys"
 chmod 0600 "${home}/.ssh/authorized_keys"
+
+systemctl enable podman-restart.service >/dev/null 2>&1 ||
+  echo "警告:无法启用 podman-restart.service,服务器重启后 kite 不会自动拉起" >&2
 
 install -d -m 0700 -o root -g root "${STATE_DIR}"
 if ! podman secret exists "${SECRET}"; then

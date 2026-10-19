@@ -73,15 +73,15 @@ healthy() {
 }
 
 echo "启动 ${version} (${digest})"
-run_container "${pinned}" "${version}"
-if healthy; then
+# 启动失败(网络 / secret 缺失等)与健康检查失败同样走回滚:此时旧容器已被删除,不能让 set -e 直接退出。
+if run_container "${pinned}" "${version}" && healthy; then
   mkdir -p "${STATE_DIR}"
   printf '%s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${version}" "${pinned}" >>"${STATE_DIR}/deploy-history"
   echo "部署成功: ${version}"
   exit 0
 fi
 
-echo "健康检查失败,容器日志(最后 50 行):" >&2
+echo "启动或健康检查失败,容器日志(最后 50 行):" >&2
 "${PODMAN}" logs --tail 50 "${CONTAINER}" >&2 || true
 if [ -z "${previous}" ]; then
   echo "首次部署失败,没有可回滚的版本" >&2
@@ -89,8 +89,7 @@ if [ -z "${previous}" ]; then
   exit 1
 fi
 echo "回滚到 ${previous}" >&2
-run_container "${previous}" "${previous_version:-unknown}"
-if healthy; then
+if run_container "${previous}" "${previous_version:-unknown}" && healthy; then
   echo "已回滚,${version} 未部署" >&2
 else
   echo "回滚后健康检查仍失败,需要人工处理" >&2
