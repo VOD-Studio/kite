@@ -2,10 +2,6 @@ version: 2
 
 project_name: kite
 
-before:
-  hooks:
-    - go mod tidy
-
 builds:
   # ---- CLI:跨平台二进制(linux/darwin/windows × amd64/arm64)----
   - id: cli
@@ -37,6 +33,17 @@ builds:
       - -s -w
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  - id: deploy-probe
+    main: ./cmd/kite-probe
+    binary: kite-probe
+    env:
+      - CGO_ENABLED=0
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath, -buildvcs=false]
+    ldflags: [-s -w]
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 archives:
   - id: cli
     ids: [cli]
@@ -62,13 +69,11 @@ archives:
 
 dockers_v2:
   - id: server-image
-    ids: [server]
+    ids: [server, deploy-probe]
     images:
       - "ghcr.io/vod-studio/kite-server"
     tags:
-      - "latest"
       - "{{ .Tag }}"
-      - "v{{ .Major }}.{{ .Minor }}"
     dockerfile: Dockerfile.release
     platforms:
       - linux/amd64
@@ -101,16 +106,15 @@ signs:
     artifacts: checksum
     output: true
 
+# Release Please owns release notes; never generate a competing changelog.
 changelog:
-  use: github
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
+  disable: true
 
 release:
   github: {}
-  draft: false
-  prerelease: auto   # v0.x.y 会被自动判为 prerelease
+  draft: true
+  use_existing_draft: true
+  replace_existing_artifacts: true
+  make_latest: false
+  mode: keep-existing
+  prerelease: false

@@ -10,6 +10,7 @@ Go 实现的网易云能力服务 + 命令行工具(单体仓库)。分支 / com
 |---|---|
 | `cmd/server` | gRPC(`:3722`)+ grpc-gateway REST(`:3721`),默认只绑 `127.0.0.1`,对外监听必须配令牌;SIGINT/SIGTERM 优雅关闭。 |
 | `cmd/kite` | CLI。**直连 engine + endpoint 声明,不经 gRPC / service。** |
+| `cmd/kite-probe` | 部署专用静态探针,验证 REST/gRPC 健康、服务鉴权及缺失网易云登录态;随镜像和部署安装包分发,不作为第三个用户产品。 |
 | `cmd/kite-docs` | 命令树 markdown 生成器(`make docs` 调用)。 |
 | `cmd/demo` | 进度条等终端组件的演示脚本,非交付产物、不发布。 |
 
@@ -46,6 +47,7 @@ cmd/*
 - **`internal/cli/kit` 只做 CLI 呈现**:渲染、进度、Kit 装配。与前端无关的东西(文件路径、会话、配置、召回池)不要放进来。
 - **proto 是 RPC 契约的唯一真相**(`proto/netease/music/v1/`)。改 RPC 先改 proto 再 `make proto`;不要手写与 proto 冲突的类型。
 - **proto ↔ CLI 一一对应由 `internal/cli/rpc_guard_test.go` 守护**:新增 rpc 要么接 CLI 命令,要么在 `rpcsWithoutCliAllowlist` 登记理由。
+- **部署探针只能走公开协议**:`cmd/kite-probe` 不依赖 `internal/`。由 `internal/archtest` 守护;探针行为由 `cmd/kite-probe/main_test.go` 对真实 server 验证。
 - **新域接入节奏**(约定):endpoint 声明 + CLI 直连验证 → proto 建模 → TUI 视图。尚未建模的域(评论 / MV / 排行榜 / 电台 / 网盘 / 签到等)由 issue #34 追踪;当前 RPC 数量以 `proto/` 为准,文档里不写死数字。
 
 ### 已知债务(诚实登记)
@@ -87,7 +89,7 @@ CI 的约定(唯一门禁 `CI OK`、工具版本来源、发布流程)见 [`CONT
 - **`docs/cmd/` 是生成物,不要手改**,改命令树后跑 `make docs`。命令语法唯一真相是 `kite <命令> --help`;其它文档指向 `--help` 或生成参考,**不要复制命令手册**(复制即第二份真相)。
 - 接入方(其它项目 / AI 工具):[`docs/integration.md`](docs/integration.md) · [`docs/mcp.md`](docs/mcp.md) · [`llms.txt`](llms.txt)(链接由测试校验存在)
 - 上手:[`docs/kite-guide.md`](docs/kite-guide.md) · CLI 设计:[`docs/kite-cli-design.md`](docs/kite-cli-design.md) · 路线图:[`docs/kite-roadmap.md`](docs/kite-roadmap.md)
-- 对外契约:[`docs/grpc-errors.md`](docs/grpc-errors.md)(gRPC/REST 错误映射;改 `internal/server/errors.go` 的 reason 必须同步)· [`docs/server-security.md`](docs/server-security.md)(监听地址 / 访问令牌 / 健康检查;改 `internal/server/auth.go` 或 `config` 的 `KITE_SERVER_*` 必须同步) · [`docs/deploy.md`](docs/deploy.md)(生产部署链路;改 `scripts/deploy-*.sh` 后须在服务器重跑安装脚本)
+- 对外契约:[`docs/grpc-errors.md`](docs/grpc-errors.md)(gRPC/REST 错误映射;改 `internal/server/errors.go` 的 reason 必须同步)· [`docs/server-security.md`](docs/server-security.md)(监听地址 / 访问令牌 / 健康检查;改 `internal/server/auth.go` 或 `config` 的 `KITE_SERVER_*` 必须同步) · [`docs/deploy.md`](docs/deploy.md)(生产部署链路;部署器能力变化须提升 `scripts/deploy-version`,由管理员验证签名安装包后升级;普通发版不得修改宿主机特权脚本,约定)
 - 领域术语与决策索引:[`CONTEXT.md`](CONTEXT.md) · ADR:[`docs/adr/`](docs/adr/) · PRD:[`docs/prd/`](docs/prd/)
 - 改了架构边界,同步改本文件和 `internal/archtest` 的规则表,二者不一致即视为 bug。
 

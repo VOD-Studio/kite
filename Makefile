@@ -13,6 +13,8 @@ AIR           ?= $(shell command -v air 2>/dev/null           || echo $$(go env 
 GOLANGCI_LINT_VERSION := v2.12
 BUF_VERSION           := 1.71.0
 GOVULNCHECK_VERSION   := v1.6.0
+GORELEASER_VERSION    := 2.17.1
+COSIGN_VERSION        := v3.1.2
 # 仅本地热重载用,不影响 CI。
 AIR_VERSION           := latest
 
@@ -117,7 +119,7 @@ proto-breaking:
 
 ## verify-gen: 重新生成后 gen/ 不应有漂移(CI 同款)
 verify-gen: proto
-	git diff --exit-code -- gen/
+	scripts/check-generated.sh gen/
 
 ## proto-deps: 拉取 buf BSR 依赖（googleapis）
 proto-deps:
@@ -146,10 +148,8 @@ interop-go:
 
 ## scripts-check: scripts/*.sh 的 shellcheck 与单元测试(release PR 的 CI 保障逻辑等)
 scripts-check:
-	@if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh; else echo "(未安装 shellcheck,跳过静态检查)"; fi
-	scripts/release-pr-ci_test.sh
-	scripts/deploy-server_test.sh
-	scripts/pick-runner_test.sh
+	shellcheck scripts/*.sh
+	@set -e; for test in scripts/*_test.sh; do bash "$$test"; done
 
 ## check: push 前一键自检(镜像 CI 的主要检查;vuln / verify-gen 依赖网络,按需单独跑)
 check: fmt-check tidy-check scripts-check vet test lint proto-lint
@@ -160,6 +160,8 @@ ci-env:
 	@echo "GOLANGCI_LINT_VERSION=$(GOLANGCI_LINT_VERSION)"
 	@echo "BUF_VERSION=$(BUF_VERSION)"
 	@echo "GOVULNCHECK_VERSION=$(GOVULNCHECK_VERSION)"
+	@echo "GORELEASER_VERSION=$(GORELEASER_VERSION)"
+	@echo "COSIGN_VERSION=$(COSIGN_VERSION)"
 
 ## clean: 清除本地构建产物(tmp/、bin/)。不清 gen/——已进版本控制。
 clean:

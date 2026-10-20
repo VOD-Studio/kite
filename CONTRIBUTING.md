@@ -20,18 +20,20 @@ go vet ./...              # 检查
 
 ## CI 约定
 
-- **本地自检**:`make check`(gofmt + go mod tidy + vet + test + lint + proto-lint)。`make vuln`、`make proto-breaking`、`make verify-gen` 依赖网络或 git 基线,按需单独跑。
-- **门禁只有一个**:`CI OK`(聚合 job)。新增 / 重命名 CI job 时在 `.github/workflows/ci.yml` 同步它的 `needs`;发布流程与 ruleset 的 required check 都只认这个名字。
-- **工具版本的唯一来源是 `Makefile` 顶部**(golangci-lint / buf / govulncheck),不要在 workflow 里重复写。
-- **门禁不依赖会自行变化的外部状态**:漏洞库、未固定版本的插件或 runner,都会让「没改代码」的 PR 变红。依赖漏洞只在 PR 改动 `go.mod` / `go.sum` 时才拦,全量扫描由 `scheduled.yml` 每日跑并开 issue。
-- **release PR 的 CI**:release PR 由 `github-actions[bot]` 创建,`GITHUB_TOKEN` 触发的事件有两个坑——仓库的「首次贡献者需批准」策略会让它的 pull_request CI 停在 `action_required`(此时 required check `CI OK` 视为未满足、PR 保持 BLOCKED),且按 GitHub 规则这类事件原则上不会触发其它 workflow。`release-please.yml` 每次运行后调用 `scripts/release-pr-ci.sh`:有等待批准的运行就批准(这个 PR 由我们自己的 workflow 生成,批准是安全的,无需放宽仓库策略);轮询约 1 分钟仍没有任何 pull_request 运行,则回退为在 release 分支上 `workflow_dispatch` 一次 CI。逻辑有假 `gh` 的单元测试(`make scripts-check`)。若 release PR 仍是 BLOCKED,在 Actions 页手动重跑 `Release Please`。
-- **镜像冒烟**:`Docker Build` job 在构建后跑 `scripts/docker-smoke.sh`(无令牌拒绝启动、`/healthz`、REST 鉴权),不访问外网。镜像的监听地址 / 令牌策略见 [`docs/server-security.md`](docs/server-security.md);`Dockerfile` 与 `Dockerfile.release` 的 `KITE_SERVER_*` 必须一致(有测试守护)。
+- **本地自检**:`make check`(gofmt + go mod tidy + ShellCheck/脚本回归 + vet + test + lint + proto-lint)。部署事务和安装器回归需要 Linux,macOS 会明确打印 skip,由 Linux CI 补齐。`make vuln`、`make proto-breaking`、`make verify-gen` 依赖网络或 git 基线,按需单独跑。
+- **门禁只有一个**:`CI OK`。增减 / 重命名 job 时同步 `.github/workflows/ci.yml` 的 `needs` 和 `scripts/ci-results.sh`;失败、取消、意外跳过都不能变绿。发布只接受指定源码 SHA 在本仓 `ci.yml` 的成功 main push 运行,不能用同名外部检查替代。
+- **工具版本的唯一来源**:Go 以 `go.mod` 为准;golangci-lint / buf / govulncheck / GoReleaser / Cosign 以 `Makefile` 顶部为准。第三方 Actions 固定完整 commit SHA,镜像 base 固定 digest;不要在 workflow 重复维护工具版本。
+- **漏洞门禁**:PR 只在依赖变化时扫描,`scheduled.yml` 每日全量扫描并报告。已知修复版本的漏洞必须失败,不能因为它高于当前工具链就当成「尚未发布」;无已知修复版本要产生 advisory / issue,扫描器安装、执行和报告解析故障必须显式失败。
+- **执行隔离与排队**:使用固定 `ubuntu-24.04` 托管 runner,不把未受信 PR 送入持久化自托管环境。PR 的旧 CI 可以取消;main 按 SHA 保留发布所需证据;发版、BSR、生产部署各自使用 `queue: max` 串行排队,不丢弃中间等待项。
+- **release PR 的 CI**:`GITHUB_TOKEN` 创建 PR 不保证触发后续 workflow。`scripts/release-pr-ci.sh` 只接受本仓 `github-actions[bot]` 创建、目标为 main 的固定 release 分支;等待 / 批准 / 补派发 `ci.yml` 时核验准确 HEAD 和 workflow,动作前再次检查 HEAD。已有成功 producer 不重复派发,其它 bot 或同名 fork 分支不能借此获批。
+- **镜像冒烟**:`Docker Build` 验证开发镜像;`Release Check` 从 GoReleaser snapshot 的真实二进制构建 `Dockerfile.release` 后运行同一安全冒烟。验证无令牌拒绝启动、健康检查及 REST 鉴权,不用 Dockerfile 文本相等冒充运行时验证。正式公开前还验证发布镜像双架构;生产部署另外运行完整 REST/gRPC 探针。
 - **Go 互操作冒烟**:`Go Interop` job 跑 `make interop-go`(`scripts/go-interop.sh`):`interop/go` 依赖 BSR 上由 proto 生成的 Go SDK(接入方的真实路径),对真实运行的 `kite-server` 验证令牌鉴权与 `LOGIN_REQUIRED`;`docs/integration.md` 的 Go 示例与 `interop/go/kite.go` 逐字一致(测试守护)。SDK 版本锁在 `interop/go/go.mod`,随 BSR 新版本按需升级。
 - **Rust 互操作冒烟**:`Rust Interop` job 跑 `make interop-rust`(`scripts/rust-interop.sh`):`buf` 把 proto 编成描述符,`interop/rust` 据此生成 tonic 客户端,对真实运行的 `kite-server` 验证健康检查、令牌鉴权和 `ErrorInfo`。`docs/` 里的 Rust 示例与 `interop/rust/src/*.rs` 逐字一致(有测试守护):改示例先改文档,再原样同步。本地需要 `cargo`,较慢,不在 `make check` 里。
 - **真实上游冒烟**:`make upstream-smoke` 对真实上游逐个调用只读 RPC,断言响应不是空消息(专抓「成功但返回空」)。手动运行、不进 CI——外部服务的状态会让门禁漂移。endpoint 的 MapResponse 单测应优先用从真实上游抓取的响应(`testdata/`,裁剪并去除个人信息),而不是手写夹具。
-- **BSR 发布**:release 成功后 `bsr` job 调用 `bsr.yml`,把 `proto/` 推送到 `buf.build/vod-studio/kite`(版本 tag 作标签;`main` 标签只跟随最新正式版,补推旧版本不会让它倒退),供其它语言的项目直接依赖。令牌只在最后的推送一步可见,手动补推只接受已发布 release 的版本号。需要 BSR 上已有组织 `vod-studio` 和仓库 secret `BUF_TOKEN`;未配置时只给提示、跳过,不影响发布。手动补推:Actions → `BSR` → Run workflow(填 tag)。
-- **生产部署**:release 成功后 `deploy` job 调用 `deploy.yml`,经 SSH 把新镜像部署到与 violet 同机的服务器(失败自动回滚)。服务器侧一次性安装、需要的仓库 secret、手动部署 / 回滚见 [`docs/deploy.md`](docs/deploy.md);未配置部署 secret 时只给提示、跳过,不影响发布。
-- **发布**:release PR 合并后,`release-please.yml` 在同一 workflow 内直接调用 `release.yml`(release-please 用 `GITHUB_TOKEN` 打的 tag 不会触发 `on: push: tags`)。手动补发某个 tag 的产物:Actions → `Release` → Run workflow。
+- **BSR 发布**:公开且验真通过的 release 才推送到 `buf.build/vod-studio/kite`。精确版本标签始终保留,`main` 仅跟随数值最大的正式版,补旧版不会倒退。`BUF_TOKEN` 只在推送一步可见;缺失必须失败,不能显示成功跳过。手动补推:Actions → `BSR` → Run workflow,在 main 上指定已公开 tag。
+- **生产部署**:release 公开后自动调用 `deploy.yml`,不增加日常人工批准。只从 main 工作流读取 `production` environment 的专用 SSH secrets,先检查宿主机部署器版本,再执行验签、切换、探针及失败回滚。缺 secret、旧部署器或健康失败均明确变红,不能假成功。管理员首次安装、权限治理和回滚见 [`docs/deploy.md`](docs/deploy.md)。
+- **发布完成的含义**:合并 release PR 批准发版,release-please 建 draft 和 tag,同一 workflow 调用 `release.yml`;所有跨平台档案、签名校验和、双架构镜像、签名部署安装包完成并验真后才公开 release。只有最大正式版推进 `latest`;minor 标签也只前进。手动重跑公开版只验原产物和恢复适用标签,不覆盖已发布字节;失败的 draft 可以继续完成。公开版缺损需发布修正版,不能悄悄重建旧版。
+- **仓库配置不是 YAML**:`python3 scripts/github-settings.py` 默认只读审计;管理员加 `--apply` 才应用主分支 / tag ruleset、Actions 权限与 production 分支白名单。脚本不读取、迁移或删除 secret 值,不移除已有人工审批规则;发现与自动部署冲突时必须先由管理员处理。
 
 ## 工作流(分支与提交)
 
@@ -112,9 +114,10 @@ go vet ./...              # 检查
 
 **合并**:
 
-- **手动合并**,不勾 auto-merge。由人工 review approve 后在 UI 点合并。
-- 合并方式:**squash merge**(单 commit 历史,与已有 PR 惯例一致)。
-- 合并后:**自动删除分支**(`gh pr merge --squash --delete-branch`,合并即删远程 + 本地 feature 分支)。
+- **手动合并**,不启用 auto-merge。审批是协作约定,不是强制要求作者无法给自己完成的审批数量。
+- **业务 PR 自选 Merge / Squash / Rebase**:需要保留原子提交时选 Merge 或 Rebase;Squash 只在 main 留一个汇总提交。PR 标题和所有非 merge 原子提交都必须符合上面的 Conventional Commits,确保任意合并方式都能正确推导版本。
+- **release PR 使用 Squash**:这是版本 / changelog 的发布批准记录,不是业务提交归档。普通 PR 合 main 只累计待发布变化;合并 `chore(main): release ...` PR 才启动正式发版与自动部署,不混淆这两类合并。
+- **分支清理按需执行**:合并后确认无未交付修改再删除;Squash / Rebase 后不要仅凭 `git branch --merged` 判断是否已合入。仓库治理脚本不擅自改变自动删分支偏好。
 
 ## 报告安全问题
 

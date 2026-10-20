@@ -4,7 +4,7 @@
 #   docker build --build-arg GOPROXY=https://goproxy.cn,direct -t kite-server .
 
 # 阶段1: 构建
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26.9-alpine@sha256:3082400e369fa24d5fc60bca20edab3f6d604e0c5a690ec66b295eff4dd87ade AS builder
 
 ARG GOPROXY=https://proxy.golang.org,direct
 ENV GOPROXY=${GOPROXY}
@@ -17,14 +17,16 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /server ./cmd/server \
+    && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /kite-probe ./cmd/kite-probe
 
 # 阶段2: 运行时
 # 与 Dockerfile.release 同一基础镜像:开发镜像与线上镜像一致,避免「本地能跑、发布不行」。
 # static-debian12 自带 CA 证书,:nonroot 已是非 root 用户,无 shell,攻击面最小。
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
 
 COPY --from=builder /server /usr/local/bin/server
+COPY --from=builder /kite-probe /usr/local/bin/kite-probe
 
 # 容器内必须监听全部网卡,端口映射才通。因此镜像不带令牌启动会被拒绝(这是有意的):
 # 运行时必须设置 KITE_SERVER_AUTH_TOKEN 或 KITE_SERVER_AUTH_TOKEN_FILE。见 docs/server-security.md。

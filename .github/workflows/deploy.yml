@@ -1,127 +1,129 @@
 name: Deploy
 
-# 把已发布的 kite-server 镜像部署到生产服务器(容器加入专用网络 kite_network,同机调用方
-# 加入该网络后经 http://kite:3721 访问,不映射宿主机端口)。两种入口:
-#   - workflow_call:release-please.yml 在产物发布成功后调用(日常路径,tag 为刚发布的版本);
-#   - workflow_dispatch:手动部署指定版本——重试失败的部署,或回滚到旧版本。
-#
-# 链路:runner 经 SSH 登录服务器的 kite-deploy 用户;该用户的公钥被强制只能执行
-# scripts/deploy-ssh-gate.sh(只接受一个镜像引用),再经 sudo 调 scripts/deploy-server.sh:
-# 拉取 → 锁定 digest → 替换容器 → 健康检查,失败自动回滚。服务器侧一次性安装见 docs/deploy.md。
-#
-# runner:私有 runner(组织级 omarchy)在线且空闲时优先用它,否则用托管 runner(scripts/pick-runner.sh)。
-# 安全:本仓库公开,所以只响应发版与手动触发,不响应 pull_request;部署 job 不检出代码,
-# 在私有 runner 上也只执行下面这一条 SSH 命令。
-#
-# 前置(仓库 secret,未配置时只给提示并跳过,不让发布流程变红):
-#   KITE_DEPLOY_SSH_KEY      部署私钥(对应服务器 kite-deploy 用户的公钥)
-#   KITE_DEPLOY_KNOWN_HOSTS  服务器的 known_hosts 行(ssh-keyscan 获取,固定主机指纹)
-#   KITE_DEPLOY_HOST / KITE_DEPLOY_PORT  服务器地址与 SSH 端口
-#   RUNNER_STATUS_TOKEN      可选:查询私有 runner 状态的只读令牌;不配则总用托管 runner
-
+# 合并 release PR 后自动部署;手动入口用于指定版本重试或回滚。
+# 只允许 main 的工作流取得 production 环境凭据。主机部署器由管理员独立安装,
+# 日常部署先检查版本,再经受限 SSH 入口验签、替换、探活;失败恢复旧镜像。
 on:
   workflow_call:
     inputs:
       tag:
-        description: 要部署的 tag(如 v0.3.0)
+        description: 已发布的正式版本(如 v0.4.0)
         required: true
         type: string
     secrets:
-      KITE_DEPLOY_SSH_KEY:
-        required: false
-      KITE_DEPLOY_KNOWN_HOSTS:
-        required: false
-      KITE_DEPLOY_HOST:
-        required: false
-      KITE_DEPLOY_PORT:
-        required: false
-      RUNNER_STATUS_TOKEN:
+      KITE_PRODUCTION_SSH_KEY:
+        required: true
+      KITE_PRODUCTION_KNOWN_HOSTS:
+        required: true
+      KITE_PRODUCTION_HOST:
+        required: true
+      KITE_PRODUCTION_PORT:
         required: false
   workflow_dispatch:
     inputs:
       tag:
-        description: 要部署的 tag(如 v0.3.0),必须是已发布 release 的版本号;填旧版本即回滚
+        description: 已发布的正式版本;填旧版本按已记录制品回滚
         required: true
         type: string
 
-# 生产部署串行,已在跑的不取消(替换容器到一半被取消比排队更糟)
 concurrency:
   group: deploy-production
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
 
 jobs:
   prepare:
-    name: 校验与选择 runner
+    name: 校验部署来源与版本
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
-      configured: ${{ steps.gate.outputs.configured }}
-      labels: ${{ steps.runner.outputs.labels }}
+      source-sha: ${{ steps.release.outputs.sha }}
+      deployer-version: ${{ steps.version.outputs.required }}
     steps:
-      - name: 校验 tag
+      - name: 限制工作流来源
+        run: |
+          if [ "$GITHUB_REPOSITORY" != VOD-Studio/kite ] || [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo '::error::生产部署只能从 VOD-Studio/kite 的 main 工作流执行'
+            exit 1
+          fi
+      - name: 校验已公开版本与主干来源
+        id: release
         env:
           TAG: ${{ inputs.tag }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::tag 必须形如 v1.2.3(不接受分支名或 SHA): ${TAG}"
-            exit 1
-          fi
-          gh release view "${TAG}" >/dev/null || { echo "::error::${TAG} 不是已发布的 release"; exit 1; }
-      - name: 检查部署配置
-        id: gate
-        env:
-          HAS_KEY: ${{ secrets.KITE_DEPLOY_SSH_KEY != '' }}
-          HAS_HOSTS: ${{ secrets.KITE_DEPLOY_KNOWN_HOSTS != '' }}
-          HAS_HOST: ${{ secrets.KITE_DEPLOY_HOST != '' }}
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo '::error::tag 必须形如 v1.2.3'; exit 1; }
+          gh release view "$TAG" --json tagName,isDraft,isPrerelease |
+            jq -e --arg tag "$TAG" '.tagName == $tag and (.isDraft | not) and (.isPrerelease | not)' >/dev/null
+          sha=$(gh api "repos/$GH_REPO/commits/$TAG" --jq .sha)
+          ancestry=$(gh api "repos/$GH_REPO/compare/$sha...main" --jq .status)
+          [[ "$ancestry" == ahead || "$ancestry" == identical ]] || { echo '::error::版本提交不在 main 历史中'; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: 读取最低部署器版本
+        id: version
         run: |
-          if [ "${HAS_KEY}" = true ] && [ "${HAS_HOSTS}" = true ] && [ "${HAS_HOST}" = true ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=已跳过部署::未配置 KITE_DEPLOY_SSH_KEY / KITE_DEPLOY_KNOWN_HOSTS / KITE_DEPLOY_HOST(见 docs/deploy.md)"
-          fi
-      - uses: actions/checkout@v7
-        if: steps.gate.outputs.configured == 'true'
-      - name: 选择 runner
-        id: runner
-        if: steps.gate.outputs.configured == 'true'
-        env:
-          TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
-          ORG: VOD-Studio
-          RUNNER_ID: "216"
-        run: scripts/pick-runner.sh
+          required=$(cat scripts/deploy-version)
+          [[ "$required" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo '::error::部署器版本文件无效'; exit 1; }
+          echo "required=$required" >> "$GITHUB_OUTPUT"
 
   deploy:
     name: 部署 ${{ inputs.tag }}
     needs: prepare
-    if: needs.prepare.outputs.configured == 'true'
-    runs-on: ${{ fromJSON(needs.prepare.outputs.labels) }}
+    runs-on: ubuntu-24.04
     environment: production
     timeout-minutes: 15
     permissions:
       contents: read
-      packages: read   # GITHUB_TOKEN 经 stdin 交给服务器拉取 ghcr 镜像,job 结束即失效
+      packages: read
     steps:
-      - name: 经 SSH 部署
+      - name: 检查安装版本并部署
         env:
           TAG: ${{ inputs.tag }}
-          SSH_KEY: ${{ secrets.KITE_DEPLOY_SSH_KEY }}
-          KNOWN_HOSTS: ${{ secrets.KITE_DEPLOY_KNOWN_HOSTS }}
-          HOST: ${{ secrets.KITE_DEPLOY_HOST }}
-          PORT: ${{ secrets.KITE_DEPLOY_PORT }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.source-sha }}
+          REQUIRED_VERSION: ${{ needs.prepare.outputs.deployer-version }}
+          SSH_KEY: ${{ secrets.KITE_PRODUCTION_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.KITE_PRODUCTION_KNOWN_HOSTS }}
+          HOST: ${{ secrets.KITE_PRODUCTION_HOST }}
+          PORT: ${{ secrets.KITE_PRODUCTION_PORT }}
           REGISTRY_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          command -v ssh >/dev/null || { echo "::error::runner 上没有 ssh 客户端"; exit 1; }
-          dir="$(mktemp -d "${RUNNER_TEMP}/kite-deploy.XXXXXX")"
-          trap 'rm -rf "${dir}"' EXIT
-          (umask 077 && printf '%s\n' "${SSH_KEY}" >"${dir}/key" && printf '%s\n' "${KNOWN_HOSTS}" >"${dir}/known_hosts")
-          printf '%s\n' "${REGISTRY_TOKEN}" | ssh -i "${dir}/key" -p "${PORT:-22}" \
-            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            -o UserKnownHostsFile="${dir}/known_hosts" -o ConnectTimeout=20 \
-            "kite-deploy@${HOST}" "ghcr.io/vod-studio/kite-server:${TAG}"
+          if [ -z "$SSH_KEY" ] || [ -z "$KNOWN_HOSTS" ] || [ -z "$HOST" ]; then
+            echo '::error::production 环境缺少部署凭据;拒绝把未部署报告为成功。见 docs/deploy.md'
+            exit 1
+          fi
+          command -v ssh >/dev/null
+          dir=$(mktemp -d "$RUNNER_TEMP/kite-deploy.XXXXXX")
+          trap 'rm -rf "$dir"' EXIT
+          (umask 077 && printf '%s\n' "$SSH_KEY" >"$dir/key" && printf '%s\n' "$KNOWN_HOSTS" >"$dir/known_hosts")
+          ssh_command=(ssh -i "$dir/key" -p "${PORT:-22}" -o BatchMode=yes -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$dir/known_hosts"
+            -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 "kite-deploy@$HOST")
+          installed=$("${ssh_command[@]}" version </dev/null) || {
+            echo "::error::服务器没有版本化部署器。请管理员安装至少 $REQUIRED_VERSION;旧服务未替换"
+            exit 1
+          }
+          [[ "$installed" =~ ^kite-deployer\ ([0-9]+\.[0-9]+\.[0-9]+)$ ]] || { echo '::error::无法识别服务器部署器版本'; exit 1; }
+          installed=${BASH_REMATCH[1]}
+          if ! printf '%s\n%s\n' "$REQUIRED_VERSION" "$installed" | sort --version-sort --check=quiet; then
+            echo "::error::部署器 $installed 低于要求 $REQUIRED_VERSION;请管理员更新安装包,旧服务未替换"
+            exit 1
+          fi
+          printf -v image_ref 'ghcr.io/vod-studio/kite-server:%s' "$TAG"
+          printf '%s\n' "$REGISTRY_TOKEN" | "${ssh_command[@]}" "$image_ref"
+          {
+            echo "### 已部署 $TAG"
+            echo "- 制品源码提交: $SOURCE_SHA"
+            echo "- 工作流提交: $GITHUB_SHA"
+            echo "- 部署器: $installed"
+            echo '- 镜像 index 与部署结果见 SSH 输出;平台 digest 等完整记录保存在服务器的 deploy-history.json。'
+          } >> "$GITHUB_STEP_SUMMARY"

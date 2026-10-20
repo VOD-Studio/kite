@@ -46,8 +46,8 @@ if [ -z "$ready" ]; then
   exit 1
 fi
 
-if ! KITE_GRPC_ADDR="127.0.0.1:${port}" KITE_TOKEN="${token}" \
-  cargo test --manifest-path interop/rust/Cargo.toml -- --include-ignored; then
+if ! (cd interop/rust && KITE_GRPC_ADDR="127.0.0.1:${port}" KITE_TOKEN="${token}" \
+  cargo test --locked -- --include-ignored); then
   echo "--- kite-server 日志 ---" >&2
   cat "$tmp/server.log" >&2
   exit 1

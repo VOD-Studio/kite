@@ -40,21 +40,23 @@ permissions:
 
 jobs:
   ai-review:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     env:
-      GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+      HAS_KEY: ${{ secrets.GLM_API_KEY != '' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: 检查 API key
-        if: env.GLM_API_KEY == ''
+        if: env.HAS_KEY == 'false'
         run: echo "::warning::GLM_API_KEY 未配置,AI 评审跳过。在 Settings → Secrets 添加后生效"
 
       - name: AI 评审
-        if: env.GLM_API_KEY != ''
-        uses: VOD-Studio/inori@v0
+        if: env.HAS_KEY == 'true'
+        uses: VOD-Studio/inori@f9c3535738d04b2a087ca56b306c9041e9e396b9 # v0
         with:
           # provider / llm_model 等评审配置由 .github/inori.yml 提供,这里只
           # 传凭据。评审模型默认 glm-5.3-flash(GLM Coding Plan)。

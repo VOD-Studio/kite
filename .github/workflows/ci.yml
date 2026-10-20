@@ -8,7 +8,7 @@
 # 设计原则:
 #   1. 门禁不依赖会自行变化的外部状态(漏洞库、unpinned 插件、latest runner):
 #      凡是「没改代码也会变红」的检查,要么固定版本,要么只在相关改动时才拦 PR,
-#      全量扫描走 security.yml 定时任务。
+#      全量扫描走 scheduled.yml 定时任务。
 #   2. 工具版本唯一来源是 Makefile(.github/actions/setup 读取),workflow 不重复写。
 #   3. 检查逻辑放 Makefile / scripts,CI 只负责编排,本地 `make check` 可复现。
 
@@ -24,10 +24,10 @@ on:
   # 手动触发入口(Actions 页 Run workflow)。PR 专属步骤(PR Title、proto breaking)在此事件下按条件跳过。
   workflow_dispatch:
 
-# 同一 PR 多次 push 时取消旧的运行
+# PR 的新提交取代旧运行；main/dispatch 每个 SHA 独立，后续 push 不会取消发布所需证据。
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
       - run: make fmt-check
       - run: make tidy-check
@@ -51,10 +51,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
       # 全量检查,与本地 make check 一致:存量已清零,只看新增会让历史债重新悄悄堆积。
-      - uses: golangci/golangci-lint-action@v9
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           args: --timeout 5m
@@ -69,13 +69,13 @@ jobs:
       matrix:
         os: [ubuntu-24.04, macos-15]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
       # build 前置到 vet/test 之前:纯编译错误最快暴露
       - run: go build ./...
       - run: make vet
       - run: make test   # -race + coverage,与本地等价
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: matrix.os == 'ubuntu-24.04'
         with:
           name: coverage
@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
       - name: CLI 全平台编译
         run: |
@@ -108,12 +108,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0   # buf breaking 需要 origin/main
       - uses: ./.github/actions/setup
       # buf-setup-action 已归档,统一用 buf-action(setup_only 仅装 CLI),版本取自 Makefile
-      - uses: bufbuild/buf-action@v1
+      - uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3 # v1
         with:
           setup_only: true
           version: ${{ env.BUF_VERSION }}
@@ -124,13 +124,13 @@ jobs:
       - run: make verify-gen
 
   # 依赖漏洞:只在 PR 改动了依赖时才拦(门禁只对「本 PR 引入的变化」负责)。
-  # 漏洞库每天都在变,对无关 PR 拦截只会制造噪音;全量扫描见 security.yml(定时)。
+  # 漏洞库每天都在变,对无关 PR 拦截只会制造噪音;全量扫描见 scheduled.yml(定时)。
   vuln:
     name: Dependency Security
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
@@ -141,9 +141,9 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: |
           if [ "${EVENT}" != "pull_request" ]; then
-            echo "非 PR 事件,全量扫描交给 security.yml 定时任务"
+            echo "非 PR 事件,全量扫描交给 scheduled.yml 定时任务"
             echo "changed=false" >> "$GITHUB_OUTPUT"
-          elif git diff --quiet "origin/${BASE_REF}" HEAD -- go.mod go.sum scripts/govulncheck-gate.sh; then
+          elif git diff --quiet "origin/${BASE_REF}...HEAD" -- go.mod go.sum Makefile scripts/govulncheck-gate.sh .github/workflows/ci.yml .github/workflows/scheduled.yml .github/actions/setup/action.yml; then
             echo "go.mod / go.sum 未变化,跳过(定时任务会全量扫描)"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
@@ -156,8 +156,7 @@ jobs:
         if: steps.deps.outputs.changed == 'true'
         run: make vuln
 
-  # 根 Dockerfile(本地开发 / 自部署)的构建验证 + 冒烟(安全默认值:无令牌拒绝启动、/healthz、鉴权);
-  # Dockerfile.release 由 goreleaser 在发布时构建,ENV 与根 Dockerfile 保持一致(见 docs/server-security.md)。
+  # 根 Dockerfile 的构建与运行验证；发布 Dockerfile 在 Release Check 用 snapshot 二进制独立构建冒烟。
   docker:
     name: Docker Build
     runs-on: ubuntu-24.04
@@ -166,9 +165,9 @@ jobs:
       actions: write   # buildx type=gha 缓存读写
       contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v4
-      - uses: docker/build-push-action@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           push: false
@@ -188,9 +187,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
-      - uses: bufbuild/buf-action@v1
+      - uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3 # v1
         with:
           setup_only: true
           version: ${{ env.BUF_VERSION }}
@@ -198,7 +197,7 @@ jobs:
       - name: 安装固定的 Rust 工具链
         working-directory: interop/rust
         run: rustup toolchain install
-      - uses: actions/cache@v6
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             ~/.cargo/registry
@@ -215,41 +214,43 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
       - run: make interop-go
 
   # 发布配置的合并前校验:goreleaser 配置错误、跨平台构建失败原本要到打 tag 才暴露。
-  # 跳过 docker / 签名 / 发布(需要 buildx、OIDC 与 registry 凭据);镜像构建由 Docker Build job 覆盖。
+  # snapshot 不发布/签名，但随后以其真实二进制构建 Dockerfile.release 并运行安全冒烟。
   release-check:
     name: Release Check
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0   # goreleaser 需要完整历史与 tag
       - uses: ./.github/actions/setup
-      - uses: goreleaser/goreleaser-action@v7
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7
         with:
           distribution: goreleaser
-          version: "~> v2"
+          version: ${{ env.GORELEASER_VERSION }}
           args: check
-      - uses: goreleaser/goreleaser-action@v7
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7
         with:
           distribution: goreleaser
-          version: "~> v2"
+          version: ${{ env.GORELEASER_VERSION }}
           args: release --snapshot --clean --skip=docker,sign,sbom,publish
+      - name: 发布镜像构建与真实冒烟
+        run: scripts/release-image-smoke.sh
 
-  # squash merge 用 PR 标题作为 main 上的 commit message,release-please 靠它推导版本与
-  # CHANGELOG;标题不合规会让该变更静默地不进 changelog、不触发版本号变化。
+  # 标题保证 Squash 路径可用于版本推导；原子 commit 检查保证 Merge/Rebase 路径同样可靠。
+  # 不强制普通业务 PR 采用某一种合并策略。
   pr-title:
     name: PR Title
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: amannn/action-semantic-pull-request@v6
+      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -268,9 +269,16 @@ jobs:
             revert
             hotfix
           requireScope: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: 校验 Merge/Rebase 的原子提交
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: scripts/pr-commits.sh
 
   # 唯一门禁:ruleset required check 与发布流程都只认它。
-  # skipped 视为通过(pr-title 在 push 事件下被跳过);failure / cancelled 视为失败。
+  # 所有必要 job 必须 success；只有非 PR 事件的 pr-title 允许 skipped。
   ci-ok:
     name: CI OK
     if: always()
@@ -278,13 +286,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: 汇总各 job 结果
         env:
           NEEDS: ${{ toJSON(needs) }}
-        run: |
-          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<<"${NEEDS}"
-          bad=$(jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped")] | map(.key) | join(", ")' <<<"${NEEDS}")
-          if [ -n "${bad}" ]; then
-            echo "::error::以下 job 未通过: ${bad}"
-            exit 1
-          fi
+          EVENT: ${{ github.event_name }}
+        run: scripts/ci-results.sh "$EVENT" <<<"$NEEDS"

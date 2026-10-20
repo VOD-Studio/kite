@@ -1,7 +1,7 @@
 # 定时任务:跟踪「没改代码也会变化」的外部状态,与 PR 门禁(ci.yml)解耦。
 #
-#   - vuln:每日全量 govulncheck。漏洞库更新会让无关 PR 变红,所以 PR 门禁只在依赖变化时才拦
-#     (见 ci.yml 的 vuln job),全量扫描放这里;失败时开 / 更新一个 issue 提醒,不阻塞任何 PR。
+#   - vuln:每日全量 govulncheck；可修复漏洞/工具错误失败，无修复版保持 advisory。
+#     两者都开 / 更新 issue，避免无修复版漏洞从维护视野中消失。
 
 name: Scheduled
 
@@ -22,23 +22,25 @@ jobs:
       contents: read
       issues: write   # 失败时开 / 更新 issue
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
       - name: Install govulncheck
         run: go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
       - name: govulncheck 门禁
         id: scan
         run: make vuln
-      - name: 失败时开 / 更新 issue
-        if: failure() && steps.scan.outcome == 'failure'
+      - name: 漏洞 advisory 或扫描失败时开 / 更新 issue
+        if: ${{ !cancelled() && (failure() || steps.scan.outputs.advisory == 'true') }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SCAN_OUTCOME: ${{ steps.scan.outcome }}
+          ADVISORY: ${{ steps.scan.outputs.advisory }}
         run: |
-          title="[security] 依赖存在可修复的漏洞"
+          title="[security] 定时漏洞扫描需要处理"
           existing=$(gh issue list --state open --search "\"${title}\" in:title" --json number --jq '.[0].number // empty')
-          body="定时全量扫描发现可修复的漏洞,详情见运行日志: ${RUN_URL}"
+          body="定时扫描结果: ${SCAN_OUTCOME:-未完成}; 无修复版 advisory: ${ADVISORY:-未知}。扫描失败可能是可修复漏洞或工具/安装故障；请检查日志，不应视为安全通过。详情: ${RUN_URL}"
           if [ -n "${existing}" ]; then
             gh issue comment "${existing}" --body "${body}"
           else

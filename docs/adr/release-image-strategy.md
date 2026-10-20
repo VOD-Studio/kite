@@ -1,6 +1,6 @@
 # 发布镜像策略:dockers_v2 + distroless + 双 Dockerfile + ghcr.io
 
-2026-07-27 决策(访谈见 `CONTEXT.md`)。
+2026-07-27 决策;2026-10-20 更新发布完成状态、运维探针与标签推进策略(术语见 `CONTEXT.md`)。
 
 ## Context
 
@@ -21,7 +21,7 @@ kite 是双产物:CLI 跨平台二进制 + gRPC 服务镜像。发布管道由 G
 ### base 镜像:distroless static-debian12(采用) vs alpine vs scratch
 
 - **distroless `gcr.io/distroless/static-debian12:nonroot`**(采用):Go 静态二进制(`CGO_ENABLED=0`)完美匹配,**自带 CA 证书包**(gRPC over TLS 必需),无 shell 极小攻击面。GoReleaser 官方 supply-chain example 用 `FROM scratch`,社区 gRPC 教程普遍用 distroless。
-- alpine:现 Dockerfile 在用,~5MB,有 shell 易调试;但 musl libc 偶有兼容性坑,需 `apk add ca-certificates tzdata`。
+- alpine:有 shell 易调试;但 musl libc 偶有兼容性坑,需额外安装 CA 证书和时区数据。
 - scratch:最极端(~0+binary),但要手动管 CA 证书。
 
 选 distroless:服务端场景对安全/体积敏感,gRPC TLS 需 CA 证书,且 `:nonroot` 变体已是非 root。
@@ -40,19 +40,27 @@ kite 是双产物:CLI 跨平台二进制 + gRPC 服务镜像。发布管道由 G
 
 ## Decision
 
-**当前范围**:仅 server 镜像发布。CLI 二进制发版(build + archives + signs)暂未配——CLI 的 beep/oto 依赖 cgo,与 `CGO_ENABLED=0` 静态编译冲突;播放功能将迁移到 TUI(#14 移除 CLI 播放),故不为将死功能解决 cgo。等 #14 完成后补回 CLI build,届时:
+**当前范围**:CLI 与 server 均发布 Linux / macOS / Windows × amd64 / arm64 档案。
+部署用 `kite-probe` 只编译 Linux 两种架构,随 server 镜像和签名部署安装包分发,不增加第三类用户档案。
 
-- 镜像构建:GoReleaser `dockers_v2`,`ids: [server]`,只把 server 产物打进镜像(CLI 走 archives)。
-- base:`gcr.io/distroless/static-debian12:nonroot`。
-- Dockerfile:新增 `Dockerfile.release`(发布用,COPY 二进制);根 `Dockerfile`(本地开发)保留不动。
-- registry:`ghcr.io/vod-studio/kite-server`(全小写,镜像名必须小写)。
-- 镜像 tag:`latest` + `{{ .Tag }}` + `v{{ .Major }}.{{ .Minor }}`。
-- 签名:cosign keyless(OIDC,不传 `--key`);workflow 需 `id-token: write`。
+- 镜像构建:GoReleaser `dockers_v2`,`ids: [server, deploy-probe]`;CLI 只走 archives。
+- base:固定 digest 的 `gcr.io/distroless/static-debian12:nonroot`,两份 Dockerfile 保持相同运行时安全策略。
+- Dockerfile:`Dockerfile.release` 只 COPY 已编译二进制;根 `Dockerfile` 供本地从源码多阶段编译。
+- registry:`ghcr.io/vod-studio/kite-server`。
+- 镜像 tag:构建只推精确版本。全部发布产物验真后,串行按数值 SemVer 推进 `latest` 和对应 minor 标签;
+  补旧版不得倒退浮动标签,公开版本不得覆盖原字节。
+- 签名:Cosign keyless(OIDC,不传 `--key`);镜像按 index digest 签名,校验和及部署安装包各有 Sigstore bundle。
 - SBOM:`dockers_v2.sbom: true`(默认)。
+- 完成状态:release-please 先建 draft / tag,档案、签名、镜像和安装包完成并验证后才公开;
+  用户看见「已发布」不能仍缺附件。公开版重跑只验证原产物;损坏历史版本通过修正版解决。
+- 管理权限:CI 仅部署已批准的应用版本;宿主机部署器由管理员验证签名安装包后升级。
+  受限 SSH 密钥不能修改自己的授权文件或 root 程序。切换流程见 [部署指南](../deploy.md)。
 
 ### GoReleaser 编译/COPY 模式(核心)
 
-GoReleaser 在 `dist/<os>_<arch>/` 编译好二进制 → `dockers_v2` 把 `dist/<target>/` 按 `$TARGETPLATFORM` 注入构建上下文 → `Dockerfile.release` 里 `COPY $TARGETPLATFORM/server` 直接拿。**Dockerfile 绝不 `RUN go build`**。
+GoReleaser 编译二进制后,`dockers_v2` 按 `$TARGETPLATFORM` 注入构建上下文。
+`Dockerfile.release` 直接 COPY `server` 和 `kite-probe`,绝不重复 `go build`。
+合并前 CI 从 snapshot 产物实际构建 / 运行发布镜像,公开前再验证发布 index 及双架构镜像。
 
 ### 版本信息嵌入
 
@@ -61,9 +69,10 @@ kite 的 `internal/cli/version` 包用 `debug.ReadBuildInfo()` 读 vcs 元数据
 ## Consequences
 
 - 反悔成本中:改回老 `dockers` 要等 v3(无 ETA)移除后才完全不可用,但配置会一直 warning。
-- 发布 Dockerfile 极简(4 行),本地 Dockerfile 多阶段,两者职责分离,互不影响。
-- 镜像无 shell,调试需 `docker cp` 或临时换 alpine 镜像。
-- cosign keyless 需 GitHub OIDC,自托管 runner 要支持 OIDC 才能签名。
+- 发布 Dockerfile 不编译,开发 Dockerfile 从源码构建;两条路径均有实际容器冒烟,不以源码文本相等作证明。
+- 镜像无 shell,部署验收依靠独立的 REST/gRPC 静态探针,不在服务镜像安装运维工具。
+- Cosign keyless 依赖 GitHub OIDC;仅可信 main 工作流拥有签名权限,部署端固定证书身份与 issuer。
+- 单机部署接受短暂中断;先完成来源 / digest 验证再替换,失败使用旧容器实际本地 image ID 恢复。
 
 ## 反向条件
 
