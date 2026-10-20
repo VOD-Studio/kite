@@ -218,7 +218,7 @@ jobs:
       - uses: ./.github/actions/setup
       - run: make interop-go
 
-  # 网页播放器 web/player(npm 包 @violetjs/kite-player):类型检查 + 测试 + 构建。
+  # 网页播放器 packages/kite-player(npm 包 @violetjs/kite-player):类型检查 + 测试 + 构建。
   # 依赖由 package-lock.json 锁定,Node 大版本取自 Makefile。发布见 npm.yml。
   player:
     name: Player
@@ -232,7 +232,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: web/player/package-lock.json
+          cache-dependency-path: packages/kite-player/package-lock.json
       - run: make player-check
 
   # 发布配置的合并前校验:goreleaser 配置错误、跨平台构建失败原本要到打 tag 才暴露。

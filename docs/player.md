@@ -1,6 +1,6 @@
 # 网页播放器:自部署与接入
 
-kite 自带一个网页播放器组件 [`@violetjs/kite-player`](../web/player/),和 kite-server 的**公开只读模式**配合使用:站长自己部署 kite,在博客里放一个标签就能播网易云歌单,不依赖任何第三方公共接口。
+kite 自带一个网页播放器组件 [`@violetjs/kite-player`](../packages/kite-player/),和 kite-server 的**公开只读模式**配合使用:站长自己部署 kite,在博客里放一个标签就能播网易云歌单,不依赖任何第三方公共接口。
 
 ```
 博客页面(静态 HTML 也行)
@@ -11,7 +11,7 @@ kite 自带一个网页播放器组件 [`@violetjs/kite-player`](../web/player/)
   kite-server 公开模式(/player/v1)── 白名单、签名播放链接、限流、可选站长 VIP 登录态
 ```
 
-有自己后端的站点(比如 violet)不需要开公开模式:后端照常用令牌调用 kite 的 gRPC / REST,再实现下文的 `/player/v1` 协议,或者给组件传一个[自定义数据源](../web/player/README.md#自定义数据来源)。
+有自己后端的站点(比如 violet)不需要开公开模式:后端照常用令牌调用 kite 的 gRPC / REST,再实现下文的 `/player/v1` 协议,或者给组件传一个[自定义数据源](../packages/kite-player/README.md#自定义数据来源)。
 
 ## 开启公开模式
 
@@ -102,7 +102,7 @@ secrets:
 
 - `api` 填反向代理对外的 HTTPS 地址;页面所在的站点要在 `KITE_PUBLIC_ORIGINS` 里。
 - 卡片里的歌必须在白名单内:属于白名单歌单,或单独列在 `KITE_PUBLIC_SONGS`。
-- 元素属性、卡片尺寸、主题与样式变量、React hooks、自定义数据源,以及在其它框架(如 Rust 的 Dioxus)里使用,见[组件说明](../web/player/README.md)。
+- 元素属性、卡片尺寸、主题与样式变量、React hooks、自定义数据源,以及在其它框架(如 Rust 的 Dioxus)里使用,见[组件说明](../packages/kite-player/README.md)。
 
 ## 协议 `/player/v1`
 

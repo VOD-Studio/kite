@@ -1,7 +1,7 @@
 name: npm
 
-# 把 web/player 发布到 npm(@violetjs/kite-player)。只有手动入口:
-#   改 web/player/package.json 的 version → PR 合入 main → Actions → npm → Run workflow(选 main)。
+# 把 packages/kite-player 发布到 npm(@violetjs/kite-player)。只有手动入口:
+#   改 packages/kite-player/package.json 的 version → PR 合入 main → Actions → npm → Run workflow(选 main)。
 #
 # 不用 git tag 触发:GoReleaser 按「上一个 tag」生成 kite 的 changelog,另一套 tag 会混进去。
 # 发布的是哪个 commit 由 npm provenance 记录(npm 包页面可查)。
@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: web/player
+        working-directory: packages/kite-player
     steps:
       - name: 只从 main 发布
         working-directory: .
@@ -56,7 +56,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: https://registry.npmjs.org
           cache: npm
-          cache-dependency-path: web/player/package-lock.json
+          cache-dependency-path: packages/kite-player/package-lock.json
 
       - name: 确认版本还没发布过
         id: version
@@ -64,7 +64,7 @@ jobs:
           name=$(node -p "require('./package.json').name")
           version=$(node -p "require('./package.json').version")
           if npm view "${name}@${version}" version >/dev/null 2>&1; then
-            echo "::error::${name}@${version} 已经在 npm 上,先改 web/player/package.json 的 version"
+            echo "::error::${name}@${version} 已经在 npm 上,先改 packages/kite-player/package.json 的 version"
             exit 1
           fi
           # 预发布版本(如 0.2.0-beta.1)发到 next,不占用 latest
