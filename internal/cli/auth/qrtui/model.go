@@ -43,7 +43,7 @@ type Result struct {
 // Deps 注入依赖(测试 seam)。Check 是对 CheckQrcode 的封装,内部调 kit.RawDo
 // + model.DecodeQrcodeStatus;调用方负责 ctx 的 cookie 注入。
 type Deps struct {
-	// QR renderQR 的输出(已含 quiet zone 与半高方块),固定不变。
+	// QR termqr.Render 的输出(已含 quiet zone 与半高方块),固定不变。
 	QR string
 	// QRURL 二维码原始 URL(展示给无法识别二维码的终端用户)。
 	QRURL string
