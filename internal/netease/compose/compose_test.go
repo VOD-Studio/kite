@@ -21,14 +21,17 @@ import (
 )
 
 // upstream 是按路径路由的假网易云。weapi 请求体是加密的,看不到 offset 等参数,
-// 所以歌曲详情返回歌单里的全部歌曲,由 Details 按请求的 ID 挑出这一页。
+// 所以歌曲详情返回歌单里的全部歌曲,由 Details 按请求的 ID 挑出这一页;
+// 用户歌单按调用次数依次返回各页。
 type upstream struct {
-	t      *testing.T
-	detail []byte // /weapi/v6/playlist/detail
-	songs  []byte // /weapi/v3/song/detail
+	t         *testing.T
+	detail    []byte   // /weapi/v6/playlist/detail
+	songs     []byte   // /weapi/v3/song/detail
+	userPages [][]byte // /weapi/user/playlist,按调用次数依次返回
 
 	mu      sync.Mutex
 	cookies map[string][]string // path → 每次请求的 Cookie 头
+	pageHit atomic.Int32
 }
 
 func (u *upstream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +44,9 @@ func (u *upstream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(u.detail)
 	case "/weapi/v3/song/detail":
 		_, _ = w.Write(u.songs)
+	case "/weapi/user/playlist":
+		i := int(u.pageHit.Add(1)) - 1
+		_, _ = w.Write(u.userPages[min(i, len(u.userPages)-1)])
 	default:
 		u.t.Errorf("unexpected upstream path %s", r.URL.Path)
 		w.WriteHeader(http.StatusNotFound)
@@ -150,6 +156,81 @@ func TestPlaylistTracks_LastAndEmptyPages(t *testing.T) {
 	require.Equal(t, ids, songIDs(all), "未指定 limit 时默认 100,71 首全部返回")
 }
 
+// userPlaylistsUpstream:两页上游数据。第一页额外带「喜欢的音乐」(与真实上游一致),
+// 用户 7 创建 3 张(含喜欢的音乐)、收藏 2 张。
+func userPlaylistsUpstream() *upstream {
+	return &upstream{userPages: [][]byte{
+		[]byte(`{"code":200,"more":true,"playlist":[
+			{"id":100,"name":"喜欢的音乐","specialType":5,"creator":{"userId":7}},
+			{"id":101,"name":"创建 A","creator":{"userId":7}},
+			{"id":201,"name":"收藏 X","creator":{"userId":9}}]}`),
+		[]byte(`{"code":200,"more":false,"playlist":[
+			{"id":102,"name":"创建 B","creator":{"userId":7}},
+			{"id":202,"name":"收藏 Y","creator":{"userId":8}}]}`),
+	}}
+}
+
+func playlistIDs(resp *mmpb.UserPlaylistResponse) []int64 {
+	out := make([]int64, len(resp.GetPlaylists()))
+	for i, p := range resp.GetPlaylists() {
+		out[i] = p.GetId()
+	}
+	return out
+}
+
+// issue #88:total 以前是当前页长度,随 limit / offset 变化;筛选又在上游分页之后做。
+func TestUserPlaylists_TotalAndPagingPerFilter(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		filter mmpb.PlaylistFilter
+		want   []int64
+	}{
+		{mmpb.PlaylistFilter_PLAYLIST_FILTER_ALL, []int64{100, 101, 201, 102, 202}},
+		{mmpb.PlaylistFilter_PLAYLIST_FILTER_CREATED, []int64{100, 101, 102}},
+		{mmpb.PlaylistFilter_PLAYLIST_FILTER_SUBSCRIBED, []int64{201, 202}},
+	}
+	for _, c := range cases {
+		t.Run(c.filter.String(), func(t *testing.T) {
+			t.Parallel()
+			for _, limit := range []int32{1, 2, 3} {
+				var walked []int64
+				for offset := int32(0); ; offset += limit {
+					// 每次都是一次独立的读取:上游从第一页重新给。
+					u := userPlaylistsUpstream()
+					eng, _ := newEngine(t, u)
+					resp, err := UserPlaylists(context.Background(), eng, &mmpb.UserPlaylistRequest{
+						UserId: 7, Filter: c.filter, Limit: limit, Offset: offset,
+					})
+					require.NoError(t, err)
+					require.Equal(t, int32(len(c.want)), resp.GetTotal(), "limit=%d offset=%d", limit, offset)
+					require.LessOrEqual(t, len(resp.GetPlaylists()), int(limit))
+					if len(resp.GetPlaylists()) == 0 {
+						require.GreaterOrEqual(t, int(offset), len(c.want), "只有越界才是空页")
+						break
+					}
+					walked = append(walked, playlistIDs(resp)...)
+				}
+				require.Equal(t, c.want, walked, "limit=%d 完整遍历不重复、不跳过", limit)
+			}
+		})
+	}
+}
+
+func TestUserPlaylists_FollowsMoreAndDedupes(t *testing.T) {
+	t.Parallel()
+	u := userPlaylistsUpstream()
+	// 第二页重复了第一页的一张(上游翻页时列表有变动),按 ID 去重。
+	u.userPages[1] = []byte(`{"code":200,"more":false,"playlist":[
+		{"id":101,"name":"创建 A","creator":{"userId":7}},
+		{"id":102,"name":"创建 B","creator":{"userId":7}}]}`)
+	eng, _ := newEngine(t, u)
+
+	resp, err := UserPlaylists(context.Background(), eng, &mmpb.UserPlaylistRequest{UserId: 7, Limit: 10})
+	require.NoError(t, err)
+	require.Equal(t, []int64{100, 101, 201, 102}, playlistIDs(resp))
+	require.Equal(t, int32(2), u.pageHit.Load(), "more=false 后不再翻页")
+}
+
 // issue #90:带了调用方 cookie 的读取用它,没带的匿名;任何情况下都不借用会话池里的站点账号。
 func TestComposedReads_UseCallerCookieNeverThePool(t *testing.T) {
 	t.Parallel()
@@ -162,16 +243,20 @@ func TestComposedReads_UseCallerCookieNeverThePool(t *testing.T) {
 		{"匿名", ""},
 	}
 	u, _ := playlistUpstream(t)
+	u.userPages = userPlaylistsUpstream().userPages
 	eng, pool := newEngine(t, u)
 
 	// 交错执行:A、B、匿名、再 A。
 	for _, c := range append(cases, cases[0]) {
 		ctx := engine.WithCookie(context.Background(), c.cookie)
-		_, err := PlaylistTracks(ctx, eng, &mmpb.AllTracksRequest{PlaylistId: 1, Limit: 3})
+		u.pageHit.Store(0)
+		_, err := UserPlaylists(ctx, eng, &mmpb.UserPlaylistRequest{UserId: 7})
+		require.NoError(t, err)
+		_, err = PlaylistTracks(ctx, eng, &mmpb.AllTracksRequest{PlaylistId: 1, Limit: 3})
 		require.NoError(t, err)
 	}
 
-	for _, path := range []string{"/weapi/v6/playlist/detail", "/weapi/v3/song/detail"} {
+	for _, path := range []string{"/weapi/user/playlist", "/weapi/v6/playlist/detail", "/weapi/v3/song/detail"} {
 		got := u.calls(path)
 		require.NotEmpty(t, got, path)
 		var seq []string

@@ -544,9 +544,9 @@ type UserPlaylistRequest struct {
 	UserId int64 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// 歌单过滤（ALL/CREATED/SUBSCRIBED）。
 	Filter PlaylistFilter `protobuf:"varint,2,opt,name=filter,proto3,enum=netease.music.v1.PlaylistFilter" json:"filter,omitempty"`
-	// 每页数量。
+	// 每页数量。不传或 ≤ 0 时为 30,超过 1000 按 1000。
 	Limit int32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	// 偏移量。
+	// 偏移量(从 0 开始)。超出 total 时返回空页。
 	Offset        int32 `protobuf:"varint,4,opt,name=offset,proto3" json:"offset,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -613,9 +613,10 @@ func (x *UserPlaylistRequest) GetOffset() int32 {
 // UserPlaylist 响应（复用 playlist.proto 的完整 Playlist，含 creator 供 filter 判断）。
 type UserPlaylistResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// 歌单列表。
+	// 这一页的歌单,不超过 limit 张。
 	Playlists []*Playlist `protobuf:"bytes,1,rep,name=playlists,proto3" json:"playlists,omitempty"`
-	// 总数。
+	// 当前 filter 下的歌单总数,不随 limit / offset 变化。
+	// 「我喜欢的音乐」的创建者是用户本人,计入 ALL 与 CREATED。
 	Total         int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

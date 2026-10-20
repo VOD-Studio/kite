@@ -34,6 +34,7 @@ kite-server 以 gRPC(默认 `:3722`)和 REST(grpc-gateway,默认 `:3721`)提供�
 - 带本人的 cookie 时按该账号读,能看到私有歌单及其歌曲;不带时匿名,只有公开内容。服务端保存的账号不会被借给任何请求。
 - 带 cookie 的结果按账号单独缓存,不同账号、匿名请求之间不会串数据。
 - cookie 失效时上游按匿名返回公开内容,**不会**报 `LOGIN_REQUIRED`;要确认登录态,调 `AuthService/LoginStatus`(未登录时 `session` 为空)。
+- 分页:`total` 是总数(`UserPlaylist` 为当前 `filter` 下的总数),不随 `limit` / `offset` 变化;每页不超过 `limit`(默认值与上限见 proto 注释),`offset` 超出总数时返回空页。
 
 ## Go 示例
 

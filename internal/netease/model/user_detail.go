@@ -88,31 +88,24 @@ type rawUserPlaylists struct {
 	} `json:"playlist"` // 歌单列表
 }
 
-// DecodeUserPlaylists 解析用户歌单列表响应。
-// filter 按 creator.userId == ownerUserID 判断创建/收藏。
-// ownerUserID 为 0 时按网易云返回顺序原样返回（无法判断创建/收藏）。
-func DecodeUserPlaylists(raw json.RawMessage, ownerUserID int64, filter mmpb.PlaylistFilter) ([]*mmpb.Playlist, int32, error) {
+// UserPlaylistPage 是上游用户歌单接口的一页原始结果(未筛选)。
+type UserPlaylistPage struct {
+	// Playlists 按上游顺序。第一页会在 limit 之外额外带上「喜欢的音乐」。
+	Playlists []*mmpb.Playlist
+	// More 表示上游还有下一页。上游不返回总数。
+	More bool
+}
+
+// DecodeUserPlaylistPage 解析用户歌单接口的一页。筛选与分页在 compose.UserPlaylists 里做:
+// 上游的分页既不返回总数、第一页又多一条,只有拿到全量后才能给出准确的 total。
+func DecodeUserPlaylistPage(raw json.RawMessage) (*UserPlaylistPage, error) {
 	var r rawUserPlaylists
 	if err := json.Unmarshal(raw, &r); err != nil {
-		return nil, 0, fmt.Errorf("解析用户歌单失败: %w", err)
+		return nil, fmt.Errorf("解析用户歌单失败: %w", err)
 	}
-	var out []*mmpb.Playlist
+	out := &UserPlaylistPage{More: r.More, Playlists: make([]*mmpb.Playlist, 0, len(r.Playlist))}
 	for _, p := range r.Playlist {
-		// ownerUserID 非空时按创建者 ID 判断创建/收藏。
-		if ownerUserID != 0 {
-			isCreated := p.Creator.UserID == ownerUserID
-			switch filter {
-			case mmpb.PlaylistFilter_PLAYLIST_FILTER_CREATED:
-				if !isCreated {
-					continue
-				}
-			case mmpb.PlaylistFilter_PLAYLIST_FILTER_SUBSCRIBED:
-				if isCreated {
-					continue
-				}
-			}
-		}
-		out = append(out, &mmpb.Playlist{
+		out.Playlists = append(out.Playlists, &mmpb.Playlist{
 			Id:         p.ID,
 			Name:       p.Name,
 			CoverUrl:   p.CoverImgURL,
@@ -124,5 +117,5 @@ func DecodeUserPlaylists(raw json.RawMessage, ownerUserID int64, filter mmpb.Pla
 			},
 		})
 	}
-	return out, int32(len(r.Playlist)), nil
+	return out, nil
 }

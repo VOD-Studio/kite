@@ -35,7 +35,7 @@ service UserService {
     };
   }
 
-  // UserPlaylist 获取用户歌单列表(创建的 + 收藏的)。
+  // UserPlaylist 获取用户歌单列表(创建的 + 收藏的),按网易云的顺序分页。
   // 可选登录:不带 cookie 按匿名读,只有公开歌单;经 metadata x-netease-cookie 带了本人的 cookie
   // 就按该账号读(含私有歌单)。不会借用服务端保存的任何账号。
   rpc UserPlaylist(UserPlaylistRequest) returns (UserPlaylistResponse) {
@@ -189,17 +189,18 @@ message UserPlaylistRequest {
   int64 user_id = 1;
   // 歌单过滤（ALL/CREATED/SUBSCRIBED）。
   PlaylistFilter filter = 2;
-  // 每页数量。
+  // 每页数量。不传或 ≤ 0 时为 30,超过 1000 按 1000。
   int32 limit = 3;
-  // 偏移量。
+  // 偏移量(从 0 开始)。超出 total 时返回空页。
   int32 offset = 4;
 }
 
 // UserPlaylist 响应（复用 playlist.proto 的完整 Playlist，含 creator 供 filter 判断）。
 message UserPlaylistResponse {
-  // 歌单列表。
+  // 这一页的歌单,不超过 limit 张。
   repeated Playlist playlists = 1;
-  // 总数。
+  // 当前 filter 下的歌单总数,不随 limit / offset 变化。
+  // 「我喜欢的音乐」的创建者是用户本人,计入 ALL 与 CREATED。
   int32 total = 2;
 }
 
