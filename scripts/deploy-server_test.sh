@@ -25,7 +25,7 @@ case "$1" in
   run)
     if [ -n "${FAKE_RUN_FAIL:-}" ] && grep -Eq "${FAKE_RUN_FAIL}" <<<"${@: -1}"; then exit 125; fi
     echo "${@: -1}" >"${STATE}/current" ;;
-  rm|logs) ;;
+  rm|logs|network) ;;
   *) echo "unexpected podman call: $*" >&2; exit 99 ;;
 esac
 SHIM
@@ -64,6 +64,12 @@ expect "新版本健康 → 部署成功,按 digest 运行" 0 $? "@sha256:new$"
 grep -q " v1.2.3 ghcr.io/vod-studio/kite-server@sha256:new$" "${tmp}/state/deploy-history" ||
   { echo "FAIL 成功后应记录部署历史"; fail=1; }
 grep -q "^login" "${tmp}/calls.log" && { echo "FAIL 没有令牌时不应登录"; fail=1; }
+grep -qx "network create --ignore kite_network" "${tmp}/calls.log" ||
+  { echo "FAIL 应确保专用网络 kite_network 存在"; fail=1; }
+grep -q -- "--network kite_network --network-alias kite" <(grep '^run ' "${tmp}/calls.log") ||
+  { echo "FAIL 容器应加入 kite_network,别名 kite"; fail=1; }
+[ "$(grep -c -- '--network ' "${tmp}/calls.log")" = 1 ] ||
+  { echo "FAIL 容器只应加入一个网络"; fail=1; }
 
 deploy "${ref}" "${old}" "sha256:old" ""
 expect "新版本不健康 → 回滚到旧镜像" 1 $? "@sha256:old$"

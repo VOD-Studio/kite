@@ -1,7 +1,7 @@
 name: Deploy
 
-# 把已发布的 kite-server 镜像部署到生产服务器(与 violet 同机,容器加入 violet_network,
-# violet 经 http://kite:3721 访问,不映射宿主机端口)。两种入口:
+# 把已发布的 kite-server 镜像部署到生产服务器(容器加入专用网络 kite_network,同机调用方
+# 加入该网络后经 http://kite:3721 访问,不映射宿主机端口)。两种入口:
 #   - workflow_call:release-please.yml 在产物发布成功后调用(日常路径,tag 为刚发布的版本);
 #   - workflow_dispatch:手动部署指定版本——重试失败的部署,或回滚到旧版本。
 #

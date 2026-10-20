@@ -5,7 +5,8 @@
 #   stdin:镜像仓库令牌(可为空;镜像公开时匿名拉取)。令牌只写进本次运行的临时 authfile,结束即删。
 #
 # 流程:拉取 → 锁定 digest → 替换容器 → 健康检查;失败时回滚到替换前的镜像并以非零退出。
-# 容器只加入内网(默认 violet_network,别名 kite),不映射宿主机端口:同网的 violet 经 http://kite:3721 访问。
+# 容器只加入 kite 专用网络(默认 kite_network,别名 kite;不存在时创建),不映射宿主机端口:
+# 调用方把自己的后端容器加入该网络,经 http://kite:3721 访问,彼此的其它容器互不可见。
 # 访问令牌来自 podman secret(安装脚本 deploy-server-install.sh 创建),以文件形式挂进容器。
 #
 # 环境变量(均有默认值,测试时覆盖):PODMAN CURL CONTAINER NETWORK ALIAS SECRET STATE_DIR
@@ -15,7 +16,7 @@ set -euo pipefail
 PODMAN="${PODMAN:-podman}"
 CURL="${CURL:-curl}"
 CONTAINER="${CONTAINER:-kite}"
-NETWORK="${NETWORK:-violet_network}"
+NETWORK="${NETWORK:-kite_network}"
 ALIAS="${ALIAS:-kite}"
 SECRET="${SECRET:-kite-auth-token}"
 STATE_DIR="${STATE_DIR:-/srv/kite}"
@@ -71,6 +72,9 @@ healthy() {
   done
   return 1
 }
+
+# 网络由 kite 拥有:首次部署时创建,已存在则不动。放在替换容器之前,创建失败时旧容器仍在运行。
+"${PODMAN}" network create --ignore "${NETWORK}" >/dev/null
 
 echo "启动 ${version} (${digest})"
 # 启动失败(网络 / secret 缺失等)与健康检查失败同样走回滚:此时旧容器已被删除,不能让 set -e 直接退出。

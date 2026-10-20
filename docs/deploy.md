@@ -1,7 +1,8 @@
 # 生产部署
 
-kite-server 与 violet 部署在同一台服务器上:容器加入 violet 的内网 `violet_network`(网络别名 `kite`),
-不映射宿主机端口,violet 经 `http://kite:3721`(REST)/ `kite:3722`(gRPC)访问。
+kite-server 的容器只加入 kite 专用网络 `kite_network`(网络别名 `kite`,首次部署时创建),不映射宿主机端口。
+同机的调用方把自己的后端容器加入 `kite_network`,经 `http://kite:3721`(REST)/ `kite:3722`(gRPC)访问;
+加入这个网络只能看到 kite(和其它调用方加入的容器),看不到各项目自己网络里的数据库等容器。
 监听非回环地址,所以访问令牌是必需的(见 [server-security.md](server-security.md))。
 
 ## 自动部署
@@ -33,7 +34,8 @@ gh workflow run deploy.yml -f tag=v0.3.0
 
 ## 服务器一次性安装
 
-以 root 在服务器上执行(可重复执行;改了 `scripts/deploy-*.sh` 后重跑即更新服务器上的副本):
+以 root 在服务器上执行(可重复执行;改了 `scripts/deploy-*.sh` 后重跑即更新服务器上的副本——
+CI 有意不更新这些副本,否则能改工作流的人就等于拿到了服务器 root):
 
 ```bash
 # 在本地生成部署专用密钥(不要复用个人密钥)
@@ -56,8 +58,23 @@ sudo ./deploy-server-install.sh kite-deploy.pub
 
 未配置前三项时 `deploy.yml` 只给提示并跳过,不会让发布流程变红。
 
-## violet 侧
+## 调用方接入(同机项目,如 violet)
 
-- `kite_url` 设为 `http://kite:3721`;每个请求带 `Authorization: Bearer <令牌>`(令牌即 `/srv/kite/auth-token`)。
-- 网易云登录态经请求头 `Grpc-Metadata-X-Netease-Cookie` 传入,由 violet 保存;
+- 把后端容器加入 `kite_network`,并写进项目自己的部署配置——只手动 `podman network connect`,容器重建后就丢了。
+  compose 示例(`external: true` 要求网络已存在,即 kite 至少部署过一次):
+
+  ```yaml
+  services:
+    api:
+      networks: [backend, kite]   # 保留项目原有的网络,追加 kite
+  networks:
+    kite:
+      name: kite_network
+      external: true
+  ```
+
+- 容器配了 `HTTP_PROXY` / `HTTPS_PROXY` 时,把 `kite` 加进 `NO_PROXY`:Go 的 HTTP 与 gRPC 客户端默认读这些变量,
+  而 CIDR 形式的 `NO_PROXY`(如 `10.89.0.0/16`)只匹配 IP,不匹配主机名 `kite`。
+- 地址 `http://kite:3721`;每个请求带 `Authorization: Bearer <令牌>`(令牌即 `/srv/kite/auth-token`,所有调用方共用)。
+- 网易云登录态经请求头 `Grpc-Metadata-X-Netease-Cookie` 传入,由调用方保存;
   过期前调 `POST /api/v1/auth/refresh` 续期,收到 `LOGIN_REQUIRED` 时引导重新登录(见 [grpc-errors.md](grpc-errors.md))。
