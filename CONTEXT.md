@@ -9,7 +9,8 @@
 |---|---|
 | **双产物** | kite 的两个交付物:`server`(gRPC + grpc-gateway 服务)和 `kite`(直连 engine 的 CLI)。共享 `internal/netease/` 核心(engine + endpoint);`internal/service/` 只是 gRPC adapter,CLI 不经过它(见 ADR shared-boundary-engine)。 |
 | **gen/** | `buf generate` 从 `proto/` 产出的 Go stub/gRPC service/gateway/OpenAPI。被项目代码 `import` **硬依赖**(不生成则 vet/test 红)。性质同 `docs/cmd/`(生成产物且已提交)。 |
-| **release PR** | release-please 从 conventional commits 推导版本号后自动开的 PR,含待发布 CHANGELOG。合并即触发打 tag → GoReleaser 构建。 |
+| **release PR** | release-please 从 main 上的 Conventional Commits 推导版本号并更新 manifest / CHANGELOG 的 PR。以 Squash 合并表示批准发版;产物和签名完整、验真通过后才公开 release 并自动部署。业务 PR 可自选 Merge / Squash / Rebase,其合并本身不是发布批准。 |
+| **部署器** | 管理员验签后安装的宿主机特权程序,与应用镜像独立升级。CI 只有受限应用部署权限;普通 release 不能更新部署器。能力版本定义兼容性,内容摘要标识实际安装构建。 |
 | **配置(config.toml)** | 用户偏好的持久化,只收「已存在 flag 或硬编码默认值」的 key,不造新语义。与**状态文件**(session.json / history.jsonl,程序运行产生)同住配置目录但性质不同:配置可删可重建,状态不可。 |
 
 ## 不可逆/高代价决策(ADR 候选)
@@ -23,7 +24,7 @@
 | 镜像构建 | GoReleaser `dockers_v2` + 极简 Dockerfile(COPY 二进制,不重编译)+ distroless static-debian12 | 2026-07-27 | 需 ADR(老 dockers 弃用 + 双 Dockerfile 模式需背景) |
 | 镜像仓库 | ghcr.io | 2026-07-27 | (无需 ADR,GitHub 项目首选无争议) |
 | lint 严格度 | golangci-lint v2 中度(默认 6 + gosec/revive/bodyclose/misspell/unconvert/contextcheck/nilerr/gocritic),`only-new-issues: true` 避免历史债阻塞 | 2026-07-27 | (无需 ADR,可调) |
-| 发布产物范围 | 只 `cmd/server` + `cmd/kite`;`cmd/kite-docs`(开发工具)、`cmd/demo`(非交付)不发 | 2026-07-27 | (无需 ADR,AGENTS.md 已明确) |
+| 发布产物范围 | 用户产物为 `cmd/server` + `cmd/kite`;`cmd/kite-probe` 仅随镜像和运维安装包分发,不是公开 CLI 档案;`cmd/kite-docs`、`cmd/demo` 不发布 | 2026-10-20 | [release-image-strategy](docs/adr/release-image-strategy.md) |
 | CHANGELOG 位置 | 仓库根目录 `CHANGELOG.md` | 2026-07-27 | (无需 ADR,行业约定) |
 | config 优先级 | `--json` > 非TTY自动JSON > config.toml > 内置默认;管道 JSON 契约**不被 config 覆盖**(config 是机器本地偏好,契约是全局的) | 2026-08-16 | (无需 ADR,Phase A 脚本契约的自然延伸) |
 | config get 输出 | 单 key 裸打**生效值**(不带格式,可在脚本中使用,gh/jj/git 惯例);无参列表带「来源」列;未知 key 报错退非零(key 是固定枚举,拼错要早暴露) | 2026-08-16 | (无需 ADR,业界惯例) |

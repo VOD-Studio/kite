@@ -2,7 +2,7 @@ module github.com/VOD-Studio/kite
 
 go 1.26.0
 
-toolchain go1.26.6
+toolchain go1.26.9
 
 require (
 	charm.land/bubbletea/v2 v2.0.9

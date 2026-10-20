@@ -4,13 +4,14 @@
 # 本文件绝不 RUN go build——只 COPY 已编译的二进制到 distroless。
 # 本地开发用根目录 Dockerfile(多阶段,自己 go build),两者职责分离。
 
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
 
 # $TARGETPLATFORM 由 dockers_v2 的 buildx 自动注入(linux/amd64 或 linux/arm64)
 ARG TARGETPLATFORM
 
 # static-debian12 自带 CA 证书包,gRPC over TLS 可用;:nonroot 已是非 root 用户
 COPY $TARGETPLATFORM/server /usr/local/bin/server
+COPY $TARGETPLATFORM/kite-probe /usr/local/bin/kite-probe
 
 # 容器内必须监听全部网卡,端口映射才通。因此镜像不带令牌启动会被拒绝(这是有意的):
 # 运行时必须设置 KITE_SERVER_AUTH_TOKEN 或 KITE_SERVER_AUTH_TOKEN_FILE。见 docs/server-security.md。

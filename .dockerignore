@@ -1,0 +1,11 @@
+# 构建只需要源码,不把本地凭据、Git 历史和验证产物送入 builder。
+.git/
+.env
+.env.*
+tmp/
+dist/
+bin/
+interop/rust/target/
+**/node_modules/
+**/__pycache__/
+**/.DS_Store

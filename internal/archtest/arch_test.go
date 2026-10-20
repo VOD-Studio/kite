@@ -66,6 +66,11 @@ var rules = []rule{
 		forbidden: []string{"internal/cli", "internal/tui"},
 		why:       "服务端二进制不应链接前端代码",
 	},
+	{
+		from:      "cmd/kite-probe",
+		forbidden: []string{"internal"},
+		why:       "部署探针只通过公开 REST/gRPC 协议验证服务,不能绕过真实适配器和鉴权",
+	},
 }
 
 // under 判断 path 是否等于 prefix 或在其子目录下(按路径段匹配,避免 internal/cli 误匹配 internal/client)。

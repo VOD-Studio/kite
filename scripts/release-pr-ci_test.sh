@@ -1,53 +1,60 @@
 #!/usr/bin/env bash
-# scripts/release-pr-ci.sh 的单元测试:用假的 gh 覆盖四种场景,断言它调用了哪些 gh 子命令。
-# 运行: scripts/release-pr-ci_test.sh
-set -uo pipefail
-
-here="$(cd "$(dirname "$0")" && pwd)"
-tmp="$(mktemp -d)"
-trap 'rm -rf "${tmp}"' EXIT
-
-# 假 gh:按子命令返回预置输出,并把「有副作用的调用」记到 calls.log。
-cat >"${tmp}/gh" <<'SHIM'
+set -euo pipefail
+here=$(cd "$(dirname "$0")" && pwd)
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+cat > "$tmp/gh" <<'SHIM'
 #!/usr/bin/env bash
-case "$1 $2" in
-  "pr list")  printf '%s' "${FAKE_HEAD-}" ;;
-  "run list") printf '%s' "${FAKE_RUNS-}" ;;
-  "api -X")   echo "approve $*" >>"${CALLS}" ;;
-  "workflow run") echo "dispatch $*" >>"${CALLS}" ;;
-  *) echo "unexpected gh call: $*" >&2; exit 99 ;;
+set -euo pipefail
+case "$*" in
+  *'/pulls?state='*) printf '%s' "$PRS" ;;
+  *'/actions/workflows/ci.yml'*) echo 5 ;;
+  *'/actions/workflows/5/runs?'*) printf '%s' "$RUNS" ;;
+  *'/pulls/7'*) printf '%s' "${CURRENT_HEAD:-abc}" ;;
+  *'/approve'*) printf 'approve %s\n' "$*" >> "$CALLS" ;;
+  'workflow run ci.yml --ref release-please--branches--main') echo dispatch >> "$CALLS" ;;
+  *) echo "unexpected call: $*" >&2; exit 99 ;;
 esac
 SHIM
-chmod +x "${tmp}/gh"
-
-fail=0
-run_case() { # name expected_calls_regex(空=无调用) HEAD RUNS
-  local name="$1" want="$2"
-  : >"${tmp}/calls.log"
-  PATH="${tmp}:${PATH}" CALLS="${tmp}/calls.log" FAKE_HEAD="$3" FAKE_RUNS="$4" \
-    BRANCH=release-please--branches--main GH_REPO=o/r POLL_TRIES=2 POLL_SLEEP=0 \
-    "${here}/release-pr-ci.sh" >"${tmp}/out.log" 2>&1
-  local rc=$? got
-  got="$(cat "${tmp}/calls.log")"
-  if [ "${rc}" -ne 0 ]; then echo "FAIL ${name}: 退出码 ${rc}"; cat "${tmp}/out.log"; fail=1; return; fi
-  if [ -z "${want}" ]; then
-    [ -z "${got}" ] || { echo "FAIL ${name}: 期望无调用,实际: ${got}"; fail=1; return; }
-  else
-    grep -Eq "${want}" <<<"${got}" || { echo "FAIL ${name}: 期望匹配 ${want},实际: ${got}"; fail=1; return; }
-  fi
-  echo "ok   ${name}"
+chmod +x "$tmp/gh"
+export PATH="$tmp:$PATH" CALLS="$tmp/calls" GH_REPO=VOD-Studio/kite POLL_TRIES=1 POLL_SLEEP=0
+trusted='[{"number":7,"user":{"login":"github-actions[bot]","type":"Bot"},"base":{"ref":"main","repo":{"full_name":"VOD-Studio/kite"}},"head":{"sha":"abc","ref":"release-please--branches--main","repo":{"full_name":"VOD-Studio/kite"}}}]'
+run='{"id":9,"workflow_id":5,"head_sha":"abc","head_branch":"release-please--branches--main","head_repository":{"full_name":"VOD-Studio/kite"},"event":"pull_request","pull_requests":[{"number":7}],"conclusion":"action_required"}'
+check() {
+  local name=$1 expected=$2 expected_rc=${3:-0} rc=0 got
+  : > "$CALLS"
+  "$here/release-pr-ci.sh" > "$tmp/log" 2>&1 || rc=$?
+  got=$(cat "$CALLS")
+  [[ "$rc" == "$expected_rc" ]] || { cat "$tmp/log"; echo "FAIL $name exit=$rc"; exit 1; }
+  case "$expected" in
+    none) [[ -z "$got" ]] ;;
+    approve) [[ "$got" == approve* && "$got" != *dispatch* ]] ;;
+    dispatch) [[ "$got" == dispatch ]] ;;
+  esac || { echo "FAIL $name calls=$got"; exit 1; }
+  echo "ok $name"
 }
-
-run_case "没有打开的 release PR → 不做任何事"      ""                      ""      ""
-run_case "有等待批准的运行 → 批准,不 dispatch"     "^approve .*runs/123/"  "abc123" $'123 action_required'
-run_case "已有成功运行 → 无需任何操作"             ""                      "abc123" $'124 success'
-run_case "运行进行中(conclusion 为空) → 无需操作" ""                      "abc123" $'125 '
-run_case "始终没有运行 → 回退 dispatch"            "^dispatch .*ci.yml"    "abc123" ""
-
-# 额外断言:有待批准运行时绝不能同时 dispatch(会产生重复运行)
-: >"${tmp}/calls.log"
-PATH="${tmp}:${PATH}" CALLS="${tmp}/calls.log" FAKE_HEAD=abc123 FAKE_RUNS=$'1 action_required' \
-  BRANCH=b GH_REPO=o/r POLL_TRIES=1 POLL_SLEEP=0 "${here}/release-pr-ci.sh" >/dev/null 2>&1
-if grep -q '^dispatch' "${tmp}/calls.log"; then echo "FAIL 批准时不应 dispatch"; fail=1; else echo "ok   批准时不 dispatch"; fi
-
-exit "${fail}"
+export PRS="$trusted" RUNS="[{\"workflow_runs\":[$run]}]"
+check 'trusted pending producer approved once' approve
+RUNS="$(jq -c '.[0].workflow_runs[0].conclusion="success"' <<< "$RUNS")"
+check 'successful exact producer is idempotent' none
+RUNS="$(jq -c '.[0].workflow_runs[0].event="workflow_dispatch" | .[0].workflow_runs[0].pull_requests=[]' <<< "$RUNS")"
+check 'dispatch recognized without redundant dispatch' none
+export RUNS='[{"workflow_runs":[]}]'
+check 'missing producer dispatches ci.yml' dispatch
+export RUNS="[{\"workflow_runs\":[$run]}]"
+RUNS="$(jq -c '.[0].workflow_runs[0].workflow_id=99' <<< "$RUNS")"
+check 'AI review does not satisfy CI' dispatch
+export RUNS="[{\"workflow_runs\":[$run]}]"
+RUNS="$(jq -c '.[0].workflow_runs[0].head_sha="stale"' <<< "$RUNS")"
+check 'old head does not satisfy CI' dispatch
+export RUNS="[{\"workflow_runs\":[$run]}]"
+PRS="$(jq -c '.[0].head.repo.full_name="attacker/kite"' <<< "$trusted")"
+check 'same name fork cannot authorize' none
+PRS="$(jq -c '.[0].base.ref="other"' <<< "$trusted")"
+check 'wrong base cannot authorize' none
+PRS="$(jq -c '.[0].user.login="human"' <<< "$trusted")"
+check 'human branch cannot authorize' none
+export PRS="$trusted" CURRENT_HEAD=changed
+check 'head race cannot approve' none 1
+export RUNS='[{"workflow_runs":[]}]'
+check 'head race cannot dispatch' none 1
