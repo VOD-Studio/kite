@@ -29,6 +29,7 @@ cmd/*
   ├─ 前端共享的本地能力(不得依赖任何前端)
   │    internal/localstate  配置目录路径 / session.json / config.toml / 代理地址解析
   │    internal/recall      召回池(history.jsonl、frecency 打分、预热)
+  │    internal/termqr      终端二维码渲染(CLI 扫码登录与 kite-server public-login 共用)
   │
   └─ 核心(不得依赖上面任何一层)
        internal/netease/engine    请求引擎:Execute / ExecuteWithCookie / 重试 / 熔断

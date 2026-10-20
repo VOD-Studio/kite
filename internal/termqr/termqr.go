@@ -1,4 +1,8 @@
-package auth
+// Package termqr 把文本渲染成终端里可扫描的二维码。
+//
+// CLI 的扫码登录与 kite-server 的 public-login 共用,放在任何前端之外,
+// 两边都能引用而不违反依赖方向(见 internal/archtest)。
+package termqr
 
 import (
 	"fmt"
@@ -7,12 +11,12 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 )
 
-// renderQR 把内容渲染成终端二维码字符串。
+// Render 把内容渲染成终端二维码字符串。
 //
 // 自己写渲染层（编码用 go-qrcode 生成像素矩阵,不直接用它的 ToSmallString）:
 // 每行输出两个像素行,用 Unicode 半高方块 ▀▄█ 把终端高度压缩一半。
 // 外加一圈白色 quiet zone 提升扫码识别率。
-func renderQR(content string) string {
+func Render(content string) string {
 	qr, err := qrcode.New(content, qrcode.Medium)
 	if err != nil {
 		return fmt.Sprintf("(二维码生成失败: %v)\n%s\n", err, content)

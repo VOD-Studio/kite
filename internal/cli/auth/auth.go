@@ -20,6 +20,7 @@ import (
 	authendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/auth"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 	"github.com/VOD-Studio/kite/internal/netease/model"
+	"github.com/VOD-Studio/kite/internal/termqr"
 )
 
 // NewLoginCommand 扫码登录:取二维码 → 轮询 → cookie 持久化到本地会话文件。
@@ -227,7 +228,7 @@ func runLoginWith(k *kit.Kit, deps loginDeps) error {
 
 	// 2. bubbletea 接管终端:QR 固定 + spinner 状态行原地刷新。
 	result, err := qrtui.Run(qrtui.Deps{
-		QR:      renderQR(qrURL),
+		QR:      termqr.Render(qrURL),
 		QRURL:   qrURL,
 		PollCtx: ctx,
 		Check: func(ctx context.Context) (mmpb.QrcodeCode, json.RawMessage, string, error) {
