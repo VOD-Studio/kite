@@ -29,10 +29,10 @@ history.jsonl
 .idea/
 .vscode/
 
-# GoReleaser 产物(也覆盖 web/player 的构建输出)
+# GoReleaser 产物(也覆盖 packages/kite-player 的构建输出)
 dist/
 
-# 前端依赖(web/player)
+# 前端依赖(packages/kite-player)
 node_modules/
 interop/rust/target/
 interop/rust/kite.binpb

@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/VOD-Studio/kite.git",
-    "directory": "web/player"
+    "directory": "packages/kite-player"
   },
   "homepage": "https://github.com/VOD-Studio/kite/blob/main/docs/player.md",
   "keywords": [

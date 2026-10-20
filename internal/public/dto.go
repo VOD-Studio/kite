@@ -6,7 +6,7 @@ import (
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
-// 以下是 /player/v1 的响应结构,即播放器组件(web/player)依赖的公开协议。
+// 以下是 /player/v1 的响应结构,即播放器组件(packages/kite-player)依赖的公开协议。
 // 字段只增不改;ID 一律是字符串,为接入其它音乐源时的 provider:id 留余地。
 
 type infoDTO struct {

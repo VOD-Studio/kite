@@ -15,7 +15,7 @@ BUF_VERSION           := 1.71.0
 GOVULNCHECK_VERSION   := v1.6.0
 GORELEASER_VERSION    := 2.17.1
 COSIGN_VERSION        := v3.1.2
-# web/player(npm 包 @violetjs/kite-player)用的 Node 大版本;CI 的 setup-node 读这里。
+# packages/kite-player(npm 包 @violetjs/kite-player)用的 Node 大版本;CI 的 setup-node 读这里。
 NODE_VERSION          := 24
 # 仅本地热重载用,不影响 CI。
 AIR_VERSION           := latest
@@ -148,9 +148,9 @@ interop-rust:
 interop-go:
 	scripts/go-interop.sh
 
-## player-check: web/player 的类型检查 + 测试 + 构建(需要 Node,大版本见文件顶部;不在 make check 里)
+## player-check: packages/kite-player 的类型检查 + 测试 + 构建(需要 Node,大版本见文件顶部;不在 make check 里)
 player-check:
-	cd web/player && npm ci --no-audit --no-fund && npm run check
+	cd packages/kite-player && npm ci --no-audit --no-fund && npm run check
 
 ## scripts-check: scripts/*.sh 的 shellcheck 与单元测试(release PR 的 CI 保障逻辑等)
 scripts-check:
