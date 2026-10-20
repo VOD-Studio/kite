@@ -1,5 +1,5 @@
 .PHONY: all help install-tools install-cli fmt fmt-check tidy-check vet test lint vuln build build-server \
-        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust interop-go upstream-smoke check ci-env clean
+        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust interop-go upstream-smoke player-check check ci-env clean
 
 # 工具探测:优先 PATH,回退 $GOPATH/bin(GOBIN 也在 PATH 时无所谓)
 BUF           ?= $(shell command -v buf 2>/dev/null           || echo $$(go env GOPATH)/bin/buf)
@@ -15,6 +15,8 @@ BUF_VERSION           := 1.71.0
 GOVULNCHECK_VERSION   := v1.6.0
 GORELEASER_VERSION    := 2.17.1
 COSIGN_VERSION        := v3.1.2
+# web/player(npm 包 @violetjs/kite-player)用的 Node 大版本;CI 的 setup-node 读这里。
+NODE_VERSION          := 24
 # 仅本地热重载用,不影响 CI。
 AIR_VERSION           := latest
 
@@ -146,6 +148,10 @@ interop-rust:
 interop-go:
 	scripts/go-interop.sh
 
+## player-check: web/player 的类型检查 + 测试 + 构建(需要 Node,大版本见文件顶部;不在 make check 里)
+player-check:
+	cd web/player && npm ci --no-audit --no-fund && npm run check
+
 ## scripts-check: scripts/*.sh 的 shellcheck 与单元测试(release PR 的 CI 保障逻辑等)
 scripts-check:
 	shellcheck scripts/*.sh
@@ -162,6 +168,7 @@ ci-env:
 	@echo "GOVULNCHECK_VERSION=$(GOVULNCHECK_VERSION)"
 	@echo "GORELEASER_VERSION=$(GORELEASER_VERSION)"
 	@echo "COSIGN_VERSION=$(COSIGN_VERSION)"
+	@echo "NODE_VERSION=$(NODE_VERSION)"
 
 ## clean: 清除本地构建产物(tmp/、bin/)。不清 gen/——已进版本控制。
 clean:

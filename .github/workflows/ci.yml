@@ -218,6 +218,23 @@ jobs:
       - uses: ./.github/actions/setup
       - run: make interop-go
 
+  # 网页播放器 web/player(npm 包 @violetjs/kite-player):类型检查 + 测试 + 构建。
+  # 依赖由 package-lock.json 锁定,Node 大版本取自 Makefile。发布见 npm.yml。
+  player:
+    name: Player
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Load tool versions from Makefile
+        run: make -s ci-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/player/package-lock.json
+      - run: make player-check
+
   # 发布配置的合并前校验:goreleaser 配置错误、跨平台构建失败原本要到打 tag 才暴露。
   # snapshot 不发布/签名，但随后以其真实二进制构建 Dockerfile.release 并运行安全冒烟。
   release-check:
@@ -282,7 +299,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [hygiene, lint, test, cross-build, proto, vuln, docker, rust-interop, go-interop, release-check, pr-title]
+    needs: [hygiene, lint, test, cross-build, proto, vuln, docker, rust-interop, go-interop, player, release-check, pr-title]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
