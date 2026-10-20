@@ -1,8 +1,8 @@
 import { firstSungIndex, formatTime, lineUnits, wordProgress } from "../core/lyrics";
 import type { Player } from "../core/player";
 import type { Lyrics, PlayerState, Track } from "../core/types";
-import { cardStyles } from "./card-styles";
 import { blob, eq, icons } from "./icons";
+import { cardStyles } from "./styles";
 import { artists, emit, emitFly, esc, openEvent, playerFor, sizeOf, toastEvent, unplayableMessage, type OpenDetail } from "./util";
 
 /**

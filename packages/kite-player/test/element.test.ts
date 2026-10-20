@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import "../src/element";
 import { Player } from "../src/core/player";
+import { withDark } from "../src/element/styles";
 import type { Playlist } from "../src/core/types";
 import { FakeAudio, fakeSource, flush, track } from "./helpers";
 
@@ -30,6 +31,21 @@ async function mount<T extends HTMLElement>(html: string): Promise<T> {
 }
 
 const shadow = (el: Element) => el.shadowRoot as ShadowRoot;
+
+describe("样式", () => {
+  it("暗色变量展开成强制暗色与跟随系统两份", () => {
+    expect(withDark(":host{--kite-fg:#fff}")).toBe(
+      ':host([theme="dark"]){--kite-fg:#fff}@media (prefers-color-scheme: dark){:host(:not([theme="light"])){--kite-fg:#fff}}',
+    );
+  });
+
+  it("元素的样式来自 .css 源文件", async () => {
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const css = shadow(el).querySelector("style")?.textContent ?? "";
+    expect(css).toContain("--kite-accent");
+    expect(css).toContain('theme="dark"');
+  });
+});
 
 describe("自定义元素", () => {
   it("注册三个元素", () => {

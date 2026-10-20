@@ -1,0 +1,12 @@
+/* 卡片的暗色变量。只写 :host 规则:构建时生成 theme="dark" 与跟随系统两份(见 styles/index.ts)。 */
+
+:host {
+  --kite-card: #17191E;
+  --kite-fg: #ECEDEF;
+  --kite-muted: #A9AEB9;
+  --kite-line: rgba(255,255,255,.08);
+  --kite-chip: rgba(255,255,255,.08);
+  --kite-track: rgba(255,255,255,.12);
+  --kite-blob: #F2F3F5;
+  --kite-blob-icon: #15171C;
+}
