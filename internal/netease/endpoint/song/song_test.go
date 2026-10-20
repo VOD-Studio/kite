@@ -3,10 +3,12 @@ package song
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 
 	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 	"github.com/stretchr/testify/require"
 )
 
@@ -378,4 +380,36 @@ func TestSimilarSongs_MapRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int32(50), params["limit"])
 	require.Equal(t, int64(347230), params["songid"])
+}
+
+// Details 按请求的顺序返回,跳过上游查不到的歌曲(真实响应)。
+func TestDetails_OrderAndMissing(t *testing.T) {
+	t.Parallel()
+
+	raw, err := os.ReadFile("testdata/song_detail_batch_v1.json")
+	require.NoError(t, err)
+	// 夹具里的顺序是 1942741405, 1868206871, 3408464818;请求换个顺序并夹一首不存在的。
+	ids := []int64{3408464818, 99, 1942741405, 1868206871}
+	songs, err := Details.MapResponse(ids, raw)
+	require.NoError(t, err)
+	got := make([]int64, len(songs))
+	for i, s := range songs {
+		got[i] = s.GetId()
+	}
+	require.Equal(t, []int64{3408464818, 1942741405, 1868206871}, got)
+	require.NotEmpty(t, songs[0].GetName())
+}
+
+func TestDetails_MapRequest(t *testing.T) {
+	t.Parallel()
+
+	params, err := Details.MapRequest([]int64{1, 22})
+	require.NoError(t, err)
+	require.Equal(t, `[{"id":1},{"id":22}]`, params["c"])
+
+	_, err = Details.MapRequest(nil)
+	require.Error(t, err)
+	_, err = Details.MapRequest(make([]int64, MaxDetails+1))
+	require.Error(t, err, "上游一次最多 1000 首,1001 首会返回参数错误")
+	require.Equal(t, session.AuthOptional, Details.Meta.Auth)
 }

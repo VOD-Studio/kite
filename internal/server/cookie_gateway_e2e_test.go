@@ -135,6 +135,7 @@ func TestGateway_CallerCookieReachesAccountReads(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	require.Equal(t, []string{"A", "anon"}, seen["/weapi/user/playlist"])
+	require.Equal(t, []string{"A"}, seen["/weapi/v3/song/detail"])
 	// 详情:AllTracks 的 A 一次,随后 A / B / 匿名各一次;最后一次 A 命中缓存,不再请求上游。
 	require.Equal(t, []string{"A", "A", "B", "anon"}, seen["/weapi/v6/playlist/detail"])
 }

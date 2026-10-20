@@ -33,6 +33,7 @@ cmd/*
   └─ 核心(不得依赖上面任何一层)
        internal/netease/engine    请求引擎:Execute / ExecuteWithCookie / 重试 / 熔断
        internal/netease/endpoint  API 声明(每接口一个包级 var)
+       internal/netease/compose   跨接口组合:一次读取需要多次上游调用时(如按 trackIds 分页取歌曲)
        internal/netease/session   cookie 池接口
        internal/netease/model     数据模型
        errors/  gen/(proto 生成物)
@@ -41,7 +42,8 @@ cmd/*
 ### 关键约束
 
 - **共享边界是 engine + endpoint,不是 service。** 三个前端都消费 endpoint 声明;执行语义只在 `engine.Execute` / `engine.ExecuteWithCookie` 定义,**调用方不得拷贝**。决策与取舍见 [ADR](docs/adr/shared-boundary-engine.md)。
-- **`internal/service` 是 gRPC adapter**:方法恒一行调 engine,不放业务逻辑,不被 CLI / TUI 引用。
+- **`internal/service` 是 gRPC adapter**:方法恒一行调 engine(或 `compose`),不放业务逻辑,不被 CLI / TUI 引用。
+- **需要多次上游调用的读取放 `internal/netease/compose`**(约定):每一步仍是 endpoint 声明、经 `engine.Execute` 执行;gRPC、CLI 等前端都调同一个组合函数,不各自再拼。组合用到的 endpoint 用 `AuthOptional`,保证 `Execute` 与 CLI 的 `ExecuteWithCookie` 凭据行为一致。
 - **CLI 与 TUI 平行不耦合**:两者共用的东西必须先提到 CLI 之外(如 `localstate`、`recall`),再各自引用。禁止 `tui → cli`。
 - **`internal/cli/mcp`(`kite mcp`)只暴露只读工具**:与 CLI 一样直连 engine + endpoint;不得绑定写类 / 登录类 endpoint,工具表与 `docs/mcp.md` 一致。由 `internal/cli/mcp/server_test.go` 守护。
 - **`internal/cli/kit` 只做 CLI 呈现**:渲染、进度、Kit 装配。与前端无关的东西(文件路径、会话、配置、召回池)不要放进来。

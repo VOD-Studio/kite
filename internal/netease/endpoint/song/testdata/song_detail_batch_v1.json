@@ -1,0 +1,520 @@
+{
+ "code": 200,
+ "songs": [
+  {
+   "name": "光合生长",
+   "mainTitle": null,
+   "additionalTitle": null,
+   "id": 1942741405,
+   "pst": 0,
+   "t": 0,
+   "ar": [
+    {
+     "id": 13057497,
+     "name": "黄明昊 (Justin)",
+     "tns": [],
+     "alias": []
+    }
+   ],
+   "alia": [],
+   "pop": 55.0,
+   "st": 0,
+   "rt": "",
+   "fee": 8,
+   "v": 40,
+   "crbt": null,
+   "cf": "",
+   "al": {
+    "id": 144205598,
+    "name": "光合生长",
+    "picUrl": "https://p1.music.126.net/XHQkq8UkthNCucZDjASVeQ==/109951167355199411.jpg",
+    "tns": [],
+    "pic_str": "109951167355199411",
+    "pic": 109951167355199411
+   },
+   "dt": 187664,
+   "h": {
+    "br": 320000,
+    "fid": 0,
+    "size": 7509165,
+    "vd": -36815.0,
+    "sr": 48000
+   },
+   "m": {
+    "br": 192000,
+    "fid": 0,
+    "size": 4505517,
+    "vd": -34243.0,
+    "sr": 48000
+   },
+   "l": {
+    "br": 128000,
+    "fid": 0,
+    "size": 3003693,
+    "vd": -32611.0,
+    "sr": 48000
+   },
+   "sq": {
+    "br": 937842,
+    "fid": 0,
+    "size": 21999989,
+    "vd": -36780.0,
+    "sr": 48000
+   },
+   "hr": {
+    "br": 1702340,
+    "fid": 0,
+    "size": 39933648,
+    "vd": -36794.0,
+    "sr": 48000
+   },
+   "a": null,
+   "cd": "01",
+   "no": 1,
+   "rtUrl": null,
+   "ftype": 0,
+   "rtUrls": [],
+   "djId": 0,
+   "copyright": 0,
+   "s_id": 0,
+   "mark": 17716748288,
+   "originCoverType": 0,
+   "originSongSimpleData": null,
+   "tagPicList": null,
+   "resourceState": true,
+   "version": 6,
+   "songJumpInfo": null,
+   "entertainmentTags": null,
+   "awardTags": null,
+   "displayTags": [],
+   "artistClassics": false,
+   "markTags": [],
+   "songFeature": null,
+   "single": 0,
+   "noCopyrightRcmd": null,
+   "mv": 14525562,
+   "rtype": 0,
+   "rurl": null,
+   "mst": 9,
+   "cp": 0,
+   "publishTime": 0
+  },
+  {
+   "name": "然后我们成了想成为的人",
+   "mainTitle": null,
+   "additionalTitle": null,
+   "id": 1868206871,
+   "pst": 0,
+   "t": 0,
+   "ar": [
+    {
+     "id": 6472,
+     "name": "张杰",
+     "tns": [],
+     "alias": []
+    }
+   ],
+   "alia": [],
+   "pop": 95.0,
+   "st": 0,
+   "rt": "",
+   "fee": 1,
+   "v": 2066,
+   "crbt": null,
+   "cf": "",
+   "al": {
+    "id": 131506388,
+    "name": "值得更好的",
+    "picUrl": "https://p2.music.126.net/KS0TddHKX8c3atG3CkmdUw==/109951166264542938.jpg",
+    "tns": [],
+    "pic_str": "109951166264542938",
+    "pic": 109951166264542938
+   },
+   "dt": 190019,
+   "h": {
+    "br": 320002,
+    "fid": 0,
+    "size": 7603245,
+    "vd": -49527.0,
+    "sr": 48000
+   },
+   "m": {
+    "br": 192002,
+    "fid": 0,
+    "size": 4561965,
+    "vd": -46920.0,
+    "sr": 48000
+   },
+   "l": {
+    "br": 128002,
+    "fid": 0,
+    "size": 3041325,
+    "vd": -45165.0,
+    "sr": 48000
+   },
+   "sq": {
+    "br": 884415,
+    "fid": 0,
+    "size": 21007003,
+    "vd": -49616.0,
+    "sr": 48000
+   },
+   "hr": {
+    "br": 1654020,
+    "fid": 0,
+    "size": 39286999,
+    "vd": -49524.0,
+    "sr": 48000
+   },
+   "a": null,
+   "cd": "01",
+   "no": 3,
+   "rtUrl": null,
+   "ftype": 0,
+   "rtUrls": [],
+   "djId": 0,
+   "copyright": 0,
+   "s_id": 0,
+   "mark": 17716748288,
+   "originCoverType": 0,
+   "originSongSimpleData": null,
+   "tagPicList": null,
+   "resourceState": true,
+   "version": 2032,
+   "songJumpInfo": null,
+   "entertainmentTags": null,
+   "awardTags": null,
+   "displayTags": [],
+   "artistClassics": false,
+   "markTags": [],
+   "songFeature": null,
+   "single": 0,
+   "noCopyrightRcmd": null,
+   "mv": 14309727,
+   "rtype": 0,
+   "rurl": null,
+   "mst": 9,
+   "cp": 1418037,
+   "publishTime": 1629734400000
+  },
+  {
+   "name": "不会说谎的人",
+   "mainTitle": null,
+   "additionalTitle": null,
+   "id": 3408464818,
+   "pst": 0,
+   "t": 0,
+   "ar": [
+    {
+     "id": 58312610,
+     "name": "韩泰阳与太阳不能",
+     "tns": [],
+     "alias": []
+    }
+   ],
+   "alia": [],
+   "pop": 65.0,
+   "st": 0,
+   "rt": "",
+   "fee": 8,
+   "v": 39,
+   "crbt": null,
+   "cf": "",
+   "al": {
+    "id": 387791343,
+    "name": "一株属于未来的植物",
+    "picUrl": "https://p2.music.126.net/-zQZwdCHyjkB_xJ0O7-arg==/109951173589883430.jpg",
+    "tns": [],
+    "pic_str": "109951173589883430",
+    "pic": 109951173589883430
+   },
+   "dt": 322325,
+   "h": {
+    "br": 320000,
+    "fid": 0,
+    "size": 12895725,
+    "vd": -25678.0,
+    "sr": 48000
+   },
+   "m": {
+    "br": 192000,
+    "fid": 0,
+    "size": 7737453,
+    "vd": -23046.0,
+    "sr": 48000
+   },
+   "l": {
+    "br": 128000,
+    "fid": 0,
+    "size": 5158317,
+    "vd": -21312.0,
+    "sr": 48000
+   },
+   "sq": {
+    "br": 841178,
+    "fid": 0,
+    "size": 33897530,
+    "vd": -25676.0,
+    "sr": 48000
+   },
+   "hr": {
+    "br": 1609034,
+    "fid": 0,
+    "size": 64834959,
+    "vd": -25676.0,
+    "sr": 48000
+   },
+   "a": null,
+   "cd": "01",
+   "no": 11,
+   "rtUrl": null,
+   "ftype": 0,
+   "rtUrls": [],
+   "djId": 0,
+   "copyright": 0,
+   "s_id": 0,
+   "mark": 536871040,
+   "originCoverType": 0,
+   "originSongSimpleData": null,
+   "tagPicList": null,
+   "resourceState": true,
+   "version": 5,
+   "songJumpInfo": null,
+   "entertainmentTags": null,
+   "awardTags": null,
+   "displayTags": [],
+   "artistClassics": false,
+   "markTags": [],
+   "songFeature": null,
+   "single": 0,
+   "noCopyrightRcmd": null,
+   "mv": 0,
+   "rtype": 0,
+   "rurl": null,
+   "mst": 9,
+   "cp": 0,
+   "publishTime": 0
+  }
+ ],
+ "privileges": [
+  {
+   "id": 1942741405,
+   "fee": 8,
+   "payed": 0,
+   "st": 0,
+   "pl": 320000,
+   "dl": 0,
+   "sp": 7,
+   "cp": 1,
+   "subp": 1,
+   "cs": false,
+   "maxbr": 999000,
+   "fl": 320000,
+   "toast": false,
+   "flag": 4,
+   "preSell": false,
+   "playMaxbr": 999000,
+   "downloadMaxbr": 999000,
+   "maxBrLevel": "hires",
+   "playMaxBrLevel": "hires",
+   "downloadMaxBrLevel": "hires",
+   "plLevel": "exhigh",
+   "dlLevel": "none",
+   "flLevel": "exhigh",
+   "rscl": null,
+   "freeTrialPrivilege": {
+    "resConsumable": false,
+    "userConsumable": false,
+    "listenType": null,
+    "cannotListenReason": null,
+    "playReason": null,
+    "freeLimitTagType": null
+   },
+   "rightSource": 0,
+   "chargeInfoList": [
+    {
+     "rate": 128000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 0
+    },
+    {
+     "rate": 192000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 0
+    },
+    {
+     "rate": 320000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 0
+    },
+    {
+     "rate": 999000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 1
+    },
+    {
+     "rate": 1999000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 1
+    }
+   ],
+   "code": 0,
+   "message": null,
+   "plLevels": null,
+   "dlLevels": null,
+   "ignoreCache": null,
+   "bd": null
+  },
+  {
+   "id": 1868206871,
+   "fee": 1,
+   "payed": 0,
+   "st": 0,
+   "pl": 0,
+   "dl": 0,
+   "sp": 0,
+   "cp": 0,
+   "subp": 1,
+   "cs": false,
+   "maxbr": 999000,
+   "fl": 0,
+   "toast": false,
+   "flag": 260,
+   "preSell": false,
+   "playMaxbr": 999000,
+   "downloadMaxbr": 999000,
+   "maxBrLevel": "hires",
+   "playMaxBrLevel": "hires",
+   "downloadMaxBrLevel": "hires",
+   "plLevel": "none",
+   "dlLevel": "none",
+   "flLevel": "none",
+   "rscl": null,
+   "freeTrialPrivilege": {
+    "resConsumable": true,
+    "userConsumable": false,
+    "listenType": null,
+    "cannotListenReason": null,
+    "playReason": null,
+    "freeLimitTagType": null
+   },
+   "rightSource": 0,
+   "chargeInfoList": [
+    {
+     "rate": 128000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 1
+    },
+    {
+     "rate": 192000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 1
+    },
+    {
+     "rate": 320000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 1
+    },
+    {
+     "rate": 999000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 1
+    },
+    {
+     "rate": 1999000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 1
+    }
+   ],
+   "code": 0,
+   "message": null,
+   "plLevels": null,
+   "dlLevels": null,
+   "ignoreCache": null,
+   "bd": null
+  },
+  {
+   "id": 3408464818,
+   "fee": 8,
+   "payed": 0,
+   "st": 0,
+   "pl": 320000,
+   "dl": 0,
+   "sp": 7,
+   "cp": 1,
+   "subp": 1,
+   "cs": false,
+   "maxbr": 999000,
+   "fl": 320000,
+   "toast": false,
+   "flag": 1,
+   "preSell": false,
+   "playMaxbr": 999000,
+   "downloadMaxbr": 999000,
+   "maxBrLevel": "hires",
+   "playMaxBrLevel": "hires",
+   "downloadMaxBrLevel": "hires",
+   "plLevel": "exhigh",
+   "dlLevel": "none",
+   "flLevel": "exhigh",
+   "rscl": null,
+   "freeTrialPrivilege": {
+    "resConsumable": false,
+    "userConsumable": false,
+    "listenType": null,
+    "cannotListenReason": null,
+    "playReason": null,
+    "freeLimitTagType": null
+   },
+   "rightSource": 0,
+   "chargeInfoList": [
+    {
+     "rate": 128000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 0
+    },
+    {
+     "rate": 192000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 0
+    },
+    {
+     "rate": 320000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 0
+    },
+    {
+     "rate": 999000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 1
+    },
+    {
+     "rate": 1999000,
+     "chargeUrl": null,
+     "chargeMessage": null,
+     "chargeType": 1
+    }
+   ],
+   "code": 0,
+   "message": null,
+   "plLevels": null,
+   "dlLevels": null,
+   "ignoreCache": null,
+   "bd": null
+  }
+ ]
+}

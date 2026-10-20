@@ -5,6 +5,7 @@ import (
 	"context"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/compose"
 	playlistendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/playlist"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
@@ -50,9 +51,9 @@ func (s *PlaylistServer) Subscribers(ctx context.Context, req *mmpb.SubscribersR
 	return engine.Execute(s.eng, ctx, playlistendpoint.Subscribers, req)
 }
 
-// AllTracks 获取歌单全量歌曲（分页）。
+// AllTracks 按歌单顺序分页获取歌曲(两次上游调用的组合,见 compose.PlaylistTracks)。
 func (s *PlaylistServer) AllTracks(ctx context.Context, req *mmpb.AllTracksRequest) (*mmpb.AllTracksResponse, error) {
-	return engine.Execute(s.eng, ctx, playlistendpoint.AllTracks, req)
+	return compose.PlaylistTracks(ctx, s.eng, req)
 }
 
 // --- 写操作（cookie override，不走 Execute） ---
