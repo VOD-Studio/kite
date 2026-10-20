@@ -30,6 +30,7 @@ class Lifecycle(unittest.TestCase):
         self.status = 'ahead'
         self.jobs = [{'name': 'CI OK', 'conclusion': 'success'}]
         self.versions = ['v0.5.0']
+        self.extra = []
         self.ap = patch.object(m, 'api', side_effect=self.api)
         self.cp = patch.object(m, 'command', side_effect=self.command)
         self.ap.start(); self.cp.start()
@@ -37,7 +38,10 @@ class Lifecycle(unittest.TestCase):
     def api(self, path, *args):
         if args:
             self.writes.append((path, args)); return {}
-        if path.startswith('releases/tags/'): return self.release
+        if path.startswith('releases/tags/'):
+            # Mirrors GitHub: drafts are invisible to the by-tag endpoint.
+            if self.release['draft']: raise m.subprocess.CalledProcessError(1, ('gh', 'api', path))
+            return self.release
         if path.startswith('compare/'): return {'status': self.status}
         if path.endswith('/pulls'): return [self.pr]
         if path.startswith('commits/'): return self.commit
@@ -47,8 +51,11 @@ class Lifecycle(unittest.TestCase):
     def command(self, *args):
         if args[0] == 'docker': self.writes.append(args); return ''
         if '/jobs?' in args[-1]: return json.dumps([{'jobs': self.jobs}])
-        if '/releases?' in args[-1]: return json.dumps([[{'tag_name': v, 'draft': False, 'prerelease': False} for v in self.versions]])
+        if '/releases?' in args[-1]: return json.dumps([self.listing()])
         raise AssertionError(args)
+    def listing(self):
+        others = [{'tag_name': v, 'draft': False, 'prerelease': False} for v in self.versions if v != self.release['tag_name']]
+        return [self.release] + others + self.extra
     def test_authorized_draft_builds(self):
         m.prepare()
         with open(os.environ['GITHUB_OUTPUT']) as f: self.assertIn('build=true', f.read())
@@ -108,6 +115,13 @@ class Lifecycle(unittest.TestCase):
         os.environ['SOURCE_SHA'] = 'other'
         with self.assertRaises(ValueError): m.publish()
         self.assertEqual(self.writes, [])
+    def test_missing_release_refused(self):
+        self.release['tag_name'] = 'v0.4.9'
+        self.versions = []
+        with self.assertRaises(ValueError): m.prepare()
+    def test_duplicate_release_refused(self):
+        self.extra = [dict(self.release, id=2)]
+        with self.assertRaises(ValueError): m.prepare()
     def test_canonical_tags(self):
         for tag in ['main', 'v01.2.3', 'v1.2.3-rc.1', 'v1.2.3\n', 'v1.2.3;echo bad']:
             with self.subTest(tag=tag), self.assertRaises(ValueError): m.version(tag)
