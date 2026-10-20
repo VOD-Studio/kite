@@ -13,6 +13,7 @@ Go 实现的网易云能力服务 + 命令行工具(单体仓库)。分支 / com
 | `cmd/kite-probe` | 部署专用静态探针,验证 REST/gRPC 健康、服务鉴权及缺失网易云登录态;随镜像和部署安装包分发,不作为第三个用户产品。 |
 | `cmd/kite-docs` | 命令树 markdown 生成器(`make docs` 调用)。 |
 | `cmd/demo` | 进度条等终端组件的演示脚本,非交付产物、不发布。 |
+| `web/player` | 网页播放器 npm 包 `@violetjs/kite-player`(TypeScript:播放核心 + Web Components + React hooks),只经 HTTP 消费公开模式 `/player/v1`,不参与 Go 构建。用法见 [`web/player/README.md`](web/player/README.md),手动发布见 CONTRIBUTING「npm 发布」。 |
 
 ## 分层
 
@@ -53,6 +54,7 @@ cmd/*
 - **proto 是 RPC 契约的唯一真相**(`proto/netease/music/v1/`)。改 RPC 先改 proto 再 `make proto`;不要手写与 proto 冲突的类型。
 - **proto ↔ CLI 一一对应由 `internal/cli/rpc_guard_test.go` 守护**:新增 rpc 要么接 CLI 命令,要么在 `rpcsWithoutCliAllowlist` 登记理由。
 - **部署探针只能走公开协议**:`cmd/kite-probe` 不依赖 `internal/`。由 `internal/archtest` 守护;探针行为由 `cmd/kite-probe/main_test.go` 对真实 server 验证。
+- **`/player/v1` 是 `web/player` 和自建后端共同依赖的契约**(约定):字段只增不改;改 `internal/public/dto.go` 同步 `web/player/src/core/types.ts` 与 `docs/player.md`。
 - **新域接入节奏**(约定):endpoint 声明 + CLI 直连验证 → proto 建模 → TUI 视图。尚未建模的域(评论 / MV / 排行榜 / 电台 / 网盘 / 签到等)由 issue #34 追踪;当前 RPC 数量以 `proto/` 为准,文档里不写死数字。
 
 ### 已知债务(诚实登记)
@@ -73,6 +75,7 @@ cmd/*
 - **`make upstream-smoke`** —— 真实上游冒烟(需要外网,手动运行,不进 CI):对网易云真实接口逐个调用服务端 RPC,断言响应非空。**改了 endpoint 路径 / 解码器后必跑**——单元测试的夹具与解码器出自同一个假设,上游改了路径 / 字段名 / 类型都发现不了。
 - **`make interop-rust`** —— Rust 客户端互操作冒烟(需要 `cargo`,较慢,CI 的 `Rust Interop` job 跑它)。改 proto、鉴权或错误契约后建议本地跑一次。
 - **`make interop-go`** —— Go 互操作冒烟(需要访问 buf.build,CI 的 `Go Interop` job 跑它):用 BSR 上生成的 SDK 对真实 kite-server 运行 `docs/integration.md` 的示例。示例与 `interop/go/kite.go` 逐字一致(测试守护),改示例先改文档再同步。
+- **`make player-check`** —— `web/player` 的 `npm ci` + 类型检查 + 测试 + 构建(CI 的 `Player` job 跑它)。不在 `make check` 里,改了 `web/player` 或 `/player/v1` 协议后跑。
 - **`make clean`** —— 清本地构建产物(`tmp/`、`bin/`)。不清 `gen/`。
 
 ```bash
@@ -88,6 +91,7 @@ CI 的约定(唯一门禁 `CI OK`、工具版本来源、发布流程)见 [`CONT
 
 - Go 版本**以 `go.mod` 为准**。环境缺 Go 时 `make` 会无提示失败——**不要自行安装 Go**,停下来告知用户。
 - 改 proto 需要本地有 `buf`(Makefile 自动探测 `$GOPATH/bin/buf`)。
+- 改 `web/player` 需要 Node,大版本以 `Makefile` 的 `NODE_VERSION` 为准;缺 Node 时同样停下告知用户,不要自行安装。
 
 ## 文档
 

@@ -4,14 +4,14 @@ kite 自带一个网页播放器组件 [`@violetjs/kite-player`](../web/player/)
 
 ```
 博客页面(静态 HTML 也行)
-  <kite-player api="https://music.example.com" playlist="123456"></kite-player>
+  <kite-player api="https://music.example.com" playlists="123456"></kite-player>
         │ HTTPS,跨域,不带令牌
   反向代理(负责 TLS)
         │
   kite-server 公开模式(/player/v1)── 白名单、签名播放链接、限流、可选站长 VIP 登录态
 ```
 
-有自己后端的站点(比如 violet)不需要开公开模式:后端照常用令牌调用 kite 的 gRPC / REST,再实现下文的 `/player/v1` 协议,或者给组件传一个自定义数据源。
+有自己后端的站点(比如 violet)不需要开公开模式:后端照常用令牌调用 kite 的 gRPC / REST,再实现下文的 `/player/v1` 协议,或者给组件传一个[自定义数据源](../web/player/README.md#自定义数据来源)。
 
 ## 开启公开模式
 
@@ -86,6 +86,23 @@ secrets:
 ```
 
 签名密钥用 `openssl rand -hex 32 > signing.key` 生成后放进卷里;不配置时每次重启随机生成,旧的播放链接会失效,播放器会自动重新获取。
+
+## 在页面里使用
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@violetjs/kite-player@0.1/dist/kite-player.iife.js"></script>
+
+<!-- 全站一个,放在 layout 里;playlists 是播放列表里列出的歌单 -->
+<kite-player api="https://music.example.com" playlists="123456,234567"></kite-player>
+
+<!-- 文章里:单曲卡片 / 歌单卡片 -->
+<kite-track song="1973665667"></kite-track>
+<kite-playlist playlist="123456"></kite-playlist>
+```
+
+- `api` 填反向代理对外的 HTTPS 地址;页面所在的站点要在 `KITE_PUBLIC_ORIGINS` 里。
+- 卡片里的歌必须在白名单内:属于白名单歌单,或单独列在 `KITE_PUBLIC_SONGS`。
+- 元素属性、卡片尺寸、主题与样式变量、React hooks、自定义数据源,以及在其它框架(如 Rust 的 Dioxus)里使用,见[组件说明](../web/player/README.md)。
 
 ## 协议 `/player/v1`
 
