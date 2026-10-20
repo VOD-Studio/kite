@@ -452,3 +452,31 @@ func TestEngineCatalogStreamCookie(t *testing.T) {
 	require.NoError(t, err)
 	require.NotContains(t, got, "MUSIC_U")
 }
+
+// 歌单详情内嵌的歌曲会被上游截断,公开模式的歌单要按完整 trackIds 取全部歌曲(issue #89 的同一根因)。
+func TestEngineCatalogPlaylistUsesAllTrackIDs(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/weapi/v6/playlist/detail":
+			// 内嵌只有 1 首,trackIds 有 3 首。
+			_, _ = w.Write([]byte(`{"code":200,"playlist":{"id":9,"name":"写作时听","coverImgUrl":"https://p1.music.126.net/c.jpg","trackCount":3,
+				"tracks":[{"id":1,"name":"一","ar":[],"al":{},"dt":1000}],"trackIds":[{"id":1},{"id":2},{"id":3}]}}`))
+		case "/weapi/v3/song/detail":
+			_, _ = w.Write([]byte(`{"code":200,"songs":[{"id":3,"name":"三","ar":[],"al":{},"dt":1000},{"id":1,"name":"一","ar":[],"al":{},"dt":1000},{"id":2,"name":"二","ar":[],"al":{},"dt":1000}]}`))
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	cat := engineCatalog{eng: engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(srv.URL))}
+
+	pl, err := cat.Playlist(context.Background(), 9)
+	require.NoError(t, err)
+	require.Equal(t, "写作时听", pl.GetName())
+	names := make([]string, len(pl.GetSongs()))
+	for i, s := range pl.GetSongs() {
+		names[i] = s.GetName()
+	}
+	require.Equal(t, []string{"一", "二", "三"}, names, "全部歌曲,保持歌单顺序")
+}
