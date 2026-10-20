@@ -28,6 +28,42 @@ type Config struct {
 
 	// OTel 是 OpenTelemetry 追踪配置。
 	OTel OTelConfig
+
+	// Public 是给网页播放器用的公开只读模式配置,见 docs/player.md。
+	Public PublicConfig
+}
+
+// PublicConfig 是公开只读模式(/player/v1)的配置。Addr 为空表示不开启。
+//
+// 公开模式不要求访问令牌,所以只暴露白名单里的歌单与歌曲,播放链接带签名并会过期;
+// 各项的解析与校验在 internal/public.ParseOptions,配置错误时拒绝启动。
+type PublicConfig struct {
+	// Addr 是公开模式的监听地址(host:port),空表示不开启。
+	Addr string
+
+	// Playlists 是允许公开的歌单 ID,逗号分隔。
+	Playlists string
+
+	// Songs 是允许单独公开的歌曲 ID,逗号分隔(歌单里的歌无需重复列出)。
+	Songs string
+
+	// Origins 是允许跨域调用的站点(如 https://blog.example.com),逗号分隔;* 表示不限。
+	Origins string
+
+	// SessionFile 是站长网易云登录态文件(server public-login 生成),空表示只按匿名播放。
+	SessionFile string
+
+	// SigningKeyFile 是播放链接签名密钥文件,空表示每次启动随机生成(重启后旧链接失效)。
+	SigningKeyFile string
+
+	// RatePerMinute 是每个来源 IP 每分钟允许的请求数。
+	RatePerMinute int
+
+	// TrustProxy 为 true 时按 X-Forwarded-For 取来源 IP(部署在反向代理之后才打开)。
+	TrustProxy bool
+
+	// Quality 是播放音质上限:standard / exhigh / lossless / hires。
+	Quality string
 }
 
 // ServerConfig 是 gRPC + gateway 服务相关配置。
@@ -133,6 +169,10 @@ func Default() Config {
 			ServiceName: "kite",
 			SampleRatio: 1.0,
 		},
+		Public: PublicConfig{
+			RatePerMinute: 120,
+			Quality:       "exhigh",
+		},
 	}
 }
 
@@ -187,6 +227,15 @@ func Load() Config {
 	cfg.OTel.Endpoint = envStr("KITE_OTEL_ENDPOINT", cfg.OTel.Endpoint)
 	cfg.OTel.ServiceName = envStr("KITE_OTEL_SERVICE_NAME", cfg.OTel.ServiceName)
 	cfg.OTel.SampleRatio = envFloat("KITE_OTEL_SAMPLE_RATIO", cfg.OTel.SampleRatio)
+	cfg.Public.Addr = envStr("KITE_PUBLIC_ADDR", cfg.Public.Addr)
+	cfg.Public.Playlists = envStr("KITE_PUBLIC_PLAYLISTS", cfg.Public.Playlists)
+	cfg.Public.Songs = envStr("KITE_PUBLIC_SONGS", cfg.Public.Songs)
+	cfg.Public.Origins = envStr("KITE_PUBLIC_ORIGINS", cfg.Public.Origins)
+	cfg.Public.SessionFile = envStr("KITE_PUBLIC_SESSION_FILE", cfg.Public.SessionFile)
+	cfg.Public.SigningKeyFile = envStr("KITE_PUBLIC_SIGNING_KEY_FILE", cfg.Public.SigningKeyFile)
+	cfg.Public.RatePerMinute = envInt("KITE_PUBLIC_RATE_PER_MINUTE", cfg.Public.RatePerMinute)
+	cfg.Public.TrustProxy = envStr("KITE_PUBLIC_TRUST_PROXY", "") == "true"
+	cfg.Public.Quality = envStr("KITE_PUBLIC_QUALITY", cfg.Public.Quality)
 
 	cfg.Server.Env = strings.ToLower(cfg.Server.Env)
 	return cfg

@@ -67,6 +67,11 @@ var rules = []rule{
 		why:       "server 不得依赖前端",
 	},
 	{
+		from:      "internal/public",
+		forbidden: []string{"internal/cli", "internal/tui", "internal/service", "internal/server"},
+		why:       "public 是与 gRPC 平行的只读 HTTP 适配器,直连 engine/endpoint,不经 service/server",
+	},
+	{
 		from:      "cmd/server",
 		forbidden: []string{"internal/cli", "internal/tui"},
 		why:       "服务端二进制不应链接前端代码",
