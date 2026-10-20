@@ -11,6 +11,8 @@ option go_package = "github.com/VOD-Studio/kite/gen/go/netease/music/v1;mmpb";
 // PlaylistService 提供歌单查询与浏览能力。
 service PlaylistService {
   // GetPlaylist 获取歌单详情（含歌曲列表）。
+  // 可选登录:不带 cookie 按匿名读;经 metadata x-netease-cookie 带了 cookie 就按该账号读
+  // (能读到本人的私有歌单),结果按账号单独缓存;不会借用服务端保存的任何账号。
   rpc GetPlaylist(GetPlaylistRequest) returns (GetPlaylistResponse) {
     option (google.api.http) = {
       get: "/api/v1/playlists/{playlist_id}"
@@ -53,6 +55,7 @@ service PlaylistService {
   }
 
   // AllTracks 获取歌单全量歌曲（分页）。
+  // 可选登录,规则同 GetPlaylist(私有歌单要带本人 cookie)。
   rpc AllTracks(AllTracksRequest) returns (AllTracksResponse) {
     option (google.api.http) = {
       get: "/api/v1/playlists/{playlist_id}/tracks"

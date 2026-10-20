@@ -85,10 +85,13 @@ var SubCount = &engine.Endpoint[*mmpb.SubCountRequest, *mmpb.SubCountResponse]{
 //
 // filter（ALL/CREATED/SUBSCRIBED）在 MapResponse 内按 creator.userId == 请求 userId 判断，
 // ownerUserID 直接取自请求，无需 service 层后置过滤。
+//
+// AuthOptional:调用方带了网易云 cookie 就用它读(能看到本人的私有歌单),没带就匿名;
+// 任何情况下都不借用会话池里保存的账号。带 cookie 的结果按凭据指纹单独缓存。
 var UserPlaylist = &engine.Endpoint[*mmpb.UserPlaylistRequest, *mmpb.UserPlaylistResponse]{
 	Meta: engine.Meta{
 		Path: "/weapi/user/playlist", Method: "POST",
-		Crypto: engine.CryptoWeAPI, Auth: session.AuthAnonymous,
+		Crypto: engine.CryptoWeAPI, Auth: session.AuthOptional,
 	},
 	Cache: &engine.CachePolicy[*mmpb.UserPlaylistRequest]{
 		// cache key 含 filter 维度，不同 filter 不串缓存。

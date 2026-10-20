@@ -1193,7 +1193,7 @@
     },
     "/api/v1/playlists/{playlistId}": {
       "get": {
-        "summary": "GetPlaylist 获取歌单详情（含歌曲列表）。",
+        "summary": "GetPlaylist 获取歌单详情（含歌曲列表）。\n可选登录:不带 cookie 按匿名读;经 metadata x-netease-cookie 带了 cookie 就按该账号读\n(能读到本人的私有歌单),结果按账号单独缓存;不会借用服务端保存的任何账号。",
         "operationId": "PlaylistService_GetPlaylist",
         "responses": {
           "200": {
@@ -1503,7 +1503,7 @@
     },
     "/api/v1/playlists/{playlistId}/tracks": {
       "get": {
-        "summary": "AllTracks 获取歌单全量歌曲（分页）。",
+        "summary": "AllTracks 获取歌单全量歌曲（分页）。\n可选登录,规则同 GetPlaylist(私有歌单要带本人 cookie)。",
         "operationId": "PlaylistService_AllTracks",
         "responses": {
           "200": {
@@ -2871,7 +2871,7 @@
     },
     "/api/v1/users/{userId}/playlists": {
       "get": {
-        "summary": "Playlist 获取用户歌单列表。",
+        "summary": "UserPlaylist 获取用户歌单列表(创建的 + 收藏的)。\n可选登录:不带 cookie 按匿名读,只有公开歌单;经 metadata x-netease-cookie 带了本人的 cookie\n就按该账号读(含私有歌单)。不会借用服务端保存的任何账号。",
         "operationId": "UserService_UserPlaylist",
         "responses": {
           "200": {

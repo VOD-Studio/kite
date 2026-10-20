@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 	"github.com/stretchr/testify/require"
 )
 
@@ -104,4 +105,10 @@ func TestUserPlaylist_Filter(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, resp.Playlists, 2, "ownerUserID=0 时 filter 不应生效")
 	})
+}
+
+// 账号歌单要能带调用方的 cookie 读私有歌单,又不能借用会话池里保存的账号(issue #90)。
+func TestUserPlaylist_OptionalAuth(t *testing.T) {
+	t.Parallel()
+	require.Equal(t, session.AuthOptional, UserPlaylist.Meta.Auth)
 }

@@ -1,7 +1,7 @@
 // Package playlist 的浏览与发现接口声明。
 //
-// HighQuality/HighQualityTags/CatList/BrowseHot/Subscribers/AllTracks 六个读接口。
-// 全部 AuthAnonymous + 24h 缓存（歌单浏览低频变化）。
+// HighQuality/HighQualityTags/CatList/BrowseHot/Subscribers/AllTracks 六个读接口,24h 缓存
+// (歌单浏览低频变化);AllTracks 可选登录(私有歌单),其余 AuthAnonymous。
 package playlist
 
 import (
@@ -12,6 +12,7 @@ import (
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 	"github.com/VOD-Studio/kite/internal/netease/model"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 // defaultHighQualityCat 是精品歌单未指定分类时的默认分类。
@@ -165,8 +166,14 @@ var Subscribers = &engine.Endpoint[*mmpb.SubscribersRequest, *mmpb.SubscribersRe
 }
 
 // AllTracks 获取歌单全量歌曲（分页）。
+//
+// AuthOptional:调用方带了网易云 cookie 就用它读(私有歌单),没带就匿名,不借用会话池;
+// 带 cookie 的结果按凭据指纹单独缓存。
 var AllTracks = &engine.Endpoint[*mmpb.AllTracksRequest, *mmpb.AllTracksResponse]{
-	Meta: weapiMeta("/weapi/v6/playlist/detail"),
+	Meta: engine.Meta{
+		Path: "/weapi/v6/playlist/detail", Method: "POST",
+		Crypto: engine.CryptoWeAPI, Auth: session.AuthOptional,
+	},
 	Cache: &engine.CachePolicy[*mmpb.AllTracksRequest]{
 		Key: func(r *mmpb.AllTracksRequest) string {
 			return fmt.Sprintf("playlist:alltracks:%d:%d:%d", r.GetPlaylistId(), r.GetLimit(), r.GetOffset())

@@ -27,6 +27,14 @@ kite-server 以 gRPC(默认 `:3722`)和 REST(grpc-gateway,默认 `:3721`)提供�
 
 `SongService/GetSongURL` 是**可选登录**:不带 cookie 时只有免费歌,VIP / 无版权的歌 `url` 为空;带 VIP 账号的 cookie 时按该账号权益返回。直链几十分钟后过期,**不要存库**:在用户点播放时再取(例如后端 302 跳转到直链)。
 
+## 账号歌单
+
+`UserService/UserPlaylist`、`PlaylistService/GetPlaylist`、`PlaylistService/AllTracks` 也是**可选登录**:
+
+- 带本人的 cookie 时按该账号读,能看到私有歌单及其歌曲;不带时匿名,只有公开内容。服务端保存的账号不会被借给任何请求。
+- 带 cookie 的结果按账号单独缓存,不同账号、匿名请求之间不会串数据。
+- cookie 失效时上游按匿名返回公开内容,**不会**报 `LOGIN_REQUIRED`;要确认登录态,调 `AuthService/LoginStatus`(未登录时 `session` 为空)。
+
 ## Go 示例
 
 依赖 BSR 生成的 SDK:

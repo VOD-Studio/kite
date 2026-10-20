@@ -44,6 +44,8 @@ const (
 // PlaylistService 提供歌单查询与浏览能力。
 type PlaylistServiceClient interface {
 	// GetPlaylist 获取歌单详情（含歌曲列表）。
+	// 可选登录:不带 cookie 按匿名读;经 metadata x-netease-cookie 带了 cookie 就按该账号读
+	// (能读到本人的私有歌单),结果按账号单独缓存;不会借用服务端保存的任何账号。
 	GetPlaylist(ctx context.Context, in *GetPlaylistRequest, opts ...grpc.CallOption) (*GetPlaylistResponse, error)
 	// HighQuality 获取精品歌单列表。
 	HighQuality(ctx context.Context, in *HighQualityRequest, opts ...grpc.CallOption) (*HighQualityResponse, error)
@@ -56,6 +58,7 @@ type PlaylistServiceClient interface {
 	// Subscribers 获取歌单收藏者列表。
 	Subscribers(ctx context.Context, in *SubscribersRequest, opts ...grpc.CallOption) (*SubscribersResponse, error)
 	// AllTracks 获取歌单全量歌曲（分页）。
+	// 可选登录,规则同 GetPlaylist(私有歌单要带本人 cookie)。
 	AllTracks(ctx context.Context, in *AllTracksRequest, opts ...grpc.CallOption) (*AllTracksResponse, error)
 	// Subscribe 收藏/取消收藏歌单（toggle）。
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (*SubscribeResponse, error)
@@ -252,6 +255,8 @@ func (c *playlistServiceClient) RelatedPlaylistRecommend(ctx context.Context, in
 // PlaylistService 提供歌单查询与浏览能力。
 type PlaylistServiceServer interface {
 	// GetPlaylist 获取歌单详情（含歌曲列表）。
+	// 可选登录:不带 cookie 按匿名读;经 metadata x-netease-cookie 带了 cookie 就按该账号读
+	// (能读到本人的私有歌单),结果按账号单独缓存;不会借用服务端保存的任何账号。
 	GetPlaylist(context.Context, *GetPlaylistRequest) (*GetPlaylistResponse, error)
 	// HighQuality 获取精品歌单列表。
 	HighQuality(context.Context, *HighQualityRequest) (*HighQualityResponse, error)
@@ -264,6 +269,7 @@ type PlaylistServiceServer interface {
 	// Subscribers 获取歌单收藏者列表。
 	Subscribers(context.Context, *SubscribersRequest) (*SubscribersResponse, error)
 	// AllTracks 获取歌单全量歌曲（分页）。
+	// 可选登录,规则同 GetPlaylist(私有歌单要带本人 cookie)。
 	AllTracks(context.Context, *AllTracksRequest) (*AllTracksResponse, error)
 	// Subscribe 收藏/取消收藏歌单（toggle）。
 	Subscribe(context.Context, *SubscribeRequest) (*SubscribeResponse, error)
