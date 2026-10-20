@@ -6,6 +6,7 @@ import (
 	"time"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/compose"
 	playlistendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/playlist"
 	songendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/song"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
@@ -27,12 +28,20 @@ type engineCatalog struct {
 	eng *engine.Engine
 }
 
+// Playlist 取歌单信息与歌曲。详情内嵌的歌曲会被上游截断(匿名时约 10 首),
+// 歌曲改由 compose.PlaylistTracks 按完整 trackIds 取,一个歌单最多 compose.MaxPageSize 首。
 func (c engineCatalog) Playlist(ctx context.Context, id int64) (*mmpb.Playlist, error) {
 	resp, err := engine.Execute(c.eng, ctx, playlistendpoint.GetPlaylist, &mmpb.GetPlaylistRequest{PlaylistId: id})
 	if err != nil {
 		return nil, err
 	}
-	return resp.GetPlaylist(), nil
+	tracks, err := compose.PlaylistTracks(ctx, c.eng, &mmpb.AllTracksRequest{PlaylistId: id, Limit: compose.MaxPageSize})
+	if err != nil {
+		return nil, err
+	}
+	pl := resp.GetPlaylist()
+	pl.Songs = tracks.GetSongs()
+	return pl, nil
 }
 
 func (c engineCatalog) Song(ctx context.Context, id int64) (*mmpb.Song, error) {
