@@ -2,7 +2,7 @@ import { firstSungIndex, formatTime, lineUnits, wordProgress } from "../core/lyr
 import { modeLabels, type Player } from "../core/player";
 import type { PlayMode, PlayerState, Playlist, Track } from "../core/types";
 import { blob, eq, icons } from "./icons";
-import { playerStyles } from "./player-styles";
+import { playerStyles } from "./styles";
 import { $, artists, canAnimate, cssEscape, esc, flyEvent, openEvent, openQueueEvent, playerFor, toastEvent, type FlyDetail, type OpenDetail } from "./util";
 
 type Mode = "bar" | "orb" | "open";

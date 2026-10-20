@@ -157,6 +157,8 @@ npm ci
 npm run check   # 类型检查 + 测试 + 构建
 ```
 
+样式源码在 `src/element/styles/*.css`,构建时压缩后内联进 JS(Shadow DOM 的样式要随脚本分发);暗色变量只写在 `*.dark.css` 里,构建时展开成 `theme="dark"` 与跟随系统两份。
+
 `demo/index.html` 是本地演示页:先用公开模式启动 kite-server(`KITE_PUBLIC_ADDR=127.0.0.1:3793`、`KITE_PUBLIC_PLAYLISTS=3778678`、`KITE_PUBLIC_ORIGINS=http://127.0.0.1:5174`),`npm run build` 后在本目录起一个静态服务器(如 `python3 -m http.server 5174`),打开 `http://127.0.0.1:5174/demo/index.html`。演示页里的单曲不在歌单白名单时,加到 `KITE_PUBLIC_SONGS`。
 
 ## 许可

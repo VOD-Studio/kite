@@ -1,0 +1,16 @@
+/* <kite-player> 的暗色变量。只写 :host 规则:构建时生成 theme="dark" 与跟随系统两份(见 styles/index.ts)。 */
+
+:host {
+  --kite-glass: linear-gradient(180deg, rgba(44,46,54,.62), rgba(26,28,34,.5));
+  --kite-glass-edge: rgba(255,255,255,.2);
+  --kite-glass-rim: rgba(255,255,255,.08);
+  --kite-fg: #ECEDEF;
+  --kite-muted: #A9AEB9;
+  --kite-line: rgba(255,255,255,.14);
+  --kite-chip: rgba(255,255,255,.08);
+  --kite-chip-strong: rgba(255,255,255,.14);
+  --kite-sheet: #1C1E24;
+  --kite-ring-track: rgba(255,255,255,.22);
+  --kite-blob: #F2F3F5;
+  --kite-blob-icon: #15171C;
+}

@@ -1,8 +1,8 @@
 import { formatTime } from "../core/lyrics";
 import type { Player } from "../core/player";
 import type { PlayerState, Playlist } from "../core/types";
-import { cardStyles } from "./card-styles";
 import { icons } from "./icons";
+import { cardStyles } from "./styles";
 import { artists, emit, emitFly, esc, openQueueEvent, playerFor, sizeOf, toastEvent, unplayableMessage } from "./util";
 
 /** 标准卡片列出的歌曲数。 */
