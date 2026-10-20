@@ -7,6 +7,15 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## 0.4.1 (2026-10-20)
+
+## What's Changed
+* ci(deploy): kite-server 改用专用网络 kite_network by @xunrua in https://github.com/VOD-Studio/kite/pull/87
+* fix(ci): 重构发布与部署信任边界 by @xunrua in https://github.com/VOD-Studio/kite/pull/91
+
+
+**Full Changelog**: https://github.com/VOD-Studio/kite/compare/v0.4.0...v0.4.1
+
 ## [0.4.0](https://github.com/VOD-Studio/kite/compare/v0.3.1...v0.4.0) (2026-10-19)
 
 
