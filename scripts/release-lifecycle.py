@@ -37,8 +37,8 @@ def context():
         raise ValueError("release tooling must run from VOD-Studio/kite main")
     tag = os.environ["TAG"]
     version(tag)
-    release = api(f"releases/tags/{tag}")
-    if release["tag_name"] != tag or release["prerelease"]:
+    release = release_for(tag)
+    if release["prerelease"]:
         raise ValueError("not a stable release")
     commit = api(f"commits/{tag}")
     comparison = api(f"compare/{commit['sha']}...main")
@@ -88,9 +88,22 @@ def prepare():
     raise ValueError("timed out waiting for the release commit's main ci.yml run")
 
 
-def public_versions():
+def releases():
     pages = json.loads(command("gh", "api", "--paginate", "--slurp", f"repos/{REPO}/releases?per_page=100"))
-    return [r["tag_name"] for page in pages for r in page if not r["draft"] and not r["prerelease"] and TAG_RE.fullmatch(r["tag_name"])]
+    return [r for page in pages for r in page]
+
+
+def release_for(tag):
+    # releases/tags/{tag} never returns drafts (404), and every new release starts as a
+    # draft, so look it up in the authenticated listing instead.
+    matches = [r for r in releases() if r["tag_name"] == tag]
+    if len(matches) != 1:
+        raise ValueError(f"expected exactly one release for {tag}, found {len(matches)}")
+    return matches[0]
+
+
+def public_versions():
+    return [r["tag_name"] for r in releases() if not r["draft"] and not r["prerelease"] and TAG_RE.fullmatch(r["tag_name"])]
 
 
 def publish():
