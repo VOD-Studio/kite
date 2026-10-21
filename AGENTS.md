@@ -34,7 +34,7 @@ cmd/*
   │    internal/termqr      终端二维码渲染(CLI 扫码登录与 kite-server public-login 共用)
   │
   └─ 核心(不得依赖上面任何一层)
-       internal/netease/engine    请求引擎:Execute / ExecuteWithCookie / 重试 / 熔断
+       internal/netease/engine    请求引擎:Execute / ExecuteWithCookie / ExecuteWithSetCookie / 重试 / 熔断
        internal/netease/endpoint  API 声明(每接口一个包级 var)
        internal/netease/compose   跨接口组合:一次读取需要多次上游调用时(如按 trackIds 分页取歌曲)
        internal/netease/session   cookie 池接口
@@ -44,7 +44,7 @@ cmd/*
 
 ### 关键约束
 
-- **共享边界是 engine + endpoint,不是 service。** 三个前端都消费 endpoint 声明;执行语义只在 `engine.Execute` / `engine.ExecuteWithCookie` 定义,**调用方不得拷贝**。决策与取舍见 [ADR](docs/adr/shared-boundary-engine.md)。
+- **共享边界是 engine + endpoint,不是 service。** 三个前端都消费 endpoint 声明;执行语义只在 `engine.Execute` / `engine.ExecuteWithCookie` / `engine.ExecuteWithSetCookie`(登录类接口要 Set-Cookie)定义,**调用方不得拷贝**、不得绕过声明式 endpoint 调 engine 的 `RawDo*` 原始入口(由 `internal/archtest` 守护)。决策与取舍见 [ADR](docs/adr/shared-boundary-engine.md)。
 - **`internal/service` 是 gRPC adapter**:方法恒一行调 engine(或 `compose`),不放业务逻辑,不被 CLI / TUI 引用。
 - **需要多次上游调用的读取放 `internal/netease/compose`**(约定):每一步仍是 endpoint 声明、经 `engine.Execute` 执行;gRPC、CLI 等前端都调同一个组合函数,不各自再拼。组合用到的 endpoint 用 `AuthOptional`,保证 `Execute` 与 CLI 的 `ExecuteWithCookie` 凭据行为一致。
 - **CLI 与 TUI 平行不耦合**:两者共用的东西必须先提到 CLI 之外(如 `localstate`、`recall`),再各自引用。禁止 `tui → cli`。

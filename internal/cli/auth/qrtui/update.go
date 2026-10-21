@@ -23,7 +23,7 @@ func animTick() tea.Cmd {
 // pollMsg 一次轮询的结果。Check 的四个返回值原样透传。
 type pollMsg struct {
 	code      mmpb.QrcodeCode
-	raw       []byte // CONFIRMED 时有效(转 json.RawMessage 存入 model)
+	sess      *mmpb.Session // CONFIRMED 时有效(存入 model)
 	setCookie string
 	err       error
 }
@@ -31,12 +31,12 @@ type pollMsg struct {
 // timeoutMsg 超过 pollTimeout 的终态信号。
 type timeoutMsg struct{}
 
-// poll 发起一次异步轮询(tea.Cmd)。Check 经 Deps 注入,内部调 kit.RawDo。
+// poll 发起一次异步轮询(tea.Cmd)。Check 经 Deps 注入(声明式 CheckQrcode endpoint)。
 // pollInterval 间隔由 Update 在收到 pollMsg 后用 tea.Tick 排下一次。
 func poll(deps Deps) tea.Cmd {
 	return func() tea.Msg {
-		code, raw, cookie, err := deps.Check(deps.PollCtx)
-		return pollMsg{code: code, raw: raw, setCookie: cookie, err: err}
+		code, sess, cookie, err := deps.Check(deps.PollCtx)
+		return pollMsg{code: code, sess: sess, setCookie: cookie, err: err}
 	}
 }
 
@@ -90,7 +90,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, schedulePoll(m.deps)
 		case mmpb.QrcodeCode_QRCODE_CODE_CONFIRMED:
 			m.state = stateConfirmed
-			m.confirmedRaw = msg.raw
+			m.confirmedSess = msg.sess
 			m.confirmedCookie = msg.setCookie
 			return m, quitCmd()
 		case mmpb.QrcodeCode_QRCODE_CODE_EXPIRED:

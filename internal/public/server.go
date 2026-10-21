@@ -42,7 +42,7 @@ type Server struct {
 func New(eng *engine.Engine, opts Options) *Server {
 	s := newServer(engineCatalog{eng: eng}, opts, time.Now)
 	s.auth = func(ctx context.Context) error {
-		s.owner.runRefresh(ctx, eng.RawDoWithCookieAndInput)
+		s.owner.runRefresh(ctx, eng)
 		return nil
 	}
 	return s

@@ -81,7 +81,7 @@ func TestRawDo_LocalCredentialErrorDoesNotTouchBreaker(t *testing.T) {
 		e.breaker.recordFailure()
 	}
 
-	_, err := e.RawDo(context.Background(), Meta{Path: "/x", Method: "POST", Auth: session.AuthLoggedIn}, nil)
+	_, _, err := e.do(context.Background(), Meta{Path: "/x", Method: "POST", Auth: session.AuthLoggedIn}, nil, credFromPool)
 	if !errors.Is(err, merrors.ErrUnauthorized) {
 		t.Fatalf("err = %v, 期望 ErrUnauthorized", err)
 	}
@@ -102,7 +102,7 @@ func TestRawDo_LocalCredentialErrorDoesNotCloseHalfOpen(t *testing.T) {
 	e.breaker.failures = 5
 	e.breaker.mu.Unlock()
 
-	_, _ = e.RawDo(context.Background(), Meta{Path: "/x", Method: "POST", Auth: session.AuthLoggedIn}, nil)
+	_, _, _ = e.do(context.Background(), Meta{Path: "/x", Method: "POST", Auth: session.AuthLoggedIn}, nil, credFromPool)
 
 	if e.breaker.State() != stateHalfOpen {
 		t.Fatalf("state = %v, 期望仍为半开(没有真实探测)", e.breaker.State())

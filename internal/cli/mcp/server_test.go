@@ -86,8 +86,8 @@ func TestTools_NeverBindWriteEndpoints(t *testing.T) {
 		playlistendpoint.UpdateName.Meta, playlistendpoint.UpdateDesc.Meta, playlistendpoint.UpdateTags.Meta,
 		playlistendpoint.UpdateTracks.Meta,
 		albumendpoint.Subscribe.Meta, albumendpoint.Unsubscribe.Meta, artistendpoint.Subscribe.Meta,
-		authendpoint.SendCaptcha, authendpoint.LoginCellphone, authendpoint.LoginQrcode, authendpoint.CheckQrcode,
-		authendpoint.Logout,
+		authendpoint.SendCaptcha.Meta, authendpoint.LoginCellphone.Meta, authendpoint.LoginQrcode.Meta,
+		authendpoint.CheckQrcode.Meta, authendpoint.Logout.Meta,
 	}
 	for _, tl := range tools {
 		for _, f := range forbidden {
