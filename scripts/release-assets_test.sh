@@ -31,9 +31,8 @@ cat > "$tmp/bin/docker" <<'SHIM'
 #!/usr/bin/env bash
 set -euo pipefail
 case "$*" in
-  'buildx imagetools inspect '*'.Manifests'*)
-    printf '[{"platform":{"os":"linux","architecture":"amd64"},"digest":"sha256:%s"},{"platform":{"os":"linux","architecture":"arm64"},"digest":"sha256:%s"}]' "${DIGEST//a/b}" "${DIGEST//a/c}" ;;
-  'buildx imagetools inspect '*) printf '{"digest":"sha256:%s"}' "$DIGEST" ;;
+  'buildx imagetools inspect '*)
+    printf '{"digest":"sha256:%s","manifests":[{"platform":{"os":"linux","architecture":"amd64"},"digest":"sha256:%s"},{"platform":{"os":"linux","architecture":"arm64"},"digest":"sha256:%s"}]}' "$DIGEST" "${DIGEST//a/b}" "${DIGEST//a/c}" ;;
   'image inspect '*) printf '{"org.opencontainers.image.revision":"%s","org.opencontainers.image.version":"0.5.0"}' "${IMAGE_SHA:-abc}" ;;
   'pull '*) printf '%s\n' "$*" >> "$PULL_LOG"; : ;;
   *) exit 99 ;;
