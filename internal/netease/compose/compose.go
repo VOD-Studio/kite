@@ -1,12 +1,8 @@
-// Package compose 承载需要多次调用上游才能完成的读取(跨接口组合,
-// 见 docs/adr/shared-boundary-engine.md「引入真正的 use-case 层」的触发条件)。
+// Package compose 编排需要多次调用上游才能完成的用例。
 //
-// 每一步仍是一个 endpoint 声明、经 engine.Execute 执行;这里只负责编排步骤与分页。
+// 读取步骤经 engine.Execute 执行,使用 AuthOptional 接收调用方 Cookie,不借用会话池。
+// 扫码登录经 RawDoWithCookieAndInput 取得 Set-Cookie,确认后按需补查账号资料。
 // gRPC service、CLI 与其它前端都调这里,不得各自再拼一遍。
-//
-// 组合用到的 endpoint 都是 AuthOptional:调用方经 ctx 带了网易云 cookie(gRPC 的
-// x-netease-cookie、CLI 的本地登录态)就用它,没带就匿名,任何情况下都不借用会话池。
-// 因此 engine.Execute 与 CLI 惯用的 ExecuteWithCookie 在这里的凭据行为一致。
 package compose
 
 import (

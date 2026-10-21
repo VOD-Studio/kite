@@ -17,7 +17,7 @@ kite-server 以 gRPC(默认 `:3722`)和 REST(grpc-gateway,默认 `:3721`)提供�
 
 1. **访问令牌**:每个请求带 `authorization: Bearer <令牌>`(REST 用同名 `Authorization` 头)。令牌决定「谁能调用 kite」,错误时原因码为 `SERVER_AUTH_FAILED`。
 2. **网易云登录态**:需要以某个账号执行时,带 metadata `x-netease-cookie`(REST:`Grpc-Metadata-X-Netease-Cookie`)。cookie 由**接入方保存**,kite 不存储任何人的登录态。
-   - 登录:`AuthService/LoginQrcode` 拿二维码 `url`(自己画二维码)→ 约 2 秒轮询 `CheckQrcode`,`CONFIRMED` 时返回 `session.cookie`;`EXPIRED` 时重新取。
+   - 登录:`AuthService/LoginQrcode` 拿二维码 `url`(自己画二维码)→ 约 2 秒轮询 `CheckQrcode`;`CONFIRMED` 时返回包含 `user_id`、`cookie` 与账号资料的 `session`(REST 字段为 `userId`),接入方保存完整 `cookie`;`EXPIRED` 时重新取二维码。确认响应未附账号资料时,kite 使用本次登录的新 cookie 补查,不会沿用调用方的旧账号。上游缺少新凭据或返回无效账号资料时,返回 `UPSTREAM_INVALID_RESPONSE`,不会返回无凭据的 `CONFIRMED`。
    - 续期:定期调 `AuthService/RefreshLogin`,用返回的完整 cookie 替换旧值。
    - 退出:调 `AuthService/Logout`,**再删除自己保存的 cookie**(没带 cookie 时 Logout 也返回成功,不能据此判断已注销)。
    - 缺失或失效时原因码为 `LOGIN_REQUIRED`:提示用户重新登录。
