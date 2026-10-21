@@ -46,7 +46,7 @@ var URL = &engine.Endpoint[*mmpb.GetSongURLRequest, *mmpb.GetSongURLResponse]{
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.GetSongURLRequest, raw json.RawMessage) (*mmpb.GetSongURLResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Code int `json:"code"`
 			Data []struct {
 				ID   int64  `json:"id"`
@@ -55,9 +55,9 @@ var URL = &engine.Endpoint[*mmpb.GetSongURLRequest, *mmpb.GetSongURLResponse]{
 				Size int64  `json:"size"`
 				Type string `json:"type"`
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.GetSongURLResponse{}, fmt.Errorf("解析播放 URL 失败: %w", err)
+		}](raw, "播放 URL")
+		if err != nil {
+			return nil, err
 		}
 		if len(resp.Data) == 0 {
 			return &mmpb.GetSongURLResponse{}, fmt.Errorf("未找到播放 URL（可能是 VIP 歌曲）: %w", merrors.ErrNotFound)

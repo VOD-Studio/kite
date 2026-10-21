@@ -88,7 +88,7 @@ var Albums = &engine.Endpoint[*mmpb.AlbumsRequest, *mmpb.AlbumsResponse]{
 		return map[string]any{"limit": limit, "offset": req.GetOffset(), "total": true}, nil
 	},
 	MapResponse: func(_ *mmpb.AlbumsRequest, raw json.RawMessage) (*mmpb.AlbumsResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			HotAlbums []struct {
 				ID          int64  `json:"id"`          // 专辑ID
 				Name        string `json:"name"`        // 专辑名
@@ -100,9 +100,9 @@ var Albums = &engine.Endpoint[*mmpb.AlbumsRequest, *mmpb.AlbumsResponse]{
 				} `json:"artist"` // 歌手
 			} `json:"hotAlbums"`
 			More bool `json:"more"` // 是否更多
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析歌手专辑失败: %w", err)
+		}](raw, "歌手专辑")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.AlbumsResponse{More: resp.More}
 		for _, a := range resp.HotAlbums {
@@ -132,11 +132,11 @@ var Desc = &engine.Endpoint[*mmpb.DescRequest, *mmpb.DescResponse]{
 		return map[string]any{"id": fmt.Sprintf("%d", req.GetArtistId())}, nil
 	},
 	MapResponse: func(_ *mmpb.DescRequest, raw json.RawMessage) (*mmpb.DescResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			BriefDesc string `json:"briefDesc"` // 详细描述
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析歌手描述失败: %w", err)
+		}](raw, "歌手描述")
+		if err != nil {
+			return nil, err
 		}
 		return &mmpb.DescResponse{Desc: resp.BriefDesc}, nil
 	},
@@ -154,15 +154,15 @@ var Similar = &engine.Endpoint[*mmpb.SimilarRequest, *mmpb.SimilarResponse]{
 		return map[string]any{"artistid": fmt.Sprintf("%d", req.GetArtistId())}, nil
 	},
 	MapResponse: func(_ *mmpb.SimilarRequest, raw json.RawMessage) (*mmpb.SimilarResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Artists []struct {
 				ID     int64  `json:"id"`        // 歌手ID
 				Name   string `json:"name"`      // 歌手名
 				PicURL string `json:"img1v1Url"` // 1:1头像
 			} `json:"artists"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析相似歌手失败: %w", err)
+		}](raw, "相似歌手")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.SimilarResponse{}
 		for _, a := range resp.Artists {
@@ -184,14 +184,14 @@ var Fans = &engine.Endpoint[*mmpb.FansRequest, *mmpb.FansResponse]{
 		return map[string]any{"id": fmt.Sprintf("%d", req.GetArtistId())}, nil
 	},
 	MapResponse: func(_ *mmpb.FansRequest, raw json.RawMessage) (*mmpb.FansResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Data struct {
 				FansCnt   int64 `json:"fansCnt"`   // 粉丝数(现行字段名)
 				FansCount int64 `json:"fansCount"` // 粉丝数(旧字段名,上游曾叫这个;改名后只认旧名会静默得到 0)
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析粉丝数失败: %w", err)
+		}](raw, "粉丝数")
+		if err != nil {
+			return nil, err
 		}
 		fans := resp.Data.FansCnt
 		if fans == 0 {
@@ -219,15 +219,15 @@ var TopArtists = &engine.Endpoint[*mmpb.TopArtistsRequest, *mmpb.TopArtistsRespo
 		return map[string]any{"limit": limit, "offset": req.GetOffset()}, nil
 	},
 	MapResponse: func(_ *mmpb.TopArtistsRequest, raw json.RawMessage) (*mmpb.TopArtistsResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Artists []struct {
 				ID     int64  `json:"id"`        // 歌手ID
 				Name   string `json:"name"`      // 歌手名
 				PicURL string `json:"img1v1Url"` // 1:1头像
 			} `json:"artists"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析热门歌手失败: %w", err)
+		}](raw, "热门歌手")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.TopArtistsResponse{}
 		for _, a := range resp.Artists {
@@ -239,7 +239,7 @@ var TopArtists = &engine.Endpoint[*mmpb.TopArtistsRequest, *mmpb.TopArtistsRespo
 
 // parseArtistSongs 解析歌手歌曲列表响应（AllSongs/TopSongs 共用）。
 func parseArtistSongs(raw json.RawMessage) (*mmpb.AllSongsResponse, error) {
-	var resp struct {
+	resp, err := engine.Decode[struct {
 		Songs []struct {
 			ID   int64  `json:"id"`   // 歌曲ID
 			Name string `json:"name"` // 歌曲名
@@ -256,9 +256,9 @@ func parseArtistSongs(raw json.RawMessage) (*mmpb.AllSongsResponse, error) {
 			Fee int   `json:"fee"` // 付费类型(0免费 1VIP 4付费专辑 8低音质免费)
 		} `json:"songs"`
 		Total int `json:"total"` // 总数
-	}
-	if err := json.Unmarshal(raw, &resp); err != nil {
-		return nil, fmt.Errorf("解析歌手歌曲失败: %w", err)
+	}](raw, "歌手歌曲")
+	if err != nil {
+		return nil, err
 	}
 	out := &mmpb.AllSongsResponse{Total: int32(resp.Total)}
 	for _, s := range resp.Songs {

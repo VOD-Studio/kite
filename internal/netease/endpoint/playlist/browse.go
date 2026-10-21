@@ -53,14 +53,14 @@ var HighQualityTags = &engine.Endpoint[*mmpb.HighQualityTagsRequest, *mmpb.HighQ
 	MapRequest: func(*mmpb.HighQualityTagsRequest) (map[string]any, error) { return map[string]any{}, nil },
 	MapResponse: func(_ *mmpb.HighQualityTagsRequest, raw json.RawMessage) (*mmpb.HighQualityTagsResponse, error) {
 		// 真机返回的 category 是数字(如 0),旧 fixture 按字符串假设,两种形态都兼容。
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Tags []struct {
 				Name     string          `json:"name"`     // 标签名
 				Category json.RawMessage `json:"category"` // 分类(数字或字符串)
 			} `json:"tags"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析精品标签失败: %w", err)
+		}](raw, "精品标签")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.HighQualityTagsResponse{}
 		for _, t := range resp.Tags {
@@ -86,15 +86,15 @@ var CatList = &engine.Endpoint[*mmpb.CatListRequest, *mmpb.CatListResponse]{
 	NewResp:    func() *mmpb.CatListResponse { return &mmpb.CatListResponse{} },
 	MapRequest: func(*mmpb.CatListRequest) (map[string]any, error) { return map[string]any{}, nil },
 	MapResponse: func(_ *mmpb.CatListRequest, raw json.RawMessage) (*mmpb.CatListResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Sub []struct {
 				Name          string `json:"name"`          // 分类名
 				ResourceCount int64  `json:"resourceCount"` // 资源数
 				Type          int64  `json:"type"`          // 类型ID
 			} `json:"sub"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析歌单分类失败: %w", err)
+		}](raw, "歌单分类")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.CatListResponse{}
 		for _, c := range resp.Sub {
@@ -145,15 +145,15 @@ var Subscribers = &engine.Endpoint[*mmpb.SubscribersRequest, *mmpb.SubscribersRe
 		return map[string]any{"id": fmt.Sprintf("%d", req.GetPlaylistId()), "limit": limit, "offset": req.GetOffset()}, nil
 	},
 	MapResponse: func(_ *mmpb.SubscribersRequest, raw json.RawMessage) (*mmpb.SubscribersResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Subscribers []struct {
 				UserID    int64  `json:"userId"`    // 用户ID
 				Nickname  string `json:"nickname"`  // 昵称
 				AvatarURL string `json:"avatarUrl"` // 头像URL
 			} `json:"subscribers"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析收藏者失败: %w", err)
+		}](raw, "收藏者")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.SubscribersResponse{Total: int32(len(resp.Subscribers))}
 		for _, s := range resp.Subscribers {

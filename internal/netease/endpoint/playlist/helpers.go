@@ -53,7 +53,7 @@ func parseHotPlaylistResponse(_ *mmpb.BrowseHotRequest, raw json.RawMessage) (*m
 
 // parsePlaylistSlice 解析网易云 {playlists:[...], total:N} 列表响应，返回完整 Playlist 切片。
 func parsePlaylistSlice(raw json.RawMessage) ([]*mmpb.Playlist, int32, error) {
-	var resp struct {
+	resp, err := engine.Decode[struct {
 		Playlists []struct {
 			ID          int64  `json:"id"`          // 歌单ID
 			Name        string `json:"name"`        // 歌单名
@@ -66,8 +66,8 @@ func parsePlaylistSlice(raw json.RawMessage) ([]*mmpb.Playlist, int32, error) {
 			} `json:"creator"` // 创建者
 		} `json:"playlists"`
 		Total int `json:"total"` // 总数
-	}
-	if err := json.Unmarshal(raw, &resp); err != nil {
+	}](raw, "歌单列表")
+	if err != nil {
 		return nil, 0, err
 	}
 	out := make([]*mmpb.Playlist, 0, len(resp.Playlists))

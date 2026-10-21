@@ -35,7 +35,7 @@ var Lyric = &engine.Endpoint[*mmpb.GetLyricRequest, *mmpb.GetLyricResponse]{
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.GetLyricRequest, raw json.RawMessage) (*mmpb.GetLyricResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Lrc struct {
 				Lyric string `json:"lyric"`
 			} `json:"lrc"`
@@ -45,9 +45,9 @@ var Lyric = &engine.Endpoint[*mmpb.GetLyricRequest, *mmpb.GetLyricResponse]{
 			Romalrc struct {
 				Lyric string `json:"lyric"`
 			} `json:"romalrc"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.GetLyricResponse{}, fmt.Errorf("解析歌词失败: %w", err)
+		}](raw, "歌词")
+		if err != nil {
+			return nil, err
 		}
 		return &mmpb.GetLyricResponse{
 			Lyric: &mmpb.Lyric{

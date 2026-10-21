@@ -90,7 +90,7 @@ var Events = &engine.Endpoint[*mmpb.EventsRequest, *mmpb.EventsResponse]{
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.EventsRequest, raw json.RawMessage) (*mmpb.EventsResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Events []struct {
 				ID       int64  `json:"id"`       // 动态ID
 				UserID   int64  `json:"userId"`   // 发布者ID
@@ -100,9 +100,9 @@ var Events = &engine.Endpoint[*mmpb.EventsRequest, *mmpb.EventsResponse]{
 			} `json:"events"`
 			More      bool  `json:"more"`     // 是否更多
 			LastEvent int64 `json:"lasttime"` // 最后动态ID
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析动态列表失败: %w", err)
+		}](raw, "动态列表")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.EventsResponse{More: resp.More, LastEventId: resp.LastEvent}
 		for _, e := range resp.Events {
@@ -152,15 +152,15 @@ var Level = &engine.Endpoint[*mmpb.LevelRequest, *mmpb.LevelResponse]{
 		return map[string]any{"userId": fmt.Sprintf("%d", req.GetUserId())}, nil
 	},
 	MapResponse: func(_ *mmpb.LevelRequest, raw json.RawMessage) (*mmpb.LevelResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Data struct {
 				Level int   `json:"level"` // 当前等级
 				Now   int64 `json:"now"`   // 当前经验
 				Next  int64 `json:"next"`  // 升级所需
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析用户等级失败: %w", err)
+		}](raw, "用户等级")
+		if err != nil {
+			return nil, err
 		}
 		return &mmpb.LevelResponse{
 			Level: &mmpb.UserLevel{Level: int32(resp.Data.Level), Now: resp.Data.Now, Next: resp.Data.Next},
