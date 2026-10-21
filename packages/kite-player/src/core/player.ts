@@ -180,7 +180,7 @@ export class Player {
   /** playPlaylist 把歌单设为队列并播放;start 不传时从第一首能播的开始。 */
   async playPlaylist(id: string, start?: number): Promise<void> {
     const pl = await this.loadPlaylist(id);
-    const index = start ?? pl.tracks.findIndex((t) => t.playable);
+    const index = start ?? pl.tracks.findIndex(canPlay);
     this.setQueue(pl.tracks, Math.max(index, 0), { id: pl.id, name: pl.name }, true);
   }
 
@@ -212,7 +212,7 @@ export class Player {
   async play(): Promise<void> {
     const { current } = this.state;
     if (!current || !this.audio) return;
-    if (!current.playable) {
+    if (!canPlay(current)) {
       this.store.set({ error: unplayable(current), playing: false });
       return;
     }
@@ -316,15 +316,15 @@ export class Player {
       lyrics: null,
       lyricsStatus: track ? "loading" : "idle",
       lyricIndex: -1,
-      error: track && !track.playable ? unplayable(track) : null,
+      error: track && !canPlay(track) ? unplayable(track) : null,
       loading: false,
     });
     if (!track) return;
     void this.loadLyrics(track);
-    if (!track.playable) {
+    if (!canPlay(track)) {
       this.audio?.pause();
       // 自动切到这首却不能播:顺着方向继续找下一首能播的。
-      if (autoplay && this.state.queue.some((t) => t.playable)) {
+      if (autoplay && this.state.queue.some(canPlay)) {
         const i = this.pick(1, false);
         if (i !== null && i !== index) this.jump(i, true);
       }
@@ -345,7 +345,7 @@ export class Player {
     const n = queue.length;
     if (n === 0) return null;
     if (mode === "shuffle") {
-      const candidates = queue.map((t, i) => (t.playable && i !== index ? i : -1)).filter((i) => i >= 0);
+      const candidates = queue.map((t, i) => (canPlay(t) && i !== index ? i : -1)).filter((i) => i >= 0);
       if (candidates.length === 0) return null;
       return candidates[Math.floor(Math.random() * candidates.length)] ?? null;
     }
@@ -353,7 +353,7 @@ export class Player {
       const raw = index + dir * step;
       if (auto && mode === "sequence" && (raw >= n || raw < 0)) return null;
       const i = ((raw % n) + n) % n;
-      if (queue[i]?.playable) return i;
+      if (canPlay(queue[i])) return i;
     }
     return null;
   }
@@ -554,6 +554,12 @@ export class Player {
         })
       : null;
   }
+}
+
+/** canPlay:这首歌能不能播。playable 是数据来源按登录态的推断;trial 表示只有试听片段,
+ * 但 stream 可播。试听不再是 playable 一个布尔能拦下的,两者满足其一即可。 */
+export function canPlay(track: Track | null | undefined): boolean {
+  return !!track && (track.playable || track.trial === true);
 }
 
 /** unplayableMessage 是歌曲不能播放时给听众的说明。 */

@@ -1,4 +1,4 @@
-export { Player, getPlayer, modeLabels } from "./core/player";
+export { Player, canPlay, getPlayer, modeLabels, unplayableMessage } from "./core/player";
 export type { AudioLike, PlayerOptions } from "./core/player";
 export { createKiteSource, KiteError } from "./core/source";
 export type { KiteSourceOptions } from "./core/source";
