@@ -15,6 +15,7 @@ import (
 	"github.com/VOD-Studio/kite/internal/cli/artist"
 	"github.com/VOD-Studio/kite/internal/cli/auth"
 	"github.com/VOD-Studio/kite/internal/cli/config"
+	"github.com/VOD-Studio/kite/internal/cli/dj"
 	"github.com/VOD-Studio/kite/internal/cli/fm"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
 	"github.com/VOD-Studio/kite/internal/cli/mcp"
@@ -165,6 +166,7 @@ func NewRootCommand() *cobra.Command {
 		recommend.NewCommand(k),
 		fm.NewCommand(k),
 		recent.NewCommand(k), // #47 recent 归发现(读召回池,复听场景)
+		dj.NewCommand(k),     // #33 电台归发现(音频内容源)
 	} {
 		c.GroupID = "discover"
 		root.AddCommand(c)
