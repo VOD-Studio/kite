@@ -16,7 +16,7 @@ import (
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
-// SessionFile 是站长网易云登录态文件的内容(server public-login 写入,运行中续期时改写)。
+// SessionFile 是服务账号网易云登录态文件的内容(server public-login 写入,运行中续期时改写)。
 type SessionFile struct {
 	Cookie    string    `json:"cookie"`
 	UserID    int64     `json:"userId"`
@@ -24,7 +24,7 @@ type SessionFile struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-// 站长登录态的三种状态,经 /player/v1/info 告诉播放器。
+// 服务账号登录态的三种状态,经 /player/v1/info 告诉播放器。
 const (
 	loginNone    = "none"
 	loginActive  = "active"
@@ -37,7 +37,7 @@ const refreshInterval = 24 * time.Hour
 // statInterval 是检查登录态文件是否被改写的最短间隔(public-login 在另一个进程里写文件)。
 const statInterval = 30 * time.Second
 
-// ownerSession 持有可选的站长登录态。所有访客的 VIP 播放都用这一个账号,
+// ownerSession 持有可选的服务账号登录态。所有听众的 VIP 播放都用这一个账号,
 // 所以只用于给白名单内容生成播放链接,不用于任何别的接口。
 type ownerSession struct {
 	path string
@@ -82,7 +82,7 @@ func (o *ownerSession) reload(force bool) {
 	o.reloadLocked(force)
 }
 
-// reloadLocked 在文件被改写后重新读取(例如站长重新扫码)。force 为 false 时按 statInterval 节流。
+// reloadLocked 在文件被改写后重新读取(例如部署者重新扫码)。force 为 false 时按 statInterval 节流。
 func (o *ownerSession) reloadLocked(force bool) {
 	if o.path == "" {
 		return
@@ -95,7 +95,7 @@ func (o *ownerSession) reloadLocked(force bool) {
 	info, err := os.Stat(o.path)
 	if err != nil {
 		if o.status != loginNone {
-			slog.Warn("站长登录态文件不可读,改为匿名播放", slog.String("path", o.path), slog.String("error", err.Error()))
+			slog.Warn("服务账号登录态文件不可读,改为匿名播放", slog.String("path", o.path), slog.String("error", err.Error()))
 		}
 		o.file, o.status = SessionFile{}, loginNone
 		return
@@ -105,7 +105,7 @@ func (o *ownerSession) reloadLocked(force bool) {
 	}
 	f, err := ReadSessionFile(o.path)
 	if err != nil || f.Cookie == "" {
-		slog.Warn("站长登录态文件无效,改为匿名播放", slog.String("path", o.path))
+		slog.Warn("服务账号登录态文件无效,改为匿名播放", slog.String("path", o.path))
 		o.file, o.status = SessionFile{}, loginNone
 		return
 	}
@@ -128,7 +128,7 @@ func (o *ownerSession) refresh(ctx context.Context, do authendpoint.RawDoer) err
 			o.mu.Lock()
 			o.status = loginExpired
 			o.mu.Unlock()
-			slog.Warn("站长网易云登录态已失效,VIP 歌曲暂停播放;请重新执行 server public-login")
+			slog.Warn("服务账号的网易云登录态已失效,VIP 歌曲暂停播放;请重新执行 server public-login")
 		}
 		return err
 	}
@@ -168,7 +168,7 @@ func (o *ownerSession) runRefresh(ctx context.Context, do authendpoint.RawDoer) 
 
 func (o *ownerSession) logRefresh(err error) {
 	if err != nil && !errors.Is(err, merrors.ErrUnauthorized) {
-		slog.Warn("站长登录态续期失败,稍后重试", slog.String("error", err.Error()))
+		slog.Warn("服务账号登录态续期失败,稍后重试", slog.String("error", err.Error()))
 	}
 }
 

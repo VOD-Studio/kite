@@ -87,7 +87,7 @@ func (c engineCatalog) StreamURL(ctx context.Context, id int64, level mmpb.SongL
 	return resp.GetUrl().GetUrl(), nil
 }
 
-// 各类数据在公开模式里的缓存时间。歌单短一些,站长改了歌单能较快生效;直链远短于上游的过期时间。
+// 各类数据在公开模式里的缓存时间。歌单短一些,歌单改了能较快生效;直链远短于上游的过期时间。
 const (
 	playlistTTL = 10 * time.Minute
 	songTTL     = 6 * time.Hour

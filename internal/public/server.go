@@ -27,7 +27,7 @@ type Server struct {
 	signer signer
 	limit  *limiter
 	owner  *ownerSession
-	auth   func(ctx context.Context) error // 站长登录态续期,nil 表示不续期(测试)
+	auth   func(ctx context.Context) error // 服务账号登录态续期,nil 表示不续期(测试)
 	now    func() time.Time
 
 	allowPlaylists map[int64]bool
@@ -235,7 +235,7 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 	if url == "" {
 		msg := "这首歌暂时无法播放(版权限制或需要 VIP)"
 		if cookie == "" {
-			msg = "这首歌需要 VIP:站长登录网易云后才能播放"
+			msg = "这首是 VIP 歌曲,当前服务没有登录 VIP 账号"
 		}
 		writeError(w, http.StatusNotFound, "UNPLAYABLE", msg)
 		return

@@ -10,7 +10,7 @@
 // 对外监听必须配置 KITE_SERVER_AUTH_TOKEN,否则拒绝启动。
 //
 // 设置 KITE_PUBLIC_ADDR 时另开公开只读模式(/player/v1,给网页播放器用,见 docs/player.md);
-// 子命令 `server public-login` 扫码登录站长的网易云账号,写入 KITE_PUBLIC_SESSION_FILE。
+// 子命令 `server public-login` 扫码登录服务账号(部署者自己的网易云账号),写入 KITE_PUBLIC_SESSION_FILE。
 package main
 
 import (
@@ -109,7 +109,7 @@ func main() {
 	slog.InfoContext(startupCtx, "server stopped")
 }
 
-// runPublicLogin 扫码登录站长的网易云账号,登录态写入文件,供公开模式取 VIP 播放链接。
+// runPublicLogin 扫码登录服务账号(部署者自己的网易云账号),登录态写入文件,供公开模式取 VIP 播放链接。
 // 容器里运行:docker exec -it kite server public-login。
 func runPublicLogin(args []string) int {
 	fs := flag.NewFlagSet("public-login", flag.ContinueOnError)

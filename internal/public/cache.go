@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// ttlCache 是进程内的过期缓存。公开模式面向访客,同一歌单 / 歌词会被反复请求,
+// ttlCache 是进程内的过期缓存。公开模式面向所有听众,同一歌单 / 歌词会被反复请求,
 // 缓存既减轻上游压力,也降低站点出口 IP 被上游风控的概率。
 type ttlCache[V any] struct {
 	mu    sync.Mutex

@@ -251,7 +251,7 @@ func TestPlaylist(t *testing.T) {
 	require.True(t, pl.Tracks[0].Playable)
 	require.Equal(t, "free", pl.Tracks[0].Access)
 	require.Equal(t, "vip", pl.Tracks[1].Access)
-	require.False(t, pl.Tracks[1].Playable, "没有站长登录态时 VIP 歌不可播")
+	require.False(t, pl.Tracks[1].Playable, "没有服务账号登录态时 VIP 歌不可播")
 	require.Contains(t, pl.Tracks[0].Stream, "/player/v1/tracks/1/stream?exp=")
 
 	rec = get(t, h, "/player/v1/playlists/200")
@@ -283,7 +283,7 @@ func TestStream(t *testing.T) {
 	rec := get(t, h, streamPath(t, h, "1"))
 	require.Equal(t, http.StatusFound, rec.Code)
 	require.Equal(t, "https://m801.music.126.net/1.mp3", rec.Header().Get("Location"), "直链换成 https")
-	require.Empty(t, cat.lastCookie, "没有站长登录态时按匿名取链接")
+	require.Empty(t, cat.lastCookie, "没有服务账号登录态时按匿名取链接")
 
 	vip := streamPath(t, h, "1")
 	vip = strings.Replace(vip, "/tracks/1/", "/tracks/2/", 1)
@@ -307,7 +307,7 @@ func TestStreamVIPWithOwner(t *testing.T) {
 	rec := get(t, h, pl.Tracks[1].Stream)
 	require.Equal(t, http.StatusNotFound, rec.Code)
 	require.Equal(t, "UNPLAYABLE", reason(t, rec))
-	require.Contains(t, decode[errorDTO](t, rec).Error.Message, "站长登录")
+	require.Contains(t, decode[errorDTO](t, rec).Error.Message, "VIP 歌曲")
 
 	// 写入登录态后重新创建服务(文件会被立即读取)。
 	require.NoError(t, WriteSessionFile(opts.SessionFile, SessionFile{Cookie: "MUSIC_U=owner", UserID: 1, UpdatedAt: time.Now()}))
@@ -318,7 +318,7 @@ func TestStreamVIPWithOwner(t *testing.T) {
 	rec = get(t, h, pl.Tracks[1].Stream)
 	require.Equal(t, http.StatusFound, rec.Code)
 	require.Equal(t, "https://m801.music.126.net/2-vip.flac", rec.Header().Get("Location"))
-	require.Equal(t, "MUSIC_U=owner", cat.lastCookie, "有登录态时按站长账号取链接")
+	require.Equal(t, "MUSIC_U=owner", cat.lastCookie, "有登录态时按服务账号取链接")
 }
 
 func TestStreamTarget(t *testing.T) {

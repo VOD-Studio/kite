@@ -11,7 +11,7 @@ import (
 
 type infoDTO struct {
 	Version string `json:"version"`
-	// Login 是站长登录态:none(未配置)/ active / expired(失效,只能按匿名播放)。
+	// Login 是服务账号的登录态:none(未配置)/ active / expired(失效,只能按匿名播放)。
 	Login   string `json:"login"`
 	Quality string `json:"quality"`
 }
