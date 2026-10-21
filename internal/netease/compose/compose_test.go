@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cache"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
@@ -229,6 +230,20 @@ func TestUserPlaylists_FollowsMoreAndDedupes(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []int64{100, 101, 201, 102}, playlistIDs(resp))
 	require.Equal(t, int32(2), u.pageHit.Load(), "more=false 后不再翻页")
+}
+
+// 取满页数上限时上游仍说还有,返回错误而不是把不完整的列表当成完整结果(否则 total 偏小、后面的页是空的)。
+func TestUserPlaylists_PageCapIsAnError(t *testing.T) {
+	t.Parallel()
+	u := &upstream{}
+	for i := range maxPlaylistPages {
+		u.userPages = append(u.userPages, []byte(fmt.Sprintf(`{"code":200,"more":true,"playlist":[{"id":%d,"creator":{"userId":7}}]}`, 1000+i)))
+	}
+	eng, _ := newEngine(t, u)
+
+	_, err := UserPlaylists(context.Background(), eng, &mmpb.UserPlaylistRequest{UserId: 7})
+	require.ErrorIs(t, err, merrors.ErrInvalidResponse)
+	require.Equal(t, int32(maxPlaylistPages), u.pageHit.Load())
 }
 
 // issue #90:带了调用方 cookie 的读取用它,没带的匿名;任何情况下都不借用会话池里的站点账号。

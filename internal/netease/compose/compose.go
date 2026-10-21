@@ -11,7 +11,9 @@ package compose
 
 import (
 	"context"
+	"fmt"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	playlistendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/playlist"
 	songendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/song"
@@ -72,6 +74,9 @@ func UserPlaylists(ctx context.Context, eng *engine.Engine, req *mmpb.UserPlayli
 }
 
 // allUserPlaylists 按上游顺序取用户的全部歌单,按歌单 ID 去重。
+//
+// 新的一页没有任何新歌单时按已取完处理(防止上游一直返回同一页时死循环);
+// 取满 maxPlaylistPages 页上游仍说还有时返回错误,不把不完整的列表当成完整结果。
 func allUserPlaylists(ctx context.Context, eng *engine.Engine, userID int64) ([]*mmpb.Playlist, error) {
 	var all []*mmpb.Playlist
 	seen := map[int64]bool{}
@@ -93,10 +98,10 @@ func allUserPlaylists(ctx context.Context, eng *engine.Engine, userID int64) ([]
 			added++
 		}
 		if !resp.More || added == 0 {
-			break
+			return all, nil
 		}
 	}
-	return all, nil
+	return nil, fmt.Errorf("%w: 取了 %d 页(%d 张)上游仍返回还有更多,无法给出完整的用户歌单", merrors.ErrInvalidResponse, maxPlaylistPages, len(all))
 }
 
 // filterPlaylists 按创建者区分创建 / 收藏。ownerUserID 为 0 时无法判断,原样返回。
