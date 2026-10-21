@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import "../src/element";
 import { Player } from "../src/core/player";
+import { KitePlayerElement } from "../src/element";
 import { withDark } from "../src/element/styles";
 import type { Playlist } from "../src/core/types";
 import { FakeAudio, fakeSource, flush, track } from "./helpers";
@@ -23,11 +24,21 @@ beforeEach(() => {
   (globalThis as { __kitePlayer?: Player }).__kitePlayer = player;
 });
 
-async function mount<T extends HTMLElement>(html: string): Promise<T> {
+type Lit = HTMLElement & { updateComplete: Promise<boolean> };
+
+async function mount<T extends Lit = Lit>(html: string): Promise<T> {
   document.body.innerHTML = html;
   await flush();
   await flush();
-  return document.body.firstElementChild as T;
+  const el = document.body.firstElementChild as T;
+  await el.updateComplete;
+  return el;
+}
+
+/** settle 等播放核心的异步操作和元素的重新渲染都结束。 */
+async function settle(el: Lit): Promise<void> {
+  await flush();
+  await el.updateComplete;
 }
 
 const shadow = (el: Element) => el.shadowRoot as ShadowRoot;
@@ -39,9 +50,8 @@ describe("样式", () => {
     );
   });
 
-  it("元素的样式来自 .css 源文件", async () => {
-    const el = await mount(`<kite-player playlists="100"></kite-player>`);
-    const css = shadow(el).querySelector("style")?.textContent ?? "";
+  it("元素的样式来自 .css 源文件", () => {
+    const css = String(KitePlayerElement.styles);
     expect(css).toContain("--kite-accent");
     expect(css).toContain('theme="dark"');
   });
@@ -69,21 +79,24 @@ describe("<kite-player>", () => {
     const el = await mount(`<kite-player playlists="100"></kite-player>`);
     const root = shadow(el);
     root.querySelector<HTMLButtonElement>(".bar .toggle")?.click();
-    await flush();
+    await settle(el);
     expect(player.state.playing).toBe(true);
     expect(root.querySelector(".kp")?.classList.contains("playing")).toBe(true);
 
     root.querySelector<HTMLButtonElement>(".bar-text")?.click();
+    await settle(el);
     expect(root.querySelector(".kp")?.getAttribute("data-mode")).toBe("open");
     expect(root.querySelector<HTMLElement>(".stage")?.hidden).toBe(false);
     expect(root.querySelector(".meta-title")?.textContent).toBe("纸飞机");
 
     root.querySelector<HTMLButtonElement>(".dots [data-go='lyrics']")?.click();
+    await settle(el);
     expect(root.querySelector(".kp")?.getAttribute("data-view")).toBe("lyrics");
     expect(root.querySelectorAll(".lines .line")).toHaveLength(3);
 
     root.querySelector<HTMLButtonElement>(".stage .close")?.click();
     await new Promise((r) => setTimeout(r, 500));
+    await settle(el);
     expect(root.querySelector(".kp")?.getAttribute("data-mode")).toBe("bar");
     expect(root.querySelector<HTMLElement>(".stage")?.hidden).toBe(true);
   });
@@ -92,7 +105,7 @@ describe("<kite-player>", () => {
     const el = await mount(`<kite-player playlists="100"></kite-player>`);
     const root = shadow(el);
     root.querySelector<HTMLButtonElement>(".bar-text")?.click();
-    await flush();
+    await settle(el);
     root.querySelectorAll<HTMLButtonElement>(".lines .line")[1]?.click();
     expect(player.state.time).toBe(4);
     expect(player.state.lyricIndex).toBe(1);
@@ -106,6 +119,7 @@ describe("<kite-player>", () => {
     const root = shadow(el);
     const btn = root.querySelector<HTMLButtonElement>(".ctl .mode");
     btn?.click();
+    await settle(el);
     expect(player.state.mode).toBe("one");
     expect(root.querySelector(".kp")?.getAttribute("data-pm")).toBe("one");
     expect(btn?.getAttribute("aria-label")).toContain("单曲循环");
@@ -115,13 +129,14 @@ describe("<kite-player>", () => {
     const el = await mount(`<kite-player playlists="100"></kite-player>`);
     const root = shadow(el);
     root.querySelector<HTMLButtonElement>(".bar .open-queue")?.click();
-    await flush();
+    await settle(el);
     expect(root.querySelector(".kp")?.hasAttribute("data-sheet")).toBe(true);
     const rows = root.querySelectorAll<HTMLButtonElement>(".list .row");
     expect(rows).toHaveLength(3);
     expect(rows[0]?.classList.contains("cur")).toBe(true);
     expect(rows[2]?.classList.contains("locked")).toBe(true);
     rows[2]?.click();
+    await settle(el);
     expect(root.querySelector(".toast")?.textContent).toContain("VIP");
     rows[1]?.click();
     expect(player.state.current?.id).toBe("2");
@@ -139,7 +154,7 @@ describe("<kite-track>", () => {
     const el = await mount(`<kite-track song="2" size="m"></kite-track>`);
     const root = shadow(el);
     root.querySelector<HTMLButtonElement>(".play")?.click();
-    await flush();
+    await settle(el);
     expect(player.state.current?.id).toBe("2");
     expect(root.querySelector(".card")?.classList.contains("cur")).toBe(true);
     expect(root.querySelector(".card")?.classList.contains("playing")).toBe(true);
@@ -159,8 +174,8 @@ describe("<kite-track>", () => {
     const root = shadow(el);
     expect(root.querySelector(".lyric-line")?.textContent).toBe("风吹过来");
     root.querySelector<HTMLButtonElement>(".play")?.click();
-    await flush();
-    await flush();
+    await settle(el);
+    await settle(el);
     expect(player.state.lyricIndex).toBe(0);
     expect(root.querySelector(".lyric-line")?.textContent).toBe("风吹过来");
     expect(root.querySelector(".lyric-line")?.classList.contains("live")).toBe(false);
@@ -170,9 +185,9 @@ describe("<kite-track>", () => {
     const el = await mount(`<kite-track song="3" size="s"></kite-track>`);
     const root = shadow(el);
     expect(root.querySelector(".card")?.classList.contains("locked")).toBe(true);
-    expect(root.textContent).toContain("站长登录");
+    expect(root.textContent).toContain("VIP 歌曲");
     root.querySelector<HTMLButtonElement>(".play")?.click();
-    await flush();
+    await settle(el);
     expect(player.state.current?.id).not.toBe("3");
   });
 
@@ -190,9 +205,38 @@ describe("<kite-playlist>", () => {
     const rows = root.querySelectorAll<HTMLButtonElement>(".row");
     expect(rows).toHaveLength(3);
     rows[1]?.click();
-    await flush();
+    await settle(el);
     expect(player.state.playlist?.id).toBe("100");
     expect(player.state.current?.id).toBe("2");
     expect(rows[1]?.classList.contains("cur")).toBe(true);
+  });
+});
+
+describe("紧凑布局", () => {
+  it("卡片宽度不超过阈值时宿主带 data-narrow,尺寸变了重新判断", async () => {
+    const observers: ((width: number) => void)[] = [];
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      constructor(private cb: ResizeObserverCallback) {}
+      observe(): void {
+        observers.push((width) => this.cb([{ contentRect: { width } } as ResizeObserverEntry], this as unknown as ResizeObserver));
+      }
+      unobserve(): void {}
+      disconnect(): void {}
+    } as unknown as typeof ResizeObserver;
+    try {
+      const el = await mount(`<kite-track song="2" size="m"></kite-track>`);
+      const resize = observers.at(-1);
+      resize?.(500);
+      expect(el.hasAttribute("data-narrow")).toBe(true);
+      resize?.(600);
+      expect(el.hasAttribute("data-narrow")).toBe(false);
+      resize?.(490);
+      el.setAttribute("size", "s");
+      resize?.(490);
+      expect(el.hasAttribute("data-narrow"), "小卡片的阈值是 480").toBe(false);
+    } finally {
+      globalThis.ResizeObserver = original;
+    }
   });
 });

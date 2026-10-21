@@ -1,93 +1,134 @@
+import { html, LitElement, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { classMap } from "lit/directives/class-map.js";
 import { formatTime } from "../core/lyrics";
 import type { Player } from "../core/player";
 import type { PlayerState, Playlist } from "../core/types";
 import { icons } from "./icons";
-import { cardStyles } from "./styles";
-import { artists, emit, emitFly, esc, openQueueEvent, playerFor, sizeOf, toastEvent, unplayableMessage } from "./util";
+import { cardSheet } from "./styles";
+import { artists, emit, emitFly, openQueueEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow } from "./util";
 
 /** 标准卡片列出的歌曲数。 */
 const previewRows = 4;
+/** 卡片窄于这个宽度时用紧凑布局。 */
+const narrowAt = 520;
 
 /**
- * <kite-playlist playlist="歌单 ID" size="m | l">:文章里的歌单卡片。
+ * <kite-playlist playlist="歌单 ID" size="m | l">:歌单卡片。
  * m 列出前 4 首;l 列出全部(可滚动)。点任意一首从那首开始播放整个歌单。
  */
-export class KitePlaylistElement extends HTMLElement {
-  static observedAttributes = ["playlist", "size"];
+export class KitePlaylistElement extends LitElement {
+  static override styles = cardSheet;
+  static override properties = {
+    playlist: { type: String },
+    size: { type: String },
+    theme: { type: String, reflect: true },
+    api: { type: String, reflect: true },
+  };
 
-  private root: ShadowRoot | null = null;
+  declare playlist: string | null;
+  declare size: string | null;
+  declare theme: string | null;
+  declare api: string | null;
+
   private player!: Player;
+  private s!: PlayerState;
   private list: Playlist | null = null;
-  private unsub: (() => void)[] = [];
+  private status: "loading" | "ready" | "error" = "loading";
+  private errorText = "";
   private loadSeq = 0;
+  private cleanup: (() => void)[] = [];
 
-  connectedCallback(): void {
-    if (!this.root) this.root = this.attachShadow({ mode: "open" });
-    this.player = playerFor(this);
-    this.unsub.push(this.player.subscribe((s) => this.update(s)));
-    void this.load();
+  constructor() {
+    super();
+    this.playlist = null;
+    this.size = null;
+    this.theme = null;
+    this.api = null;
   }
 
-  disconnectedCallback(): void {
-    for (const fn of this.unsub) fn();
-    this.unsub = [];
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.player = playerFor(this, this.api);
+    this.s = this.player.state;
+    this.cleanup.push(
+      this.player.subscribe((s) => {
+        this.s = s;
+        this.requestUpdate();
+      }),
+      watchNarrow(this, () => narrowAt),
+    );
   }
 
-  attributeChangedCallback(name: string, old: string | null, value: string | null): void {
-    if (!this.root || old === value) return;
-    if (name === "playlist") void this.load();
-    else this.draw();
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    for (const fn of this.cleanup) fn();
+    this.cleanup = [];
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    if (changed.has("playlist")) void this.load();
   }
 
   private async load(): Promise<void> {
-    const id = this.getAttribute("playlist");
-    const root = this.root;
-    if (!id || !root) return;
+    const id = this.playlist;
+    if (!id) return;
     const seq = ++this.loadSeq;
-    root.innerHTML = `<style>${cardStyles}</style><div class="skeleton" aria-busy="true"></div>`;
+    this.status = "loading";
+    this.requestUpdate();
     try {
       await this.player.whenSource();
       const pl = await this.player.loadPlaylist(id);
       if (seq !== this.loadSeq) return;
       this.list = pl;
-      this.draw();
+      this.status = "ready";
     } catch (err) {
       if (seq !== this.loadSeq) return;
-      root.innerHTML = `<style>${cardStyles}</style><div class="card pl"><div class="name">歌单暂时无法显示</div><div class="error">${esc((err as Error).message)}</div></div>`;
+      this.status = "error";
+      this.errorText = (err as Error).message;
     }
+    this.requestUpdate();
   }
 
-  private draw(): void {
+  protected override render(): TemplateResult {
     const pl = this.list;
-    const root = this.root;
-    if (!pl || !root) return;
-    const big = sizeOf(this, ["m", "l"], "m") === "l";
+    if (this.status === "loading" || (!pl && this.status !== "error")) return html`<div class="skeleton" aria-busy="true"></div>`;
+    if (this.status === "error" || !pl) return html`<div class="card pl"><div class="name">歌单暂时无法显示</div><div class="error">${this.errorText}</div></div>`;
+    const big = sizeOf(this.size, ["m", "l"] as const, "m") === "l";
     const rows = big ? pl.tracks : pl.tracks.slice(0, previewRows);
     const minutes = Math.round(pl.tracks.reduce((sum, t) => sum + t.durationMs, 0) / 60000);
     const covers = [pl.cover, pl.tracks[1]?.album.cover ?? pl.cover, pl.tracks[2]?.album.cover ?? pl.cover];
-    root.innerHTML = `<style>${cardStyles}</style>
-      <div class="card pl${big ? " big" : ""}" part="card">
-        <div class="head">
-          <div class="stack"><div class="cover c3"><img alt="" src="${esc(covers[2])}"></div><div class="cover c2"><img alt="" src="${esc(covers[1])}"></div><div class="cover c1"><img alt="" src="${esc(covers[0])}"></div></div>
-          <div class="info"><div class="kicker">歌单</div><div class="name ell">${esc(pl.name)}</div><div class="meta ell">${pl.trackCount || pl.tracks.length} 首${minutes ? ` · ${minutes} 分钟` : ""}</div></div>
-          <button class="playall" aria-label="播放全部">${icons.play}<span>播放全部</span></button>
+    const inThis = this.s.playlist?.id === pl.id;
+    const cur = this.s.current?.id;
+    return html`<div class=${classMap({ card: true, pl: true, big, cur: inThis, playing: inThis && this.s.playing })} part="card">
+      <div class="head">
+        <div class="stack">
+          <div class="cover c3"><img alt="" src=${covers[2] ?? ""} /></div>
+          <div class="cover c2"><img alt="" src=${covers[1] ?? ""} /></div>
+          <div class="cover c1"><img alt="" src=${covers[0] ?? ""} /></div>
         </div>
-        <div class="rows" role="list">${rows
-          .map(
-            (t, i) => `<button class="row${t.playable ? "" : " locked"}" role="listitem" data-i="${i}">
-              <span class="idx">${i + 1}</span>
-              <span class="t"><b>${esc(t.title)}</b><span>${esc(artists(t))}</span></span>
-              <span class="d">${t.playable ? formatTime(t.durationMs / 1000) : t.access === "vip" ? `<span class="tg vip">VIP</span>` : "—"}</span>
-            </button>`,
-          )
-          .join("")}</div>
-        ${!big && pl.tracks.length > previewRows ? `<button class="more">查看全部 ${pl.tracks.length} 首 ›</button>` : ""}
-      </div>`;
-    root.querySelector(".playall")?.addEventListener("click", () => this.play());
-    root.querySelectorAll<HTMLElement>(".row").forEach((row) => row.addEventListener("click", () => this.play(Number(row.dataset.i))));
-    root.querySelector(".more")?.addEventListener("click", () => emit(openQueueEvent, { playlist: pl.id }));
-    this.update(this.player.state);
+        <div class="info">
+          <div class="kicker">歌单</div>
+          <div class="name ell">${pl.name}</div>
+          <div class="meta ell">${pl.trackCount || pl.tracks.length} 首${minutes ? ` · ${minutes} 分钟` : ""}</div>
+        </div>
+        <button class="playall" aria-label="播放全部" @click=${() => this.play()}>${icons.play}<span>播放全部</span></button>
+      </div>
+      <div class="rows" role="list">
+        ${rows.map(
+          (t, i) => html`<button class=${classMap({ row: true, locked: !t.playable, cur: inThis && t.id === cur })} role="listitem" data-i=${i} @click=${() => this.play(i)}>
+            <span class="idx">${i + 1}</span>
+            <span class="t"><b>${t.title}</b><span>${artists(t)}</span></span>
+            <span class="d">${t.playable ? formatTime(t.durationMs / 1000) : t.access === "vip" ? html`<span class="tg vip">VIP</span>` : "—"}</span>
+          </button>`,
+        )}
+      </div>
+      ${!big && pl.tracks.length > previewRows ? html`<button class="more" @click=${this.openQueue}>查看全部 ${pl.tracks.length} 首 ›</button>` : nothing}
+    </div>`;
   }
+
+  private openQueue = (): void => {
+    if (this.list) emit(openQueueEvent, { playlist: this.list.id });
+  };
 
   private play(index?: number): void {
     const pl = this.list;
@@ -97,24 +138,11 @@ export class KitePlaylistElement extends HTMLElement {
       emit(toastEvent, unplayableMessage(t));
       return;
     }
-    const s = this.player.state;
-    if (t && s.current?.id === t.id) {
+    if (t && this.player.state.current?.id === t.id) {
       void this.player.toggle();
       return;
     }
-    emitFly(this.root?.querySelector(".c1") ?? null, pl.cover);
+    emitFly(this.renderRoot.querySelector(".c1"), pl.cover);
     void this.player.playPlaylist(pl.id, index);
-  }
-
-  private update(s: PlayerState): void {
-    const pl = this.list;
-    if (!pl || !this.root) return;
-    const card = this.root.querySelector(".card");
-    const inThis = s.playlist?.id === pl.id;
-    card?.classList.toggle("cur", inThis);
-    card?.classList.toggle("playing", inThis && s.playing);
-    this.root.querySelectorAll<HTMLElement>(".row").forEach((row) => {
-      row.classList.toggle("cur", inThis && pl.tracks[Number(row.dataset.i)]?.id === s.current?.id);
-    });
   }
 }

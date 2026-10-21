@@ -1,95 +1,293 @@
+import { html, LitElement, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { classMap } from "lit/directives/class-map.js";
+import { keyed } from "lit/directives/keyed.js";
 import { firstSungIndex, formatTime, lineUnits, wordProgress } from "../core/lyrics";
 import type { Player } from "../core/player";
-import type { Lyrics, PlayerState, Track } from "../core/types";
+import type { LyricLine, Lyrics, PlayerState, Track } from "../core/types";
 import { blob, eq, icons } from "./icons";
-import { cardStyles } from "./styles";
-import { artists, emit, emitFly, esc, openEvent, playerFor, sizeOf, toastEvent, unplayableMessage, type OpenDetail } from "./util";
+import { cardSheet } from "./styles";
+import { artists, emit, emitFly, openEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow, type OpenDetail } from "./util";
+
+const sizes = ["s", "m", "l"] as const;
+type Size = (typeof sizes)[number];
+
+/** 卡片窄于这个宽度时用紧凑布局(小卡片 480,其它 520)。 */
+const narrowAt: Record<Size, number> = { s: 480, m: 520, l: 520 };
+
+/** 卡片里显示的那一句:正在唱的(live)或唱到第一句之前预览的第一句。 */
+interface LyricView {
+  key: number;
+  line: LyricLine | undefined;
+  live: boolean;
+  prev: string;
+  next: string;
+  instrumental: boolean;
+}
 
 /**
- * <kite-track song="歌曲 ID" size="s | m | l">:文章里的单曲卡片。
+ * <kite-track song="歌曲 ID" size="s | m | l">:单曲卡片。
  * s 一行小卡片;m 标准卡片(默认,带当前歌词与完整控制);l 大卡片(封面环境色、滚动歌词)。
- * 与 <kite-player> 共用播放核心:在卡片里播放,右下角播放器同步。
+ * 与 <kite-player> 共用播放核心:在卡片里播放,页面上的播放器同步。
  */
-export class KiteTrackElement extends HTMLElement {
-  static observedAttributes = ["song", "size"];
+export class KiteTrackElement extends LitElement {
+  static override styles = cardSheet;
+  static override properties = {
+    song: { type: String },
+    size: { type: String },
+    theme: { type: String, reflect: true },
+    api: { type: String, reflect: true },
+  };
 
-  private root: ShadowRoot | null = null;
+  declare song: string | null;
+  declare size: string | null;
+  declare theme: string | null;
+  declare api: string | null;
+
   private player!: Player;
+  private s!: PlayerState;
   private track: Track | null = null;
+  /** 卡片自己预取的歌词,用于还没播放时预览。 */
   private lyrics: Lyrics | null = null;
-  private size = "m";
-  private unsub: (() => void)[] = [];
-  private shownLine = -2;
-  private shownLyrics: Lyrics | null = null;
-  private units: HTMLElement[] = [];
-  private dragging = false;
+  private status: "loading" | "ready" | "error" = "loading";
+  private errorText = "";
   private loadSeq = 0;
+  private dragging = false;
+  private units: HTMLElement[] = [];
+  private cleanup: (() => void)[] = [];
 
-  connectedCallback(): void {
-    if (!this.root) this.root = this.attachShadow({ mode: "open" });
-    this.player = playerFor(this);
-    this.unsub.push(
-      this.player.subscribe((s, prev) => this.update(s, prev)),
+  constructor() {
+    super();
+    this.song = null;
+    this.size = null;
+    this.theme = null;
+    this.api = null;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.player = playerFor(this, this.api);
+    this.s = this.player.state;
+    this.cleanup.push(
+      this.player.subscribe((s) => {
+        this.s = s;
+        this.requestUpdate();
+      }),
       this.player.onTime((t) => this.onFrame(t)),
+      watchNarrow(this, () => narrowAt[this.cardSize()]),
     );
-    void this.load();
   }
 
-  disconnectedCallback(): void {
-    for (const fn of this.unsub) fn();
-    this.unsub = [];
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    for (const fn of this.cleanup) fn();
+    this.cleanup = [];
   }
 
-  attributeChangedCallback(name: string, old: string | null, value: string | null): void {
-    if (!this.root || old === value) return;
-    if (name === "song") void this.load();
-    else this.draw();
+  protected override willUpdate(changed: PropertyValues): void {
+    if (changed.has("song")) void this.load();
+  }
+
+  private cardSize(): Size {
+    return sizeOf(this.size, sizes, "m");
   }
 
   private async load(): Promise<void> {
-    const id = this.getAttribute("song");
-    const root = this.root;
-    if (!id || !root) return;
+    const id = this.song;
+    if (!id) return;
     const seq = ++this.loadSeq;
-    root.innerHTML = `<style>${cardStyles}</style><div class="skeleton" aria-busy="true"></div>`;
+    this.status = "loading";
+    this.requestUpdate();
     try {
       await this.player.whenSource();
       const track = await this.player.loadTrack(id);
-      const lyrics = sizeOf(this, ["s", "m", "l"], "m") === "s" ? null : await this.player.lyricsFor(track).catch(() => null);
+      const lyrics = this.cardSize() === "s" ? null : await this.player.lyricsFor(track).catch(() => null);
       if (seq !== this.loadSeq) return;
       this.track = track;
       this.lyrics = lyrics;
-      this.draw();
+      this.status = "ready";
     } catch (err) {
       if (seq !== this.loadSeq) return;
-      root.innerHTML = `<style>${cardStyles}</style><div class="card s"><div class="main"><div class="title">${esc("这首歌暂时无法显示")}</div><div class="error">${esc((err as Error).message)}</div></div></div>`;
+      this.status = "error";
+      this.errorText = (err as Error).message;
     }
+    this.requestUpdate();
   }
 
-  private draw(): void {
+  // ---- 渲染 ----
+
+  protected override render(): TemplateResult {
     const t = this.track;
-    const root = this.root;
-    if (!t || !root) return;
-    this.size = sizeOf(this, ["s", "m", "l"], "m");
-    const html = this.size === "s" ? this.htmlS(t) : this.size === "l" ? this.htmlL(t) : this.htmlM(t);
-    root.innerHTML = `<style>${cardStyles}</style>${html}`;
-    root.querySelector(".play")?.addEventListener("click", () => void this.play(false));
-    root.querySelector(".chorus")?.addEventListener("click", () => void this.play(true));
-    root.querySelector(".prev")?.addEventListener("click", () => this.player.prev());
-    root.querySelector(".next")?.addEventListener("click", () => this.player.next());
-    root.querySelector(".open")?.addEventListener("click", () => void this.openPlayer());
-    const range = root.querySelector<HTMLInputElement>(".progress input");
-    range?.addEventListener("input", () => {
-      this.dragging = true;
-      this.setPct(Number(range.value) / 1000);
-    });
-    range?.addEventListener("change", () => {
-      this.dragging = false;
-      this.player.seek((Number(range.value) / 1000) * this.player.state.duration);
-    });
-    this.shownLine = -2;
-    this.update(this.player.state, null);
+    if (this.status === "loading" || (!t && this.status !== "error")) return html`<div class="skeleton" aria-busy="true"></div>`;
+    if (this.status === "error" || !t) {
+      return html`<div class="card s"><div class="main"><div class="title">这首歌暂时无法显示</div><div class="error">${this.errorText}</div></div></div>`;
+    }
+    const size = this.cardSize();
+    const cur = this.s.current?.id === t.id;
+    const classes = classMap({ card: true, [size]: true, locked: !t.playable, cur, playing: cur && this.s.playing });
+    if (size === "s") return this.renderS(t, cur, classes);
+    return size === "l" ? this.renderL(t, cur, classes) : this.renderM(t, cur, classes);
   }
+
+  private renderS(t: Track, cur: boolean, classes: ReturnType<typeof classMap>): TemplateResult {
+    const locked = !t.playable;
+    const sub = locked
+      ? html`${icons.lock}<span class="ell">${unplayableMessage(t)}</span>`
+      : html`<span class="ell">${[artists(t), t.album.name, formatTime(t.durationMs / 1000)].filter(Boolean).join(" · ")}</span>`;
+    return html`<div class=${classes} part="card">
+      <div class="cover"><img alt="" src=${t.album.cover} /></div>
+      <div class="main">
+        <div class="title">${eq}<span class="ell">${t.title}</span><span class="who ell">${artists(t)}</span></div>
+        <div class="sub" ?hidden=${cur && t.playable}>${sub}</div>
+        ${this.renderProgress(t, !cur)}
+      </div>
+      <div class="actions">
+        ${locked ? nothing : html`<button class="chip chorus" aria-label=${`从副歌开始播放 ${t.title}`} @click=${this.onChorus}>${icons.wave}副歌</button>`}<button
+          class="blob play"
+          aria-label=${this.playLabel(t, cur)}
+          @click=${this.onPlay}
+        >
+          ${blob}
+        </button>
+      </div>
+    </div>`;
+  }
+
+  private renderM(t: Track, cur: boolean, classes: ReturnType<typeof classMap>): TemplateResult {
+    const locked = !t.playable;
+    const lv = this.lyricView(cur);
+    return html`<div class=${classes} part="card">
+      <div class="cover"><img alt="" src=${t.album.cover} /></div>
+      <div class="main">
+        <div class="head">
+          <div style="flex:1;min-width:0">
+            <div class="title ell">${t.title}</div>
+            <div class="who"><span class="ell">${[artists(t), t.album.name].filter(Boolean).join(" · ")}</span>${this.tags(t)}</div>
+          </div>
+          ${locked ? nothing : html`<button class="chip chorus" @click=${this.onChorus}>${icons.wave}从副歌听</button>`}
+        </div>
+        <div class="lyric">${this.renderLine(lv, true)}<div class="lyric-tr ell">${lv.line?.translation ?? ""}</div></div>
+        ${locked ? html`<div class="error">${unplayableMessage(t)}</div>` : nothing}
+        <div class="controls">
+          <button class="ib prev" aria-label="上一首" ?hidden=${!cur} @click=${this.onPrev}>${icons.prev}</button
+          ><button class="blob play" aria-label=${this.playLabel(t, cur)} @click=${this.onPlay}>${blob}</button
+          ><button class="ib next" aria-label="下一首" ?hidden=${!cur} @click=${this.onNext}>${icons.next}</button>${this.renderProgress(t, false)}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  private renderL(t: Track, cur: boolean, classes: ReturnType<typeof classMap>): TemplateResult {
+    const locked = !t.playable;
+    const lv = this.lyricView(cur);
+    return html`<div class=${classes} part="card">
+      <div class="amb"><img alt="" src=${t.album.cover} /></div>
+      <div class="scrim"></div>
+      <div class="top">
+        <div class="cover"><img alt="" src=${t.album.cover} /></div>
+        <div class="info">
+          <div class="kicker">${cur ? "单曲 · 正在播放" : "单曲"}</div>
+          <div class="title ell">${t.title}</div>
+          <div class="who ell">${[artists(t), t.album.name].filter(Boolean).join(" · ")}</div>
+          <div class="tags">${this.tags(t)}</div>
+          ${locked
+            ? html`<div class="error" style="color:rgba(255,255,255,.75)">${unplayableMessage(t)}</div>`
+            : html`<button class="chip chorus" @click=${this.onChorus}>${icons.wave}从副歌听</button>`}
+        </div>
+        ${locked ? nothing : html`<button class="ib open" aria-label="在播放器中打开" style="color:rgba(255,255,255,.85)" @click=${this.onOpen}>${icons.expand}</button>`}
+      </div>
+      <div class="lyric">
+        <div class="lyric-prev ell">${lv.prev}</div>
+        ${this.renderLine(lv, false)}
+        <div class="lyric-tr ell">${lv.line?.translation ?? ""}</div>
+        <div class="lyric-next ell">${lv.next}</div>
+      </div>
+      <div class="controls">
+        <button class="ib prev" aria-label="上一首" ?hidden=${!cur} style="color:#fff" @click=${this.onPrev}>${icons.prev}</button
+        ><button class="blob play" aria-label=${this.playLabel(t, cur)} @click=${this.onPlay}>${blob}</button
+        ><button class="ib next" aria-label="下一首" ?hidden=${!cur} style="color:#fff" @click=${this.onNext}>${icons.next}</button>${this.renderProgress(t, false)}
+      </div>
+    </div>`;
+  }
+
+  /** renderLine:正在唱的句子拆成逐字的 span(换句时重建,不复用上一句的进度)。 */
+  private renderLine(lv: LyricView, ell: boolean): TemplateResult {
+    const classes = classMap({ "lyric-line": true, ell, live: lv.live });
+    if (!lv.line) return html`<div class=${classes}>${lv.instrumental ? "纯音乐" : ""}</div>`;
+    if (!lv.live) return html`<div class=${classes}>${lv.line.text}</div>`;
+    const units = lineUnits(lv.line);
+    return html`<div class=${classes}>${keyed(lv.key, units.map((u) => html`<span class="u">${u}</span>`))}</div>`;
+  }
+
+  private renderProgress(t: Track, hidden: boolean): TemplateResult {
+    return html`<div class="progress" ?hidden=${hidden}>
+      <span class="t-cur num">0:00</span><span class="bar"><b></b></span><span class="t-dur num">${formatTime(this.durationOf(t))}</span
+      ><input type="range" min="0" max="1000" value="0" aria-label="播放进度" @input=${this.onRangeInput} @change=${this.onRangeChange} />
+    </div>`;
+  }
+
+  private tags(t: Track): unknown {
+    if (t.access === "vip") return html`<span class="tg vip">VIP</span>`;
+    if (t.access === "paid") return html`<span class="tg out">数字专辑</span>`;
+    return nothing;
+  }
+
+  private playLabel(t: Track, cur: boolean): string {
+    return `${cur && this.s.playing ? "暂停" : "播放"} ${t.title}`;
+  }
+
+  private durationOf(t: Track): number {
+    return this.s.current?.id === t.id && this.s.duration > 0 ? this.s.duration : t.durationMs / 1000;
+  }
+
+  /**
+   * lyricView 算出卡片里显示的那一句。开头的署名行(作词 / 作曲)不当作「正在唱」,
+   * 唱到第一句之前一直预览第一句;刚切到这首时播放器的歌词还在加载,先用卡片自己预取的。
+   */
+  private lyricView(cur: boolean): LyricView {
+    const s = this.s;
+    const lyr = cur ? (s.lyrics ?? this.lyrics) : this.lyrics;
+    const lines = lyr?.lines ?? [];
+    const sung = firstSungIndex(lines);
+    const idx = cur && s.lyrics ? s.lyricIndex : -1;
+    const live = idx >= 0 && idx >= sung;
+    const at = live ? idx : sung;
+    return {
+      key: live ? idx : -1,
+      line: lines[at],
+      live,
+      prev: live && idx > sung ? (lines[idx - 1]?.text ?? "") : "",
+      next: lines[at + 1]?.text ?? "",
+      instrumental: !!lyr?.instrumental,
+    };
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    // 尺寸变了而宽度没变时 ResizeObserver 不会触发,紧凑布局的阈值要在这里重新判断。
+    if (changed.has("size")) this.toggleAttribute("data-narrow", this.clientWidth > 0 && this.clientWidth <= narrowAt[this.cardSize()]);
+    this.units = [...this.renderRoot.querySelectorAll<HTMLElement>(".lyric-line.live .u")];
+    const t = this.track;
+    if (!t) return;
+    if (this.s.current?.id === t.id) this.onFrame(this.player.currentTime());
+    else this.setPct(0);
+  }
+
+  // ---- 事件 ----
+
+  private onPlay = (): void => void this.play(false);
+  private onChorus = (): void => void this.play(true);
+  private onPrev = (): void => this.player.prev();
+  private onNext = (): void => this.player.next();
+  private onOpen = (): void => void this.openPlayer();
+
+  private onRangeInput = (e: Event): void => {
+    this.dragging = true;
+    this.setPct(Number((e.target as HTMLInputElement).value) / 1000);
+  };
+
+  private onRangeChange = (e: Event): void => {
+    this.dragging = false;
+    this.player.seek((Number((e.target as HTMLInputElement).value) / 1000) * this.player.state.duration);
+  };
 
   private async play(chorus: boolean): Promise<void> {
     const t = this.track;
@@ -103,7 +301,7 @@ export class KiteTrackElement extends HTMLElement {
       await this.player.toggle();
       return;
     }
-    if (s.current?.id !== t.id) emitFly(this.root?.querySelector(".cover") ?? null, t.album.cover);
+    if (s.current?.id !== t.id) emitFly(this.renderRoot.querySelector(".cover"), t.album.cover);
     await this.player.playTrack(t);
     if (chorus) {
       await this.player.whenLyrics(t.id);
@@ -118,133 +316,14 @@ export class KiteTrackElement extends HTMLElement {
     emit<OpenDetail>(openEvent, { view: "lyrics", immersive: true });
   }
 
-  // ---- 各尺寸的结构 ----
-
-  private tags(t: Track, out = "out"): string {
-    if (t.access === "vip") return `<span class="tg vip">VIP</span>`;
-    if (t.access === "paid") return `<span class="tg ${out}">数字专辑</span>`;
-    return "";
-  }
-
-  private progress(t: Track): string {
-    return `<div class="progress" hidden><span class="t-cur num">0:00</span><span class="bar"><b></b></span><span class="t-dur num">${formatTime(t.durationMs / 1000)}</span><input type="range" min="0" max="1000" value="0" aria-label="播放进度"></div>`;
-  }
-
-  private htmlS(t: Track): string {
-    const locked = !t.playable;
-    const sub = locked
-      ? `${icons.lock}<span class="ell">${esc(unplayableMessage(t))}</span>`
-      : `<span class="ell">${esc([artists(t), t.album.name, formatTime(t.durationMs / 1000)].filter(Boolean).join(" · "))}</span>`;
-    return `<div class="card s${locked ? " locked" : ""}" part="card">
-      <div class="cover"><img alt="" src="${esc(t.album.cover)}"></div>
-      <div class="main">
-        <div class="title">${eq}<span class="ell">${esc(t.title)}</span><span class="who ell">${esc(artists(t))}</span></div>
-        <div class="sub">${sub}</div>
-        ${this.progress(t)}
-      </div>
-      <div class="actions">${locked ? "" : `<button class="chip chorus" aria-label="从副歌开始播放 ${esc(t.title)}">${icons.wave}副歌</button>`}<button class="blob play" aria-label="播放 ${esc(t.title)}">${blob}</button></div>
-    </div>`;
-  }
-
-  private htmlM(t: Track): string {
-    const locked = !t.playable;
-    return `<div class="card m${locked ? " locked" : ""}" part="card">
-      <div class="cover"><img alt="" src="${esc(t.album.cover)}"></div>
-      <div class="main">
-        <div class="head"><div style="flex:1;min-width:0"><div class="title ell">${esc(t.title)}</div><div class="who"><span class="ell">${esc([artists(t), t.album.name].filter(Boolean).join(" · "))}</span>${this.tags(t)}</div></div>${locked ? "" : `<button class="chip chorus">${icons.wave}从副歌听</button>`}</div>
-        <div class="lyric"><div class="lyric-line ell"></div><div class="lyric-tr ell"></div></div>
-        ${locked ? `<div class="error">${esc(unplayableMessage(t))}</div>` : ""}
-        <div class="controls"><button class="ib prev" aria-label="上一首" hidden>${icons.prev}</button><button class="blob play" aria-label="播放 ${esc(t.title)}">${blob}</button><button class="ib next" aria-label="下一首" hidden>${icons.next}</button>${this.progress(t).replace(" hidden", "")}</div>
-      </div>
-    </div>`;
-  }
-
-  private htmlL(t: Track): string {
-    const locked = !t.playable;
-    return `<div class="card l${locked ? " locked" : ""}" part="card">
-      <div class="amb"><img alt="" src="${esc(t.album.cover)}"></div><div class="scrim"></div>
-      <div class="top">
-        <div class="cover"><img alt="" src="${esc(t.album.cover)}"></div>
-        <div class="info"><div class="kicker">单曲</div><div class="title ell">${esc(t.title)}</div><div class="who ell">${esc([artists(t), t.album.name].filter(Boolean).join(" · "))}</div><div class="tags">${this.tags(t)}</div>${locked ? `<div class="error" style="color:rgba(255,255,255,.75)">${esc(unplayableMessage(t))}</div>` : `<button class="chip chorus">${icons.wave}从副歌听</button>`}</div>
-        ${locked ? "" : `<button class="ib open" aria-label="在播放器中打开" style="color:rgba(255,255,255,.85)">${icons.expand}</button>`}
-      </div>
-      <div class="lyric"><div class="lyric-prev ell"></div><div class="lyric-line"></div><div class="lyric-tr ell"></div><div class="lyric-next ell"></div></div>
-      <div class="controls"><button class="ib prev" aria-label="上一首" hidden style="color:#fff">${icons.prev}</button><button class="blob play" aria-label="播放 ${esc(t.title)}">${blob}</button><button class="ib next" aria-label="下一首" hidden style="color:#fff">${icons.next}</button>${this.progress(t).replace(" hidden", "")}</div>
-    </div>`;
-  }
-
-  // ---- 状态同步 ----
-
-  private update(s: PlayerState, prev: PlayerState | null): void {
-    const t = this.track;
-    const root = this.root;
-    const card = root?.querySelector<HTMLElement>(".card");
-    if (!t || !root || !card) return;
-    const cur = s.current?.id === t.id;
-    card.classList.toggle("cur", cur);
-    card.classList.toggle("playing", cur && s.playing);
-    root.querySelector(".play")?.setAttribute("aria-label", `${cur && s.playing ? "暂停" : "播放"} ${t.title}`);
-    for (const el of root.querySelectorAll<HTMLElement>(".prev, .next")) el.hidden = !cur;
-    const progress = root.querySelector<HTMLElement>(".progress");
-    if (this.size === "s" && progress) {
-      progress.hidden = !cur;
-      const sub = root.querySelector<HTMLElement>(".sub");
-      if (sub) sub.hidden = cur && t.playable;
-    }
-    if (!cur) this.setPct(0);
-    else if (!prev || s.time !== prev.time || s.duration !== prev.duration) this.onFrame(s.time);
-    const kicker = root.querySelector(".kicker");
-    if (kicker) kicker.textContent = cur ? "单曲 · 正在播放" : "单曲";
-    if (this.size !== "s") this.renderLyric(s, cur);
-  }
-
-  private renderLyric(s: PlayerState, cur: boolean): void {
-    const root = this.root;
-    if (!root) return;
-    // 刚切到这首时播放器的歌词还在加载,先用卡片自己预取的同一首歌词。
-    const lyr = cur ? (s.lyrics ?? this.lyrics) : this.lyrics;
-    const lines = lyr?.lines ?? [];
-    // 开头的署名行(作词 / 作曲)不当作「正在唱」,唱到第一句之前一直预览第一句。
-    const sung = firstSungIndex(lines);
-    const idx = cur && s.lyrics ? s.lyricIndex : -1;
-    const live = idx >= 0 && idx >= sung;
-    const key = live ? idx : -1;
-    if (key === this.shownLine && lyr === this.shownLyrics) return;
-    this.shownLine = key;
-    this.shownLyrics = lyr;
-    const at = live ? idx : sung;
-    const line = lines[at];
-    const lineEl = root.querySelector<HTMLElement>(".lyric-line");
-    if (!lineEl) return;
-    const instrumental = lyr?.instrumental;
-    if (!line) {
-      lineEl.textContent = instrumental ? "纯音乐" : "";
-      this.units = [];
-    } else if (live) {
-      lineEl.classList.add("live");
-      lineEl.innerHTML = lineUnits(line).map((u) => `<span class="u">${esc(u)}</span>`).join("");
-      this.units = [...lineEl.querySelectorAll<HTMLElement>(".u")];
-    } else {
-      lineEl.classList.remove("live");
-      lineEl.textContent = line.text;
-      this.units = [];
-    }
-    const tr = root.querySelector(".lyric-tr");
-    if (tr) tr.textContent = line?.translation ?? "";
-    const prevEl = root.querySelector(".lyric-prev");
-    if (prevEl) prevEl.textContent = live && idx > sung ? (lines[idx - 1]?.text ?? "") : "";
-    const nextEl = root.querySelector(".lyric-next");
-    if (nextEl) nextEl.textContent = lines[at + 1]?.text ?? "";
-  }
+  // ---- 每帧 ----
 
   private onFrame(t: number): void {
     const s = this.player.state;
-    if (!this.track || s.current?.id !== this.track.id || !this.root) return;
+    if (!this.track || s.current?.id !== this.track.id || !this.hasUpdated) return;
     if (!this.dragging && s.duration > 0) this.setPct(Math.min(1, t / s.duration));
-    const cur = this.root.querySelector(".t-cur");
+    const cur = this.renderRoot.querySelector(".t-cur");
     if (cur) cur.textContent = formatTime(t);
-    const dur = this.root.querySelector(".t-dur");
-    if (dur && s.duration > 0) dur.textContent = formatTime(s.duration);
     const line = s.lyrics?.lines[s.lyricIndex];
     if (line && this.units.length) {
       const p = wordProgress(line, t * 1000);
@@ -253,12 +332,8 @@ export class KiteTrackElement extends HTMLElement {
   }
 
   private setPct(pct: number): void {
-    const root = this.root;
-    if (!root) return;
-    const bar = root.querySelector<HTMLElement>(".bar");
-    bar?.style.setProperty("--pct", String(pct));
-    const input = root.querySelector<HTMLInputElement>(".progress input");
+    this.renderRoot.querySelector<HTMLElement>(".bar")?.style.setProperty("--pct", String(pct));
+    const input = this.renderRoot.querySelector<HTMLInputElement>(".progress input");
     if (input && !this.dragging) input.value = String(Math.round(pct * 1000));
   }
 }
-

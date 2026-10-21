@@ -1,20 +1,18 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { getPlayer, type Player } from "./core/player";
-import { createKiteSource } from "./core/source";
-import type { DataSource, PlayerState } from "./core/types";
-
-export * from "./index";
+import { getPlayer, type Player } from "../core/player";
+import { createKiteSource } from "../core/source";
+import type { DataSource, PlayerState } from "../core/types";
 
 export interface UsePlayerOptions {
   /** 公开模式地址;只在页面还没有设置数据来源时生效。 */
   api?: string;
-  /** 自定义数据来源(自己有后端的站点)。 */
+  /** 自定义数据来源(有自己后端的应用)。 */
   source?: DataSource;
 }
 
 /**
  * usePlayer 返回页面级的播放核心。它与 <kite-player> 等元素是同一个实例,
- * 站点可以只用 hooks 按自己的设计系统画界面,也可以和元素混用。
+ * 可以只用 hooks 按自己的设计系统画界面,也可以和元素混用。
  */
 export function usePlayer(options: UsePlayerOptions = {}): Player {
   const player = getPlayer();
