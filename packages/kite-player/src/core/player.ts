@@ -404,7 +404,12 @@ export class Player {
     });
     on("pause", () => this.store.set({ playing: false, loading: false }));
     on("waiting", () => this.store.set({ loading: true }));
-    on("playing", () => this.store.set({ loading: false, error: null }));
+    on("playing", () => {
+      // 真正开始出声说明链接可用:之后再出错(例如暂停太久直链过期)可以再重取一次,
+      // retried 只用来挡住「重取的链接也立刻失败」的连续失败。
+      this.retried = false;
+      this.store.set({ loading: false, error: null });
+    });
     on("canplay", () => this.store.set({ loading: false }));
     on("timeupdate", () => {
       const t = audio.currentTime;

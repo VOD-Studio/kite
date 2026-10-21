@@ -187,6 +187,20 @@ describe("Player", () => {
     expect(player.state.error?.reason).toBe("PLAYBACK_FAILED");
   });
 
+  it("重取的链接恢复播放后,同一首歌之后再出错仍会重取", async () => {
+    const { player, audio, source } = newPlayer();
+    await player.playPlaylist("100", 0);
+    audio.emit("error");
+    await flush();
+    audio.emit("loadedmetadata");
+    audio.emit("playing");
+    // 播放了一段之后(例如暂停太久)链接又过期
+    audio.emit("error");
+    await flush();
+    expect(source.trackCalls).toEqual(["1", "1"]);
+    expect(player.state.error).toBeNull();
+  });
+
   it("插播单曲:放到当前歌后面", async () => {
     const { player } = newPlayer();
     await player.playPlaylist("100", 0);
