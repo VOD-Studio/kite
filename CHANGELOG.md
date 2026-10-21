@@ -7,6 +7,15 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## 0.4.2 (2026-10-21)
+
+## What's Changed
+* fix(ci): 发布闸门从 release 列表里找 draft by @xunrua in https://github.com/VOD-Studio/kite/pull/93
+* fix(netease): 修复账号歌单的分页与登录上下文 by @xunrua in https://github.com/VOD-Studio/kite/pull/94
+
+
+**Full Changelog**: https://github.com/VOD-Studio/kite/compare/v0.4.1...v0.4.2
+
 ## 0.4.1 (2026-10-20)
 
 ## What's Changed
