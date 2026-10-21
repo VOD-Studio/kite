@@ -1,7 +1,7 @@
 // Package playlist 的浏览与发现接口声明。
 //
-// HighQuality/HighQualityTags/CatList/BrowseHot/Subscribers/AllTracks 六个读接口。
-// 全部 AuthAnonymous + 24h 缓存（歌单浏览低频变化）。
+// HighQuality/HighQualityTags/CatList/BrowseHot/Subscribers 五个读接口 AuthAnonymous + 24h 缓存
+// (歌单浏览低频变化);TrackIDs 供 compose.PlaylistTracks 分页取歌曲,可选登录、不缓存。
 package playlist
 
 import (
@@ -12,6 +12,7 @@ import (
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 	"github.com/VOD-Studio/kite/internal/netease/model"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 // defaultHighQualityCat 是精品歌单未指定分类时的默认分类。
@@ -164,31 +165,22 @@ var Subscribers = &engine.Endpoint[*mmpb.SubscribersRequest, *mmpb.SubscribersRe
 	},
 }
 
-// AllTracks 获取歌单全量歌曲（分页）。
-var AllTracks = &engine.Endpoint[*mmpb.AllTracksRequest, *mmpb.AllTracksResponse]{
-	Meta: weapiMeta("/weapi/v6/playlist/detail"),
-	Cache: &engine.CachePolicy[*mmpb.AllTracksRequest]{
-		Key: func(r *mmpb.AllTracksRequest) string {
-			return fmt.Sprintf("playlist:alltracks:%d:%d:%d", r.GetPlaylistId(), r.GetLimit(), r.GetOffset())
-		},
-		TTL: 24 * time.Hour,
+// TrackIDs 取歌单完整的曲目 ID 列表(不缓存)。
+//
+// 不直接对外:详情内嵌的 tracks 会被上游截断,按页取歌曲要用完整的 trackIds 切片,
+// 再批量查这一页的歌曲详情,见 compose.PlaylistTracks(对外的 AllTracks)。
+//
+// AuthOptional:调用方带了网易云 cookie 就用它读(私有歌单),没带就匿名,不借用会话池。
+var TrackIDs = &engine.Endpoint[*mmpb.GetPlaylistRequest, *model.PlaylistTrackIDs]{
+	Meta: engine.Meta{
+		Path: "/weapi/v6/playlist/detail", Method: "POST",
+		Crypto: engine.CryptoWeAPI, Auth: session.AuthOptional,
 	},
-	NewResp: func() *mmpb.AllTracksResponse { return &mmpb.AllTracksResponse{} },
-	MapRequest: func(req *mmpb.AllTracksRequest) (map[string]any, error) {
-		limit := req.GetLimit()
-		if limit <= 0 {
-			limit = 100
-		}
-		return map[string]any{
-			"id": fmt.Sprintf("%d", req.GetPlaylistId()), "n": limit, "s": 8,
-		}, nil
+	MapRequest: func(req *mmpb.GetPlaylistRequest) (map[string]any, error) {
+		// n 只影响内嵌 tracks 的数量,trackIds 总是完整的;取最少的内嵌歌曲以减小响应。
+		return map[string]any{"id": fmt.Sprintf("%d", req.GetPlaylistId()), "n": 1, "s": 0}, nil
 	},
-	MapResponse: func(_ *mmpb.AllTracksRequest, raw json.RawMessage) (*mmpb.AllTracksResponse, error) {
-		// 复用 model.MapPlaylist 的解析（歌单详情里含 tracks）。
-		pl, err := model.MapPlaylist(raw)
-		if err != nil {
-			return nil, err
-		}
-		return &mmpb.AllTracksResponse{Songs: pl.Songs, Total: pl.TrackCount}, nil
+	MapResponse: func(_ *mmpb.GetPlaylistRequest, raw json.RawMessage) (*model.PlaylistTrackIDs, error) {
+		return model.DecodePlaylistTrackIDs(raw)
 	},
 }

@@ -81,23 +81,19 @@ var SubCount = &engine.Endpoint[*mmpb.SubCountRequest, *mmpb.SubCountResponse]{
 	},
 }
 
-// UserPlaylist 是获取用户歌单列表的接口声明。
+// PlaylistPage 取用户歌单的一页原始列表(不筛选、不缓存)。
 //
-// filter（ALL/CREATED/SUBSCRIBED）在 MapResponse 内按 creator.userId == 请求 userId 判断，
-// ownerUserID 直接取自请求，无需 service 层后置过滤。
-var UserPlaylist = &engine.Endpoint[*mmpb.UserPlaylistRequest, *mmpb.UserPlaylistResponse]{
+// 不直接对外:上游第一页会在 limit 之外额外插入「喜欢的音乐」,也不返回总数,
+// 创建 / 收藏又只能在拿到数据后判断。对外的 UserPlaylist 由 compose.UserPlaylists
+// 取全量后再筛选、分页。
+//
+// AuthOptional:调用方带了网易云 cookie 就用它读(能看到本人的私有歌单),
+// 没带就匿名;任何情况下都不借用会话池里保存的账号。
+var PlaylistPage = &engine.Endpoint[*mmpb.UserPlaylistRequest, *model.UserPlaylistPage]{
 	Meta: engine.Meta{
 		Path: "/weapi/user/playlist", Method: "POST",
-		Crypto: engine.CryptoWeAPI, Auth: session.AuthAnonymous,
+		Crypto: engine.CryptoWeAPI, Auth: session.AuthOptional,
 	},
-	Cache: &engine.CachePolicy[*mmpb.UserPlaylistRequest]{
-		// cache key 含 filter 维度，不同 filter 不串缓存。
-		Key: func(req *mmpb.UserPlaylistRequest) string {
-			return fmt.Sprintf("user:playlist:%d:%d:%d:%d", req.GetUserId(), req.GetFilter(), req.GetLimit(), req.GetOffset())
-		},
-		TTL: 24 * time.Hour,
-	},
-	NewResp: func() *mmpb.UserPlaylistResponse { return &mmpb.UserPlaylistResponse{} },
 	MapRequest: func(req *mmpb.UserPlaylistRequest) (map[string]any, error) {
 		limit := int(req.GetLimit())
 		if limit <= 0 {
@@ -109,11 +105,7 @@ var UserPlaylist = &engine.Endpoint[*mmpb.UserPlaylistRequest, *mmpb.UserPlaylis
 			"offset": req.GetOffset(),
 		}, nil
 	},
-	MapResponse: func(req *mmpb.UserPlaylistRequest, raw json.RawMessage) (*mmpb.UserPlaylistResponse, error) {
-		pls, total, err := model.DecodeUserPlaylists(raw, req.GetUserId(), req.GetFilter())
-		if err != nil {
-			return nil, err
-		}
-		return &mmpb.UserPlaylistResponse{Playlists: pls, Total: total}, nil
+	MapResponse: func(_ *mmpb.UserPlaylistRequest, raw json.RawMessage) (*model.UserPlaylistPage, error) {
+		return model.DecodeUserPlaylistPage(raw)
 	},
 }

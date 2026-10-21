@@ -13,12 +13,15 @@ import (
 )
 
 // GetPlaylist 是获取歌单详情的接口声明。
+//
+// AuthOptional:调用方带了网易云 cookie 就用它读(私有歌单),没带就匿名,不借用会话池;
+// 带 cookie 的结果按凭据指纹单独缓存,不同账号与匿名请求互不命中。
 var GetPlaylist = &engine.Endpoint[*mmpb.GetPlaylistRequest, *mmpb.GetPlaylistResponse]{
 	Meta: engine.Meta{
 		Path:   "/weapi/v6/playlist/detail",
 		Method: "POST",
 		Crypto: engine.CryptoWeAPI,
-		Auth:   session.AuthAnonymous,
+		Auth:   session.AuthOptional,
 	},
 	Cache: &engine.CachePolicy[*mmpb.GetPlaylistRequest]{
 		Key: func(req *mmpb.GetPlaylistRequest) string {

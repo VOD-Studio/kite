@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/session"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,73 +36,37 @@ func TestSubCount_MapResponse(t *testing.T) {
 	require.Equal(t, int32(10), resp.Count.MvCount)
 }
 
-// TestUserPlaylist_MapResponse 用户歌单列表解析。
-func TestUserPlaylist_MapResponse(t *testing.T) {
+// TestPlaylistPage_RealShape 用户歌单的一页按上游顺序原样解析,不筛选、不计总数(真实响应,昵称已替换)。
+//
+// 上游第一页会在 limit 之外额外插入「喜欢的音乐」:这份 limit=3 的响应有 4 条。
+// 筛选与分页在 compose.UserPlaylists 里做,见 compose 的测试。
+func TestPlaylistPage_RealShape(t *testing.T) {
 	t.Parallel()
 
-	fixture := `{"code":200,"more":false,"playlist":[{"id":1,"name":"我喜欢的","coverImgUrl":"http://c.jpg","playCount":0,"trackCount":30,"creator":{"userId":123}}]}`
-
-	resp, err := UserPlaylist.MapResponse(&mmpb.UserPlaylistRequest{}, json.RawMessage(fixture))
+	page, err := PlaylistPage.MapResponse(&mmpb.UserPlaylistRequest{UserId: 129593031}, readFixture(t, "user_playlist_page_v1.json"))
 	require.NoError(t, err)
-	require.Len(t, resp.Playlists, 1)
-	require.Equal(t, "我喜欢的", resp.Playlists[0].Name)
-	require.Equal(t, int32(1), resp.Total)
+	require.True(t, page.More)
+	require.Len(t, page.Playlists, 4, "limit=3 的第一页多出「喜欢的音乐」")
+	require.Equal(t, int64(162525487), page.Playlists[0].GetId())
+	require.Equal(t, int64(129593031), page.Playlists[0].GetCreator().GetId())
+	require.Equal(t, int32(3672), page.Playlists[0].GetTrackCount())
 }
 
-// TestUserPlaylist_Filter 按 creator.userId 过滤创建/收藏歌单。
-//
-// fixture 含两个歌单：id=1 creator=123（用户自己创建），id=2 creator=999（收藏的）。
-// filter 在 endpoint 的 MapResponse 里按 req.UserId == creator.userId 判断。
-func TestUserPlaylist_Filter(t *testing.T) {
+func TestPlaylistPage_MapRequest(t *testing.T) {
 	t.Parallel()
 
-	fixture := `{"code":200,"more":false,"playlist":[
-		{"id":1,"name":"我创建的","creator":{"userId":123}},
-		{"id":2,"name":"我收藏的","creator":{"userId":999}}
-	]}`
+	params, err := PlaylistPage.MapRequest(&mmpb.UserPlaylistRequest{UserId: 7, Limit: 1000, Offset: 2000})
+	require.NoError(t, err)
+	require.Equal(t, map[string]any{"uid": "7", "limit": 1000, "offset": int32(2000)}, params)
 
-	t.Run("ALL返回全部", func(t *testing.T) {
-		t.Parallel()
-		resp, err := UserPlaylist.MapResponse(
-			&mmpb.UserPlaylistRequest{UserId: 123, Filter: mmpb.PlaylistFilter_PLAYLIST_FILTER_ALL},
-			json.RawMessage(fixture),
-		)
-		require.NoError(t, err)
-		require.Len(t, resp.Playlists, 2)
-	})
+	params, err = PlaylistPage.MapRequest(&mmpb.UserPlaylistRequest{UserId: 7})
+	require.NoError(t, err)
+	require.Equal(t, 30, params["limit"], "未指定 limit 时用上游默认的 30")
+}
 
-	t.Run("CREATED只返回创建的", func(t *testing.T) {
-		t.Parallel()
-		resp, err := UserPlaylist.MapResponse(
-			&mmpb.UserPlaylistRequest{UserId: 123, Filter: mmpb.PlaylistFilter_PLAYLIST_FILTER_CREATED},
-			json.RawMessage(fixture),
-		)
-		require.NoError(t, err)
-		require.Len(t, resp.Playlists, 1)
-		require.Equal(t, int64(1), resp.Playlists[0].Id)
-		require.Equal(t, "我创建的", resp.Playlists[0].Name)
-	})
-
-	t.Run("SUBSCRIBED只返回收藏的", func(t *testing.T) {
-		t.Parallel()
-		resp, err := UserPlaylist.MapResponse(
-			&mmpb.UserPlaylistRequest{UserId: 123, Filter: mmpb.PlaylistFilter_PLAYLIST_FILTER_SUBSCRIBED},
-			json.RawMessage(fixture),
-		)
-		require.NoError(t, err)
-		require.Len(t, resp.Playlists, 1)
-		require.Equal(t, int64(2), resp.Playlists[0].Id)
-		require.Equal(t, "我收藏的", resp.Playlists[0].Name)
-	})
-
-	t.Run("ownerUserID为0时不过滤返回全部", func(t *testing.T) {
-		t.Parallel()
-		// UserId=0 时无法判断创建/收藏，CREATED filter 不生效，返回全部。
-		resp, err := UserPlaylist.MapResponse(
-			&mmpb.UserPlaylistRequest{UserId: 0, Filter: mmpb.PlaylistFilter_PLAYLIST_FILTER_CREATED},
-			json.RawMessage(fixture),
-		)
-		require.NoError(t, err)
-		require.Len(t, resp.Playlists, 2, "ownerUserID=0 时 filter 不应生效")
-	})
+// 账号歌单要能带调用方的 cookie 读私有歌单,又不能借用会话池里保存的账号(issue #90)。
+func TestPlaylistPage_OptionalAuth(t *testing.T) {
+	t.Parallel()
+	require.Equal(t, session.AuthOptional, PlaylistPage.Meta.Auth)
+	require.Nil(t, PlaylistPage.Cache, "响应不是 proto,不走 engine 缓存")
 }

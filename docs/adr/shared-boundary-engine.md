@@ -30,6 +30,10 @@
 - ❌ TUI 尚未存在,现在抽象是猜需求;现有 78 个 RPC 都是单接口调用,没有组合逻辑可抽。
 - 触发条件:TUI 第一次出现需要在多个 view 间共享的有状态编排(播放队列、跨域组合)时,在 `internal/` 下新建独立包承载,**不改造 `internal/service`**。
 
+**2026-10 更新:跨接口组合的触发条件已出现。** issue #88 / #89 要求「按 trackIds 分页取歌曲」「取全量用户歌单后再筛选、分页」,
+一次读取需要多次上游调用。按上面的约定新建 `internal/netease/compose` 承载,没有改造 `internal/service`
+(它仍是一行调用);组合里的每一步仍是 endpoint 声明、经 `engine.Execute` 执行,执行语义没有第二份。
+
 ## Consequences
 
 - 新增 endpoint 声明后,CLI 与 gRPC 两侧各自接线,执行语义自动一致。

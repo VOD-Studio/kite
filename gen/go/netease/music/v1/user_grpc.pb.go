@@ -48,7 +48,9 @@ type UserServiceClient interface {
 	Detail(ctx context.Context, in *DetailRequest, opts ...grpc.CallOption) (*DetailResponse, error)
 	// SubCount 获取用户信息/歌单/收藏/mv/dj 数量统计。
 	SubCount(ctx context.Context, in *SubCountRequest, opts ...grpc.CallOption) (*SubCountResponse, error)
-	// Playlist 获取用户歌单列表。
+	// UserPlaylist 获取用户歌单列表(创建的 + 收藏的),按网易云的顺序分页。
+	// 可选登录:不带 cookie 按匿名读,只有公开歌单;经 metadata x-netease-cookie 带了本人的 cookie
+	// 就按该账号读(含私有歌单)。不会借用服务端保存的任何账号。
 	UserPlaylist(ctx context.Context, in *UserPlaylistRequest, opts ...grpc.CallOption) (*UserPlaylistResponse, error)
 	// DetailByName 根据 nickname 获取 userid。
 	DetailByName(ctx context.Context, in *DetailByNameRequest, opts ...grpc.CallOption) (*DetailByNameResponse, error)
@@ -211,7 +213,9 @@ type UserServiceServer interface {
 	Detail(context.Context, *DetailRequest) (*DetailResponse, error)
 	// SubCount 获取用户信息/歌单/收藏/mv/dj 数量统计。
 	SubCount(context.Context, *SubCountRequest) (*SubCountResponse, error)
-	// Playlist 获取用户歌单列表。
+	// UserPlaylist 获取用户歌单列表(创建的 + 收藏的),按网易云的顺序分页。
+	// 可选登录:不带 cookie 按匿名读,只有公开歌单;经 metadata x-netease-cookie 带了本人的 cookie
+	// 就按该账号读(含私有歌单)。不会借用服务端保存的任何账号。
 	UserPlaylist(context.Context, *UserPlaylistRequest) (*UserPlaylistResponse, error)
 	// DetailByName 根据 nickname 获取 userid。
 	DetailByName(context.Context, *DetailByNameRequest) (*DetailByNameResponse, error)

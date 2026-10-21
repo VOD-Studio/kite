@@ -6,6 +6,7 @@ import (
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
+	"github.com/VOD-Studio/kite/internal/netease/compose"
 	userendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/user"
 )
 
@@ -119,7 +120,7 @@ func newPlaylists(k *kit.Kit) *cobra.Command {
 		Short: "用户歌单",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, userendpoint.UserPlaylist, &mmpb.UserPlaylistRequest{UserId: uid})
+			return kit.RenderCompose(k, compose.UserPlaylists, &mmpb.UserPlaylistRequest{UserId: uid})
 		},
 	}
 	withUID(c, &uid)

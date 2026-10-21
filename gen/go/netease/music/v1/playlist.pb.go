@@ -987,9 +987,9 @@ type AllTracksRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 歌单 ID。
 	PlaylistId int64 `protobuf:"varint,1,opt,name=playlist_id,json=playlistId,proto3" json:"playlist_id,omitempty"`
-	// 每页数量。
+	// 每页数量。不传或 ≤ 0 时为 100,超过 1000 按 1000。
 	Limit int32 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	// 偏移量。
+	// 偏移量(从 0 开始)。超出 total 时返回空页。
 	Offset        int32 `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1049,9 +1049,9 @@ func (x *AllTracksRequest) GetOffset() int32 {
 // AllTracks 响应。
 type AllTracksResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// 全量歌曲列表（分页）。
+	// 这一页的歌曲,按歌单原顺序;不超过 limit 首(上游已下架的歌会被跳过,可能更少)。
 	Songs []*Song `protobuf:"bytes,1,rep,name=songs,proto3" json:"songs,omitempty"`
-	// 总数。
+	// 歌单的歌曲总数,不随 limit / offset 变化。
 	Total         int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

@@ -196,6 +196,16 @@ func (k *Kit) RequireLogin() error {
 	return nil
 }
 
+// RenderCompose 执行一个跨接口组合(internal/netease/compose 里的函数)并按三态规则输出。
+// 与 RenderExec 一样注入当前 cookie;组合与执行语义都在 compose / engine,CLI 不拷贝。
+func RenderCompose[Req any, Resp proto.Message](k *Kit, fn func(context.Context, *engine.Engine, Req) (Resp, error), req Req) error {
+	resp, err := fn(k.CookieCtx(), k.eng, req)
+	if err != nil {
+		return err
+	}
+	return k.Render(resp)
+}
+
 // RenderExec 执行声明式 endpoint 并按三态规则输出(读命令通用)。
 func RenderExec[Req any, Resp proto.Message](k *Kit, ep *engine.Endpoint[Req, Resp], req Req) error {
 	resp, err := Exec(k, k.CookieCtx(), ep, req)

@@ -11,6 +11,9 @@ option go_package = "github.com/VOD-Studio/kite/gen/go/netease/music/v1;mmpb";
 // PlaylistService 提供歌单查询与浏览能力。
 service PlaylistService {
   // GetPlaylist 获取歌单详情（含歌曲列表）。
+  // 歌曲列表是上游内嵌的前若干首(匿名时通常只有约 10 首),要完整、按页取歌曲用 AllTracks。
+  // 可选登录:不带 cookie 按匿名读;经 metadata x-netease-cookie 带了 cookie 就按该账号读
+  // (能读到本人的私有歌单),结果按账号单独缓存;不会借用服务端保存的任何账号。
   rpc GetPlaylist(GetPlaylistRequest) returns (GetPlaylistResponse) {
     option (google.api.http) = {
       get: "/api/v1/playlists/{playlist_id}"
@@ -52,7 +55,8 @@ service PlaylistService {
     };
   }
 
-  // AllTracks 获取歌单全量歌曲（分页）。
+  // AllTracks 按歌单原顺序分页获取歌曲。
+  // 可选登录,规则同 GetPlaylist(私有歌单要带本人 cookie)。
   rpc AllTracks(AllTracksRequest) returns (AllTracksResponse) {
     option (google.api.http) = {
       get: "/api/v1/playlists/{playlist_id}/tracks"
@@ -269,17 +273,17 @@ message SubscribersResponse {
 message AllTracksRequest {
   // 歌单 ID。
   int64 playlist_id = 1;
-  // 每页数量。
+  // 每页数量。不传或 ≤ 0 时为 100,超过 1000 按 1000。
   int32 limit = 2;
-  // 偏移量。
+  // 偏移量(从 0 开始)。超出 total 时返回空页。
   int32 offset = 3;
 }
 
 // AllTracks 响应。
 message AllTracksResponse {
-  // 全量歌曲列表（分页）。
+  // 这一页的歌曲,按歌单原顺序;不超过 limit 首(上游已下架的歌会被跳过,可能更少)。
   repeated Song songs = 1;
-  // 总数。
+  // 歌单的歌曲总数,不随 limit / offset 变化。
   int32 total = 2;
 }
 

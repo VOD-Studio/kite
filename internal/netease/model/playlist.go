@@ -23,6 +23,27 @@ type rawPlaylistDetail struct {
 	} `json:"playlist"` // 歌单信息
 }
 
+// PlaylistTrackIDs 是歌单的完整曲目 ID 列表(歌单原顺序)。
+type PlaylistTrackIDs struct {
+	IDs []int64
+}
+
+// DecodePlaylistTrackIDs 取歌单详情里完整的 trackIds。
+//
+// 详情内嵌的 tracks 会被上游截断(实测匿名请求时 71 首的歌单只返回 10 首、3672 首的只返回 6 首),
+// 只有 trackIds 是完整的;按页取歌曲要用它切片,而不是对 tracks 切片。
+func DecodePlaylistTrackIDs(raw json.RawMessage) (*PlaylistTrackIDs, error) {
+	var r rawPlaylistDetail
+	if err := json.Unmarshal(raw, &r); err != nil {
+		return nil, err
+	}
+	out := &PlaylistTrackIDs{IDs: make([]int64, 0, len(r.Playlist.TrackIDs))}
+	for _, t := range r.Playlist.TrackIDs {
+		out.IDs = append(out.IDs, t.ID)
+	}
+	return out, nil
+}
+
 // MapPlaylist 把网易云原始歌单结构转成 proto Playlist。
 func MapPlaylist(raw json.RawMessage) (*mmpb.Playlist, error) {
 	var r rawPlaylistDetail

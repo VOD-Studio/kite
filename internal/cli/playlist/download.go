@@ -26,6 +26,7 @@ import (
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
 	"github.com/VOD-Studio/kite/internal/cli/songdl"
+	"github.com/VOD-Studio/kite/internal/netease/compose"
 	playlistendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/playlist"
 	songendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/song"
 )
@@ -90,11 +91,7 @@ func defaultPlaylistDeps(k *kit.Kit) playlistDeps {
 	dlDeps := songdl.NewDeps(k)
 	return playlistDeps{
 		fetchTracks: func(ctx context.Context, id int64) (*mmpb.AllTracksResponse, error) {
-			resp, err := kit.Exec(k, ctx, playlistendpoint.AllTracks, &mmpb.AllTracksRequest{PlaylistId: id})
-			if err != nil {
-				return nil, err
-			}
-			return resp, nil
+			return compose.PlaylistTracks(ctx, k.Engine(), &mmpb.AllTracksRequest{PlaylistId: id})
 		},
 		fetchPlaylistDetail: func(ctx context.Context, id int64) (*mmpb.Playlist, error) {
 			resp, err := kit.Exec(k, ctx, playlistendpoint.GetPlaylist, &mmpb.GetPlaylistRequest{PlaylistId: id})

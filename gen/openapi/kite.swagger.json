@@ -1193,7 +1193,7 @@
     },
     "/api/v1/playlists/{playlistId}": {
       "get": {
-        "summary": "GetPlaylist 获取歌单详情（含歌曲列表）。",
+        "summary": "GetPlaylist 获取歌单详情（含歌曲列表）。\n歌曲列表是上游内嵌的前若干首(匿名时通常只有约 10 首),要完整、按页取歌曲用 AllTracks。\n可选登录:不带 cookie 按匿名读;经 metadata x-netease-cookie 带了 cookie 就按该账号读\n(能读到本人的私有歌单),结果按账号单独缓存;不会借用服务端保存的任何账号。",
         "operationId": "PlaylistService_GetPlaylist",
         "responses": {
           "200": {
@@ -1503,7 +1503,7 @@
     },
     "/api/v1/playlists/{playlistId}/tracks": {
       "get": {
-        "summary": "AllTracks 获取歌单全量歌曲（分页）。",
+        "summary": "AllTracks 按歌单原顺序分页获取歌曲。\n可选登录,规则同 GetPlaylist(私有歌单要带本人 cookie)。",
         "operationId": "PlaylistService_AllTracks",
         "responses": {
           "200": {
@@ -1530,7 +1530,7 @@
           },
           {
             "name": "limit",
-            "description": "每页数量。",
+            "description": "每页数量。不传或 ≤ 0 时为 100,超过 1000 按 1000。",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1538,7 +1538,7 @@
           },
           {
             "name": "offset",
-            "description": "偏移量。",
+            "description": "偏移量(从 0 开始)。超出 total 时返回空页。",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -2871,7 +2871,7 @@
     },
     "/api/v1/users/{userId}/playlists": {
       "get": {
-        "summary": "Playlist 获取用户歌单列表。",
+        "summary": "UserPlaylist 获取用户歌单列表(创建的 + 收藏的),按网易云的顺序分页。\n可选登录:不带 cookie 按匿名读,只有公开歌单;经 metadata x-netease-cookie 带了本人的 cookie\n就按该账号读(含私有歌单)。不会借用服务端保存的任何账号。",
         "operationId": "UserService_UserPlaylist",
         "responses": {
           "200": {
@@ -2912,7 +2912,7 @@
           },
           {
             "name": "limit",
-            "description": "每页数量。",
+            "description": "每页数量。不传或 ≤ 0 时为 30,超过 1000 按 1000。",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -2920,7 +2920,7 @@
           },
           {
             "name": "offset",
-            "description": "偏移量。",
+            "description": "偏移量(从 0 开始)。超出 total 时返回空页。",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -3330,12 +3330,12 @@
             "type": "object",
             "$ref": "#/definitions/v1Song"
           },
-          "title": "全量歌曲列表（分页）。"
+          "title": "这一页的歌曲,按歌单原顺序;不超过 limit 首(上游已下架的歌会被跳过,可能更少)。"
         },
         "total": {
           "type": "integer",
           "format": "int32",
-          "title": "总数。"
+          "title": "歌单的歌曲总数,不随 limit / offset 变化。"
         }
       },
       "title": "AllTracks 响应。"
@@ -4900,12 +4900,12 @@
             "type": "object",
             "$ref": "#/definitions/v1Playlist"
           },
-          "title": "歌单列表。"
+          "title": "这一页的歌单,不超过 limit 张。"
         },
         "total": {
           "type": "integer",
           "format": "int32",
-          "title": "总数。"
+          "title": "当前 filter 下的歌单总数,不随 limit / offset 变化。\n「我喜欢的音乐」的创建者是用户本人,计入 ALL 与 CREATED。"
         }
       },
       "title": "UserPlaylist 响应（复用 playlist.proto 的完整 Playlist，含 creator 供 filter 判断）。"

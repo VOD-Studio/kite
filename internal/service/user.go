@@ -5,6 +5,7 @@ import (
 	"context"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/compose"
 	userendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/user"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
@@ -35,9 +36,9 @@ func (s *UserServer) SubCount(ctx context.Context, req *mmpb.SubCountRequest) (*
 	return engine.Execute(s.eng, ctx, userendpoint.SubCount, req)
 }
 
-// UserPlaylist 获取用户歌单列表。filter 在 endpoint 的 MapResponse 内按 creator.userId 判断。
+// UserPlaylist 获取用户歌单列表(取全量后筛选、分页,见 compose.UserPlaylists)。
 func (s *UserServer) UserPlaylist(ctx context.Context, req *mmpb.UserPlaylistRequest) (*mmpb.UserPlaylistResponse, error) {
-	return engine.Execute(s.eng, ctx, userendpoint.UserPlaylist, req)
+	return compose.UserPlaylists(ctx, s.eng, req)
 }
 
 // DetailByName 根据 nickname 获取 userid（匿名 cookie 直接调用）。

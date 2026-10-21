@@ -1,0 +1,54 @@
+{
+ "code": 200,
+ "more": true,
+ "playlist": [
+  {
+   "id": 162525487,
+   "name": "mayuko然喜欢的音乐",
+   "specialType": 5,
+   "trackCount": 3672,
+   "playCount": 542928,
+   "coverImgUrl": "http://p1.music.126.net/qRPzGrAMECot2UYKA55fAw==/109951173367731071.jpg",
+   "creator": {
+    "userId": 129593031,
+    "nickname": "user"
+   }
+  },
+  {
+   "id": 8402165022,
+   "name": "旅行必备BGM 丨追逐狂欢与自由",
+   "specialType": 0,
+   "trackCount": 90,
+   "playCount": 575255,
+   "coverImgUrl": "http://p1.music.126.net/rV4NM_0NcJ4JOawfphcW0Q==/109951168594707493.jpg",
+   "creator": {
+    "userId": 129593031,
+    "nickname": "user"
+   }
+  },
+  {
+   "id": 7511769295,
+   "name": "谁能拒绝和喜欢的人一起去看海呢",
+   "specialType": 0,
+   "trackCount": 41,
+   "playCount": 63364,
+   "coverImgUrl": "http://p1.music.126.net/ZxQo7M7xYfdP-_SF_w3_Pw==/109951167603292453.jpg",
+   "creator": {
+    "userId": 129593031,
+    "nickname": "user"
+   }
+  },
+  {
+   "id": 410189016,
+   "name": "「鹿」",
+   "specialType": 0,
+   "trackCount": 1424,
+   "playCount": 119009,
+   "coverImgUrl": "http://p1.music.126.net/t7H0vlstNMugPr9Kvp11uA==/109951162840144801.jpg",
+   "creator": {
+    "userId": 129593031,
+    "nickname": "user"
+   }
+  }
+ ]
+}
