@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/netease/compose"
 	authendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/auth"
@@ -34,9 +35,14 @@ func (s *AuthServer) LoginByCellphone(ctx context.Context, req *mmpb.LoginByCell
 	if err != nil {
 		return nil, err
 	}
+	// gRPC 契约与旧实现一致:登录响应里没有账号信息按未登录报错。
+	// MapResponse 是宽容解码(CLI 据此可落盘仅 cookie 的会话),严格性在这里补回。
+	if resp.GetSession().GetUserId() == 0 {
+		return nil, fmt.Errorf("未登录: %w", merrors.ErrUnauthorized)
+	}
 
 	// 存入 session 池（UserID 用数字 ID 转字符串，Nickname 不唯一不能做 key）。
-	s.saveSession(ctx, resp.GetSession().GetUserId(), setCookie)
+	s.saveSession(ctx, resp.Session.UserId, setCookie)
 	resp.Session.Cookie = setCookie
 
 	return resp, nil

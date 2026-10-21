@@ -36,8 +36,9 @@ var SendCaptcha = &engine.Endpoint[*mmpb.SendCaptchaRequest, *mmpb.SendCaptchaRe
 	},
 }
 
-// LoginCellphone 手机号登录。响应解码出用户信息(Session.Cookie 由调用方
-// 从 Set-Cookie 回填),存 session 池是 service 的职责。
+// LoginCellphone 手机号登录。响应能解出账号信息时带 Session(Cookie 由调用方
+// 从 Set-Cookie 回填);解不出时宽容返回空 Session(CLI 仍可落盘仅 cookie 的会话,
+// service 按「无账号」报未登录)。存 session 池是 service 的职责。
 var LoginCellphone = &engine.Endpoint[*mmpb.LoginByCellphoneRequest, *mmpb.LoginByCellphoneResponse]{
 	Meta:    weapiMeta("/weapi/login/cellphone"),
 	NewResp: func() *mmpb.LoginByCellphoneResponse { return &mmpb.LoginByCellphoneResponse{} },
@@ -50,9 +51,12 @@ var LoginCellphone = &engine.Endpoint[*mmpb.LoginByCellphoneRequest, *mmpb.Login
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.LoginByCellphoneRequest, raw json.RawMessage) (*mmpb.LoginByCellphoneResponse, error) {
+		// 宽松:响应体解不出账号信息不算错误——Set-Cookie 仍可能有效,CLI 的
+		// persistLogin 据此落盘仅 cookie 的会话(与 origin/main 行为一致);
+		// service 侧按「无账号」重建未登录错误,保持 gRPC 契约。
 		sess, err := model.DecodeLoginResponse(raw)
 		if err != nil {
-			return nil, err
+			return &mmpb.LoginByCellphoneResponse{}, nil //nolint:nilerr // 与 CheckQrcode 的账号提取分支一致
 		}
 		return &mmpb.LoginByCellphoneResponse{Session: sess}, nil
 	},
