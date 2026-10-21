@@ -42,6 +42,11 @@ var rules = []rule{
 		why:       "recall 是 CLI/TUI 共享的召回池,不得依赖任一前端",
 	},
 	{
+		from:      "internal/termqr",
+		forbidden: []string{"internal/cli", "internal/tui", "internal/service", "internal/server"},
+		why:       "termqr 是 CLI 与服务端共用的渲染工具,不得依赖任一前端",
+	},
+	{
 		from:      "internal/cli",
 		forbidden: []string{"internal/tui", "internal/service", "internal/server"},
 		why:       "CLI 直连 engine/endpoint,不经 gRPC adapter(service/server),也不依赖 TUI",
@@ -60,6 +65,11 @@ var rules = []rule{
 		from:      "internal/server",
 		forbidden: []string{"internal/cli", "internal/tui"},
 		why:       "server 不得依赖前端",
+	},
+	{
+		from:      "internal/public",
+		forbidden: []string{"internal/cli", "internal/tui", "internal/service", "internal/server"},
+		why:       "public 是与 gRPC 平行的只读 HTTP 适配器,直连 engine/endpoint,不经 service/server",
 	},
 	{
 		from:      "cmd/server",

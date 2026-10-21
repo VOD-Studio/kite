@@ -5,7 +5,7 @@ event=${1:?用法: ci-results.sh <event-name> < needs.json}
 results=$(cat)
 jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<<"$results"
 if ! jq -e --arg event "$event" '
-  ["hygiene", "lint", "test", "cross-build", "proto", "vuln", "docker", "rust-interop", "go-interop", "release-check", "pr-title"] as $required |
+  ["hygiene", "lint", "test", "cross-build", "proto", "vuln", "docker", "rust-interop", "go-interop", "player", "release-check", "pr-title"] as $required |
   (keys == ($required | sort)) and
   all(to_entries[];
     .value.result == "success" or

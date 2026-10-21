@@ -1,12 +1,13 @@
 # kite
 
-Go 实现的网易云能力服务 + 命令行工具 + MCP 服务。
+Go 实现的网易云能力服务 + 命令行工具 + MCP 服务,另有网页播放器组件。
 
-三种用法共享同一套网易云核心(`internal/netease/`):
+几种用法共享同一套网易云核心(`internal/netease/`):
 
 - **在你的项目里调用**:gRPC + REST 服务 `kite-server`,见 [接入指南](docs/integration.md)。
 - **在终端里用**:命令行工具 `kite`,见 [使用手册](docs/kite-guide.md)。
 - **在 AI 客户端里用**:`kite mcp` 把只读接口暴露给 Claude / Cursor 等,见 [MCP](docs/mcp.md)。
+- **在网页里放播放器**:npm 包 [`@violetjs/kite-player`](packages/kite-player/),配合 kite-server 的公开模式,见 [网页播放器](docs/player.md)。
 
 给 AI 工具的项目索引见 [`llms.txt`](llms.txt)。
 
@@ -55,6 +56,15 @@ kite song download 347230 --level 3   # 下载单曲(1标准 2较高 3无损 4Hi
 claude mcp add kite -- kite mcp    # Claude Code;Claude Desktop / Cursor 的配置见 docs/mcp.md
 ```
 
+### 网页播放器(`packages/kite-player`)
+
+npm 包 `@violetjs/kite-player`:悬浮播放器、单曲与歌单卡片、逐字歌词,用 Lit 写的标准自定义元素,另有 React 组件。数据来自 kite-server 的**公开只读模式**(`/player/v1`,白名单 + 签名播放链接 + 限流),部署见 [网页播放器](docs/player.md),组件用法见 [组件说明](packages/kite-player/README.zh-CN.md)。
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@violetjs/kite-player@0.1/dist/kite-player.iife.js"></script>
+<kite-player api="https://music.example.com" playlists="3778678"></kite-player>
+```
+
 ## 架构
 
 共享 `internal/netease/` 核心(engine 请求引擎 + endpoint 接口声明),三个前端平行消费:
@@ -99,6 +109,7 @@ Go 版本以 `go.mod` 为准。若环境缺 Go,`make` 无提示直接失败。
 
 - [接入指南](docs/integration.md) —— 在你的项目里调用 kite-server(接口清单、令牌、cookie、续期、Go 示例)
 - [MCP](docs/mcp.md) —— 在 Claude / Cursor 等 AI 客户端里使用 kite
+- [网页播放器](docs/player.md) —— 公开模式的部署、协议,以及 `@violetjs/kite-player` 的嵌入方式
 - [错误契约](docs/grpc-errors.md) · [服务部署与访问控制](docs/server-security.md) · [生产部署](docs/deploy.md)
 - [使用手册](docs/kite-guide.md) —— 上手流程(安装 / 登录 / 常用操作)
 - [CLI 设计](docs/kite-cli-design.md) —— 架构决策与输出层设计

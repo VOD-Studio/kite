@@ -1,0 +1,97 @@
+{
+  "name": "@violetjs/kite-player",
+  "version": "0.1.0",
+  "description": "A music player for any web page, backed by your own kite-server: a floating player, track and playlist cards, word-by-word lyrics. Custom elements built with Lit, plus React components.",
+  "keywords": [
+    "music",
+    "player",
+    "audio",
+    "lyrics",
+    "web-components",
+    "custom-elements",
+    "lit",
+    "react",
+    "netease",
+    "kite"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/VOD-Studio/kite/tree/main/packages/kite-player#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VOD-Studio/kite.git",
+    "directory": "packages/kite-player"
+  },
+  "bugs": {
+    "url": "https://github.com/VOD-Studio/kite/issues"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "README.zh-CN.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/kite-player.iife.js",
+  "jsdelivr": "./dist/kite-player.iife.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./element": {
+      "types": "./dist/element.d.ts",
+      "import": "./dist/element.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "./dist/element.js",
+    "./dist/kite-player.iife.js"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run test && npm run build",
+    "screenshots": "npm run build && node scripts/screenshots.mjs"
+  },
+  "dependencies": {
+    "lit": "^3.3.3"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.3.0",
+    "happy-dom": "^20.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.3.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "allowScripts": {
+    "esbuild@0.27.7": true
+  }
+}

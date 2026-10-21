@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
-green='{"hygiene":{"result":"success"},"lint":{"result":"success"},"test":{"result":"success"},"cross-build":{"result":"success"},"proto":{"result":"success"},"vuln":{"result":"success"},"docker":{"result":"success"},"rust-interop":{"result":"success"},"go-interop":{"result":"success"},"release-check":{"result":"success"},"pr-title":{"result":"success"}}'
+green='{"hygiene":{"result":"success"},"lint":{"result":"success"},"test":{"result":"success"},"cross-build":{"result":"success"},"proto":{"result":"success"},"vuln":{"result":"success"},"docker":{"result":"success"},"rust-interop":{"result":"success"},"go-interop":{"result":"success"},"player":{"result":"success"},"release-check":{"result":"success"},"pr-title":{"result":"success"}}'
 run_case() {
   local name=$1 event=$2 expected=$3 input=$4 code=0
   printf '%s\n' "$input" | bash "$here/ci-results.sh" "$event" >/dev/null 2>&1 || code=$?

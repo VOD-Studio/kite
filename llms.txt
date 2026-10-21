@@ -9,6 +9,7 @@
 - [接入指南](https://raw.githubusercontent.com/VOD-Studio/kite/main/docs/integration.md): 接口清单从哪里看、令牌 / cookie / 登录续期 / 播放链接约定、可运行的 Go 示例
 - [错误契约](https://raw.githubusercontent.com/VOD-Studio/kite/main/docs/grpc-errors.md): gRPC status 与 ErrorInfo 原因码的完整映射,含 Rust 示例
 - [服务部署与访问控制](https://raw.githubusercontent.com/VOD-Studio/kite/main/docs/server-security.md): 监听地址、访问令牌、健康检查、Docker 镜像 ghcr.io/vod-studio/kite-server
+- [网页播放器](https://raw.githubusercontent.com/VOD-Studio/kite/main/docs/player.md): 公开只读模式 /player/v1 的配置、协议与错误原因码,以及 @violetjs/kite-player 组件的嵌入方式
 
 ## 接口契约
 
