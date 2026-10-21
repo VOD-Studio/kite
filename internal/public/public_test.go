@@ -29,8 +29,8 @@ type fakeCatalog struct {
 	songs      map[int64]*mmpb.Song
 	lyrics     map[int64]*mmpb.Lyric
 	words      map[int64]*mmpb.WordLyric
-	anonURL    map[int64]string
-	ownerURL   map[int64]string
+	anonURL    map[int64]*mmpb.SongURL
+	ownerURL   map[int64]*mmpb.SongURL
 	lastCookie string
 	calls      map[string]int
 }
@@ -46,8 +46,8 @@ func newFakeCatalog() *fakeCatalog {
 		songs:    map[int64]*mmpb.Song{1: free, 2: vip, 3: song(3, "单曲", 0), 9: song(9, "不在白名单", 0)},
 		lyrics:   map[int64]*mmpb.Lyric{1: {Lrc: "[00:01.00]第一句\n[00:05.50]第二句\n", Translated: "[00:01.00]first\n[00:05.52]second\n"}},
 		words:    map[int64]*mmpb.WordLyric{},
-		anonURL:  map[int64]string{1: "http://m801.music.126.net/1.mp3", 3: "https://m801.music.126.net/3.mp3"},
-		ownerURL: map[int64]string{1: "http://m801.music.126.net/1.mp3", 2: "https://m801.music.126.net/2-vip.flac"},
+		anonURL:  map[int64]*mmpb.SongURL{1: {Id: 1, Url: "http://m801.music.126.net/1.mp3"}, 3: {Id: 3, Url: "https://m801.music.126.net/3.mp3"}},
+		ownerURL: map[int64]*mmpb.SongURL{1: {Id: 1, Url: "http://m801.music.126.net/1.mp3"}, 2: {Id: 2, Url: "https://m801.music.126.net/2-vip.flac"}},
 		calls:    map[string]int{},
 	}
 }
@@ -97,7 +97,7 @@ func (f *fakeCatalog) Chorus(context.Context, int64) ([]*mmpb.ChorusSegment, err
 	return []*mmpb.ChorusSegment{{StartMs: 62000, EndMs: 92000}}, nil
 }
 
-func (f *fakeCatalog) StreamURL(_ context.Context, id int64, _ mmpb.SongLevel, cookie string) (string, error) {
+func (f *fakeCatalog) StreamURL(_ context.Context, id int64, _ mmpb.SongLevel, cookie string) (*mmpb.SongURL, error) {
 	f.mu.Lock()
 	f.lastCookie = cookie
 	f.mu.Unlock()
@@ -331,6 +331,30 @@ func TestStreamTarget(t *testing.T) {
 	}
 }
 
+// 服务账号对该歌无权益时,上游只给试听片段:302 响应用 X-Kite-Trial 头透传试听区间(毫秒),
+// 完整版没有这个头。<audio> 不读响应头,头是给自建后端消费的(docs/player.md)。
+func TestStreamTrialHeader(t *testing.T) {
+	opts := testOptions()
+	opts.SessionFile = filepath.Join(t.TempDir(), "session.json")
+	require.NoError(t, WriteSessionFile(opts.SessionFile, SessionFile{Cookie: "MUSIC_U=owner", UserID: 1, UpdatedAt: time.Now()}))
+	_, cat, _, h := newTestServer(t, opts)
+
+	cat.mu.Lock()
+	cat.ownerURL[2] = &mmpb.SongURL{Id: 2, Url: "https://m801.music.126.net/2-trial.mp3", Trial: true, TrialStartMs: 0, TrialEndMs: 30000}
+	cat.mu.Unlock()
+
+	pl := decode[playlistDTO](t, get(t, h, "/player/v1/playlists/100"))
+	rec := get(t, h, pl.Tracks[1].Stream)
+	require.Equal(t, http.StatusFound, rec.Code)
+	require.Equal(t, "https://m801.music.126.net/2-trial.mp3", rec.Header().Get("Location"))
+	require.Equal(t, "start=0; end=30000", rec.Header().Get("X-Kite-Trial"))
+
+	// 完整版(trial=false)不带试听头,消费方以头的有无区分。
+	rec = get(t, h, streamPath(t, h, "1"))
+	require.Equal(t, http.StatusFound, rec.Code)
+	require.Empty(t, rec.Header().Get("X-Kite-Trial"))
+}
+
 func TestCORS(t *testing.T) {
 	_, _, _, h := newTestServer(t, testOptions())
 
@@ -438,14 +462,16 @@ func TestEngineCatalogStreamCookie(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got = r.Header.Get("Cookie")
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"code":200,"data":[{"id":1,"url":"http://m801.music.126.net/1.mp3","br":320000,"size":1,"type":"mp3"}]}`))
+		_, _ = w.Write([]byte(`{"code":200,"data":[{"id":1,"url":"http://m801.music.126.net/1.mp3","br":320000,"size":1,"type":"mp3","code":200,"fee":8,"freeTrialInfo":{"start":0,"end":30000}}]}`))
 	}))
 	t.Cleanup(srv.Close)
 	cat := engineCatalog{eng: engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(srv.URL))}
 
-	url, err := cat.StreamURL(context.Background(), 1, mmpb.SongLevel_SONG_LEVEL_EXHIGH, "MUSIC_U=owner")
+	su, err := cat.StreamURL(context.Background(), 1, mmpb.SongLevel_SONG_LEVEL_EXHIGH, "MUSIC_U=owner")
 	require.NoError(t, err)
-	require.Equal(t, "http://m801.music.126.net/1.mp3", url)
+	require.Equal(t, "http://m801.music.126.net/1.mp3", su.GetUrl())
+	require.True(t, su.GetTrial(), "上游 freeTrialInfo 要透传到公开模式")
+	require.Equal(t, int64(30000), su.GetTrialEndMs())
 	require.Contains(t, got, "MUSIC_U=owner")
 
 	_, err = cat.StreamURL(context.Background(), 1, mmpb.SongLevel_SONG_LEVEL_EXHIGH, "")

@@ -19,6 +19,8 @@ service SongService {
   // GetSongURL 获取歌曲播放直链。level 控制音质。
   // 可选登录:不带 cookie 按匿名取(VIP / 版权受限的歌 url 为空);
   // 经 metadata x-netease-cookie 带了 cookie 就按该账号的权益取。
+  // 账号无权益时可能只拿到试听片段:url 里的 trial 为 true 并带
+  // trial_start_ms / trial_end_ms(上游未提供试听信息时 trial 为 false)。
   rpc GetSongURL(GetSongURLRequest) returns (GetSongURLResponse) {
     option (google.api.http) = {
       get: "/api/v1/songs/{song_id}/url"
@@ -188,6 +190,17 @@ message SongURL {
   int64 size = 4;
   // 文件格式（mp3 / flac 等）。
   string format = 5;
+  // 是否试听片段：账号对该歌无权益时上游只给约 30 秒的试听链接
+  // （随 freeTrialInfo 返回），trial=true 时 url 仅覆盖试听区间。
+  bool trial = 6;
+  // 试听开始（毫秒）。上游未提供试听信息时保持 0，以 trial 区分。
+  int64 trial_start_ms = 7;
+  // 试听结束（毫秒）。上游未提供试听信息时保持 0，以 trial 区分。
+  int64 trial_end_ms = 8;
+  // 上游逐条状态码（200 正常）。
+  int32 code = 9;
+  // 上游逐条付费类型（0 免费、1 VIP、4 数字专辑、8 试听片段，同 Song.fee）。
+  int32 fee = 10;
 }
 
 // 歌词信息。
