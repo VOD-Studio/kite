@@ -27,7 +27,7 @@ const rawCss: EsbuildPlugin = {
 export default defineConfig([
   {
     // npm 用户:ESM + 类型声明,react 由使用方提供。
-    entry: { index: "src/index.ts", element: "src/element.ts", react: "src/react/index.ts" },
+    entry: { index: "src/index.ts", element: "src/element/index.ts", react: "src/react/index.ts" },
     format: ["esm"],
     dts: true,
     sourcemap: true,
@@ -38,7 +38,7 @@ export default defineConfig([
   },
   {
     // 静态页面:<script src> 一个文件即可,自动注册 <kite-player> 等元素。
-    entry: { "kite-player": "src/element.ts" },
+    entry: { "kite-player": "src/element/index.ts" },
     format: ["iife"],
     globalName: "KitePlayer",
     minify: true,
