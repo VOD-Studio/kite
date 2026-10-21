@@ -58,14 +58,16 @@ if [[ "${REQUIRE_PACKAGE:-false}" == true || -e "$work/$package" || -e "$work/${
     exit 1
   }
 fi
-digest=$(docker buildx imagetools inspect "$image:$TAG" --format '{{json .Manifest}}' | jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$"))')
+index=$(docker buildx imagetools inspect "$image:$TAG" --format '{{json .Manifest}}')
+digest=$(jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$"))' <<<"$index")
 verified="$image@$digest"
 cosign verify --certificate-identity-regexp "$identity" --certificate-oidc-issuer "$issuer" "$verified" > "$work/signature.json"
 jq -e --arg digest "$digest" 'length > 0 and all(.[]; .critical.image["docker-manifest-digest"] == $digest)' "$work/signature.json" >/dev/null
 # 逐架构校验必须按该架构自身的 manifest digest 拉取:用同一个 index digest 拉两次,
 # docker 不允许把 repo@sha256:<index> 引用重新指向另一架构的镜像("cannot overwrite digest");
 # 且 inspect index 引用永远只看到第一次拉到的架构,arm64 一轮会静默变成 amd64。
-manifests=$(docker buildx imagetools inspect "$image:$TAG" --format '{{json .Manifests}}')
+# 注意 buildx 模板输入没有 .Manifests 字段,子清单在 .Manifest(manifests 数组)里。
+manifests=$(jq -er '.manifests' <<<"$index")
 for arch in amd64 arm64; do
   arch_digest=$(jq -er --arg arch "$arch" 'map(select(.platform.os == "linux" and .platform.architecture == $arch)) | if length != 1 then error("linux/" + $arch + " manifest 数量: " + (length | tostring)) else .[0].digest end | select(test("^sha256:[0-9a-f]{64}$"))' <<<"$manifests")
   arch_ref="$image@$arch_digest"
