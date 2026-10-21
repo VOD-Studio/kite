@@ -43,6 +43,7 @@ kite [flags]
 * [kite login-status](kite_login-status.md)	 - 查看当前登录态
 * [kite logout](kite_logout.md)	 - 登出并删除本地会话文件
 * [kite mcp](kite_mcp.md)	 - 以 MCP 服务(stdio)运行,供 Claude / Cursor 等 AI 客户端调用只读接口
+* [kite mv](kite_mv.md)	 - MV 详情 / 播放地址 / 排行 / 相关 / 收藏
 * [kite playlist](kite_playlist.md)	 - 歌单相关命令
 * [kite recent](kite_recent.md)	 - 列出最近搜索/播放/下载的歌曲(按 frecency 排序)
 * [kite recommend](kite_recommend.md)	 - 推荐相关命令

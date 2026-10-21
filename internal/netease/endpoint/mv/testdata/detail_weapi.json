@@ -1,0 +1,42 @@
+{
+ "loadingPic": "",
+ "bufferPic": "",
+ "loadingPicFS": "",
+ "bufferPicFS": "",
+ "subed": false,
+ "data": {
+  "id": 5436712,
+  "name": "广岛之恋",
+  "artistId": 8926,
+  "artistName": "莫文蔚",
+  "briefDesc": "",
+  "desc": null,
+  "cover": "http://p1.music.126.net/ijUg7s_2S8GMbTNsYiepJA==/18676304511774727.jpg",
+  "coverId": 18676304511774727,
+  "playCount": 852167,
+  "subCount": 10432,
+  "shareCount": 1662,
+  "likeCount": 5056,
+  "commentCount": 689,
+  "duration": 378040,
+  "nType": 0,
+  "publishTime": "1997-10-01",
+  "brs": {
+   "240": "http://vodkgeyttp8.vod.126.net/cloudmusic/MjQ3NDQ3MjUw/89a6a279dc2acfcd068b45ce72b1f560/bf2750483ed02d4c6263dffefa5959d7.mp4?wsSecret=4b1e73913e936a4adc7bf3365b3ebbee&wsTime=1792583935",
+   "480": "http://vodkgeyttp8.vod.126.net/cloudmusic/MjQ3NDQ3MjUw/89a6a279dc2acfcd068b45ce72b1f560/533e4183a709699d566180ed0cd9abe9.mp4?wsSecret=2740d6228a4153b81f6820e36620eaec&wsTime=1792583935"
+  },
+  "artists": [
+   {
+    "id": 8926,
+    "name": "莫文蔚"
+   },
+   {
+    "id": 6481,
+    "name": "张洪量"
+   }
+  ],
+  "isReward": false,
+  "commentThreadId": "R_MV_5_5436712"
+ },
+ "code": 200
+}

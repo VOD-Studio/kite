@@ -26,6 +26,7 @@ import (
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cache"
+	mvendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/mv"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
@@ -35,6 +36,7 @@ const (
 	artistID   = 6452     // 周杰伦
 	playlistID = 3778678  // 热歌榜
 	userID     = 32953014 // 网易云 API 作者的公开账号
+	mvID       = 5436712  // 莫文蔚《广岛之恋》MV
 )
 
 type smokeCase struct {
@@ -198,6 +200,36 @@ func TestUpstreamSmoke(t *testing.T) {
 		{"User.DetailByName", func(c context.Context) (proto.Message, error) {
 			return user.DetailByName(c, &mmpb.DetailByNameRequest{Nickname: "网易云音乐"})
 		}, nil},
+
+		// --- MV(#32 第一阶段)---
+		// 只有 endpoint 声明、无 service 方法,直接经 engine.Execute 冒烟
+		// (第二阶段 MvService 落地后换回 server 方法,与本文件其余用例一致)。
+		// SubscribedMvs(收藏 MV 列表)需登录态,不在此列;上游对匿名调用
+		// 恒返回空列表,带 cookie 的真实验证由 CLI `kite mv subscribed` 承接。
+		{"Mv.GetMv", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, mvendpoint.Detail, &mmpb.GetMvRequest{MvId: mvID})
+		}, func(t *testing.T, r proto.Message) {
+			mv := r.(*mmpb.GetMvResponse).GetMv()
+			require.Equal(t, "广岛之恋", mv.GetName())
+			require.NotEmpty(t, mv.GetUrls(), "多清晰度播放地址为空——brs 解析可能与上游不符")
+		}},
+		{"Mv.TopMvs", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, mvendpoint.Top, &mmpb.TopMvsRequest{})
+		}, func(t *testing.T, r proto.Message) {
+			mvs := r.(*mmpb.TopMvsResponse).GetMvs()
+			require.NotEmpty(t, mvs, "MV 排行榜为空——解码器可能与上游现行响应形状不符")
+			require.NotEmpty(t, mvs[0].GetName())
+			require.NotEmpty(t, mvs[0].GetPublishTime(), "发行日期为空说明未从嵌套 mv.publishTime 取值")
+			require.Positive(t, mvs[0].GetPlayCount())
+		}},
+		{"Mv.SimilarMvs", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, mvendpoint.Similar, &mmpb.SimilarMvsRequest{MvId: mvID})
+		}, func(t *testing.T, r proto.Message) {
+			mvs := r.(*mmpb.SimilarMvsResponse).GetMvs()
+			require.NotEmpty(t, mvs, "相关 MV 为空——解码器可能与上游现行响应形状不符")
+			require.NotEmpty(t, mvs[0].GetName())
+			require.Positive(t, mvs[0].GetDurationMs(), "时长为 0 说明 duration 字段名与上游不符")
+		}},
 	}
 
 	for _, tc := range cases {
