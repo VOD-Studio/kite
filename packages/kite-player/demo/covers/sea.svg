@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F9A26C"/><stop offset=".6" stop-color="#F7C59F"/><stop offset="1" stop-color="#FFE5C4"/></linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4D6FA3"/><stop offset="1" stop-color="#22355E"/></linearGradient>
+  </defs>
+  <rect width="600" height="600" fill="url(#sky)"/>
+  <circle cx="300" cy="330" r="95" fill="#FFF1D6"/>
+  <rect y="330" width="600" height="270" fill="url(#sea)"/>
+  <g fill="none" stroke="#FFE3BF" stroke-linecap="round" opacity=".7">
+    <path d="M220 360 H380" stroke-width="8"/><path d="M245 390 H355" stroke-width="7"/><path d="M265 420 H335" stroke-width="6"/><path d="M282 450 H318" stroke-width="5"/>
+  </g>
+  <g fill="none" stroke="#8FB0E0" stroke-width="5" stroke-linecap="round" opacity=".55">
+    <path d="M40 500 q 30 -18 60 0 t 60 0"/><path d="M400 530 q 30 -18 60 0 t 60 0"/><path d="M90 560 q 30 -18 60 0 t 60 0"/>
+  </g>
+  <path d="M470 250 l18 -10 m-8 30 l20 -12" stroke="#7A4B3A" stroke-width="4" stroke-linecap="round" opacity=".6"/>
+</svg>

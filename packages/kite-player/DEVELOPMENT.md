@@ -1,0 +1,58 @@
+# 开发说明
+
+使用说明见 [README](./README.zh-CN.md),服务端见 [docs/player.md](../../docs/player.md)。本文件说明如何开发、验证与发布,不进入 npm 包。
+
+## 常用命令
+
+开发需要 Node.js(大版本以仓库根 `Makefile` 的 `NODE_VERSION` 为准)与 npm。在本目录执行:
+
+```sh
+npm ci
+npm run check         # 类型检查 + 测试 + 构建,与 CI 的 Player job 相同(仓库根 make player-check)
+npm run build         # 输出 dist:ESM + 类型声明 + 单文件 IIFE
+npm test              # vitest + happy-dom
+npm run screenshots   # 构建后从演示页生成 docs/images/*.webp(README 的配图)
+```
+
+## 演示页
+
+`demo/index.html` 默认离线运行:`demo/demo.js` 提供示例歌单、歌词和一个按真实时钟推进的模拟音频,封面是 `demo/covers/` 里的插画,不访问任何服务。构建后在本目录起一个静态服务器打开:
+
+```sh
+npm run build
+python3 -m http.server 5174   # 或任意静态服务器
+# http://127.0.0.1:5174/demo/index.html
+```
+
+连接真实的 kite-server 时在地址后加参数:`?api=http://127.0.0.1:3793&playlists=歌单ID,歌单ID&songs=歌曲ID,…&playlist=歌单ID,…`。kite-server 需要开公开模式(`KITE_PUBLIC_ADDR`、`KITE_PUBLIC_PLAYLISTS`,`KITE_PUBLIC_ORIGINS` 包含演示页的地址)。
+
+## 截图
+
+`scripts/screenshots.mjs` 自己起静态服务,用 CDP 驱动本机的 Chrome(路径可用环境变量 `CHROME` 指定)打开演示页,依次截播放条、圆形、面板、沉浸模式、播放列表、手机全屏与各种卡片,写到 `docs/images/`。改了界面后运行 `npm run screenshots` 并检查图片。截图依赖本机字体,不同机器的结果不会逐字节相同,所以不做逐字节比对。
+
+## 目录
+
+| 目录 | 内容 |
+| --- | --- |
+| `src/core/` | 播放核心:`Player`(队列、播放模式、错误重试、媒体控件、快照)、数据来源、歌词工具,不依赖 DOM 渲染 |
+| `src/element/` | 三个 Lit 元素、图标、工具函数 |
+| `src/element/styles/` | 样式源码:`base.css`(共用)、`player.css`、`card.css`,暗色变量在 `*.dark.css` |
+| `src/react/` | React 组件(`components.ts`)与 hooks(`hooks.ts`) |
+| `test/` | 核心、元素、React 的测试 |
+| `demo/` | 离线演示页 |
+| `scripts/` | 截图脚本 |
+| `docs/images/` | README 配图(不进 npm 包) |
+
+## 约定
+
+- **样式写在 `.css` 文件里**,经 `?raw` 导入:构建时由 `tsup.config.ts` 的 rawCss 压缩成字符串,测试时由 Vite 处理。暗色变量只写一遍,`styles/index.ts` 的 `withDark` 展开成 `theme="dark"` 与跟随系统两份。
+- **模板由状态声明**:元素的 `render()` 只读播放状态和界面状态;需要每帧变化的部分(逐字高亮、进度、歌词行位移)在 `updated()` 和 `onTime` 回调里命令式处理,不要绑进模板,否则会被每次重新渲染覆盖。
+- **兼容旧内核**:不用容器查询(卡片的紧凑布局由 `util.ts` 的 `watchNarrow` 设置 `data-narrow`),`color-mix()` 必须放在 `@supports` 里并给出降级写法(值里有 `var()` 时,不支持的浏览器不会退回上一条声明)。
+- **文案面向听众**,不假设页面是博客;播放器不能播放时的说明统一用 `unplayableMessage`。
+- 修改公开行为后在 `CHANGELOG.md` 的未发布版本下记一条。
+
+## 发布
+
+只能手动发布:改 `package.json` 的 `version`,在 `CHANGELOG.md` 写好这个版本,合入 `main` 后在 GitHub Actions 运行 `npm` workflow(或 `gh workflow run npm.yml --ref main`)。workflow 只从 `main` 发布、拒绝已经发布过的版本,带 `-` 的预发布版本发到 `next`。需要仓库 secret `NPM_TOKEN`。
+
+README 的图片用 `main` 分支的 raw 链接,发布前确认对应的图已经合入 `main`。

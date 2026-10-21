@@ -1,137 +1,214 @@
 # @violetjs/kite-player
 
-在博客、个人站里放网易云音乐的播放器。数据来自你**自己部署**的 kite-server 公开模式(`/player/v1`),用法类似 APlayer + Meting:页面里写几个标签就能用。
+English | [简体中文](https://github.com/VOD-Studio/kite/blob/main/packages/kite-player/README.zh-CN.md)
 
-- 一个页面只有一个播放核心:悬浮播放条、展开面板、文章里的歌曲 / 歌单卡片都是它的视图,在哪里操作都同步。
-- 逐字歌词、副歌跳转、四种播放模式、系统媒体控件(锁屏、耳机按键);刷新页面后记住队列和进度,但不会自动播放。
-- 播放条随页面滚动收成圆形,往回滚动再展开;桌面上展开成面板,手机上全屏;另有沉浸模式。
-- VIP 歌曲:站长在 kite-server 上登录网易云后可以播放;没登录时卡片会说明原因,不会出现播不了的空白。
+A music player for any web page, backed by your own [kite-server](https://github.com/VOD-Studio/kite) (NetEase Cloud Music). Put a few tags on a page and you get a floating player plus track and playlist cards, all driven by one playback core.
 
-服务端怎么部署、怎么配置歌单白名单和站长登录,见 [docs/player.md](https://github.com/VOD-Studio/kite/blob/main/docs/player.md)。
+<p align="center">
+  <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/hero.webp" width="820" alt="The expanded player showing word-by-word lyrics over a page with track cards">
+</p>
 
-## 快速开始
+- **One player per page.** The floating bar, the expanded panel and every card are views of the same core: start a song from a card and the bar follows.
+- **Word-by-word lyrics** with translations, a staggered scroll when the line changes, drag to seek, and a jump to the chorus.
+- **Four play modes** (sequence, repeat all, repeat one, shuffle), media keys and lock-screen controls, and the queue and position are remembered across pages without autoplaying.
+- **A shape for every place.** A glass bar that shrinks to a disc while you scroll, a panel on desktop, a full screen on phones, an immersive mode, and cards in three sizes that switch to a compact layout in narrow containers.
+- **Honest about what cannot play.** VIP and paid tracks say why instead of failing silently.
+- **Framework-agnostic.** Standard custom elements built with [Lit](https://lit.dev): plain HTML, Vue, Svelte, Rust (Dioxus, Leptos) and more, plus React components and hooks.
+- **One script for static pages**, about 34 KB gzipped, Lit included.
 
-任何站点都可以直接用 `<script>` 引入(全局变量 `KitePlayer`):
+The interface text is in Simplified Chinese.
+
+## Install
+
+```sh
+npm install @violetjs/kite-player
+```
+
+Or load the single-file build from a CDN (exposes a global `KitePlayer`):
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/@violetjs/kite-player@0.1/dist/kite-player.iife.js"></script>
+```
 
-<!-- 全站一个,放在 layout 里 -->
+## Quick start
+
+```html
+<!-- One per page, e.g. in your shared layout -->
 <kite-player api="https://music.example.com" playlists="3778678"></kite-player>
 
-<!-- 文章里 -->
+<!-- Anywhere on the page -->
 <kite-track song="1973665667"></kite-track>
 <kite-playlist playlist="3778678"></kite-playlist>
 ```
 
-用打包工具时:
-
-```sh
-npm i @violetjs/kite-player
-```
+With a bundler, import the elements once:
 
 ```js
-import "@violetjs/kite-player/element"; // 注册 <kite-player> / <kite-track> / <kite-playlist>
+import "@violetjs/kite-player/element"; // registers <kite-player>, <kite-track>, <kite-playlist>
 ```
 
-`api` 只需写在一个元素上(一般是 `<kite-player>`),其它元素会找到页面上带 `api` 的那个。歌曲、歌单 ID 必须在 kite-server 的白名单里。
+`api` is the address of your kite-server's public mode; set it on one element and the others find it. Songs and playlists must be on the server's allowlist. Deploying the server is covered in [docs/player.md](https://github.com/VOD-Studio/kite/blob/main/docs/player.md).
 
-## 元素
+## Gallery
+
+All screenshots come from the offline demo in `demo/` (made-up songs and illustrated covers).
+
+### Bar and disc
+
+The bar sits in the bottom-right corner (along the bottom on phones). It shows the current line of the lyrics and shrinks to a spinning disc with a progress ring as you scroll down.
+
+<p>
+  <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/bar.webp" width="472" alt="The floating bar">
+  <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/orb.webp" width="112" alt="The bar collapsed to a disc">
+</p>
+
+### Panel
+
+Click the cover or the title to expand. Swipe or use the dots to switch between the cover and the lyrics; controls fade out on the lyrics page while music plays.
+
+<p>
+  <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/panel-cover.webp" width="380" alt="Panel, cover page">
+  <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/panel-lyrics.webp" width="380" alt="Panel, lyrics page">
+</p>
+
+### Immersive mode
+
+<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/immersive.webp" width="820" alt="Immersive mode">
+
+### Queue
+
+Every playlist listed in `playlists` gets a tab. Locked tracks explain why when clicked.
+
+<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/queue.webp" width="420" alt="The queue sheet">
+
+### Phone
+
+<p>
+  <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/mobile-cover.webp" width="260" alt="Full screen on a phone, cover page">
+  <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/mobile-lyrics.webp" width="260" alt="Full screen on a phone, lyrics page">
+  <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/mobile-cards.webp" width="260" alt="Cards in compact layout on a phone">
+</p>
+
+### Track cards
+
+`size="s"`, `size="m"` (default) and `size="l"`:
+
+<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/track-s.webp" width="752" alt="Small track card">
+<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/track-m.webp" width="752" alt="Standard track card with the current lyric">
+<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/track-l.webp" width="752" alt="Large track card">
+
+A track that cannot play:
+
+<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/track-locked.webp" width="752" alt="A locked VIP track">
+
+### Playlist cards
+
+`size="m"` (default, first four tracks) and `size="l"` (all tracks, scrollable):
+
+<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/playlist-m.webp" width="752" alt="Standard playlist card">
+<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/playlist-l.webp" width="752" alt="Large playlist card">
+
+### Dark theme
+
+Follows the system by default; force it with `theme="dark"` or `theme="light"`.
+
+<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/track-m-dark.webp" width="752" alt="Track card, dark theme">
+<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/playlist-m-dark.webp" width="752" alt="Playlist card, dark theme">
+
+## Elements
 
 ### `<kite-player>`
 
-全站悬浮的播放器。一个页面放一个。
+The floating player. Use one per page.
 
-| 属性 | 说明 |
-|---|---|
-| `api` | 公开模式的根地址,如 `https://music.example.com`。 |
-| `playlists` | 播放列表里列出的歌单 ID,逗号分隔。第一个是初始队列(只加载,不自动播放)。 |
-| `theme` | `auto`(默认,跟随系统)/ `light` / `dark`。 |
-| `collapse` | `scroll`(默认,向下滚动时收成圆形)/ `none`(不收起)。 |
+| Attribute | Description |
+| --- | --- |
+| `api` | Address of the kite-server public mode, such as `https://music.example.com`. |
+| `playlists` | Playlist IDs shown as tabs in the queue, comma-separated. The first one becomes the initial queue (loaded, not played). |
+| `theme` | `auto` (default, follows the system), `light` or `dark`. |
+| `collapse` | `scroll` (default, shrink to a disc when scrolling down) or `none`. |
 
-方法:`open("cover" \| "lyrics")` 展开到封面或歌词页,`close()` 收起。
+Methods: `open(view?: "cover" | "lyrics"): Promise<void>` expands the player; `close()` collapses it.
 
 ### `<kite-track>`
 
-文章里的单曲卡片。
+| Attribute | Description |
+| --- | --- |
+| `song` | Song ID. |
+| `size` | `s` (one line), `m` (default, with the current lyric and full controls) or `l` (large, with the cover's colors). |
+| `theme`, `api` | Same as on `<kite-player>`. |
 
-| 属性 | 说明 |
-|---|---|
-| `song` | 歌曲 ID。 |
-| `size` | `s`(一行,适合段落之间)/ `m`(默认,带当前歌词和完整控制)/ `l`(大卡片,适合整篇围绕一首歌)。 |
-| `theme` | 同上。 |
-
-点播放会把这首插到当前歌后面并开始播放;「从副歌听」直接跳到副歌。
+Playing a card inserts the song after the current one. The chorus button starts from the chorus.
 
 ### `<kite-playlist>`
 
-文章里的歌单卡片。
+| Attribute | Description |
+| --- | --- |
+| `playlist` | Playlist ID. |
+| `size` | `m` (default, first four tracks and a link to the rest) or `l` (all tracks). |
+| `theme`, `api` | Same as on `<kite-player>`. |
 
-| 属性 | 说明 |
-|---|---|
-| `playlist` | 歌单 ID。 |
-| `size` | `m`(默认,列出前 4 首和「查看全部」)/ `l`(列出全部,可滚动)。 |
-| `theme` | 同上。 |
+Clicking a track plays the whole playlist from that track.
 
-点任意一首从那首开始播放整个歌单。
+## Styling
 
-## 样式
-
-元素用 Shadow DOM,站点的样式不会误伤它。要改外观,覆盖 CSS 变量或用 `::part()`:
+The elements use Shadow DOM, so page styles do not leak in. Override CSS custom properties or use `::part()`:
 
 ```css
 kite-player, kite-track, kite-playlist {
-  --kite-accent: #3a7bd5;   /* 强调色:进度、当前歌 */
+  --kite-accent: #3a7bd5; /* progress, current track */
   --kite-font: "LXGW WenKai", sans-serif;
 }
 kite-player {
-  --kite-offset: 16px;      /* 播放条离视口边缘的距离 */
+  --kite-offset: 16px; /* distance from the viewport edges */
 }
-kite-track::part(card) { border-radius: 12px; }
+kite-track::part(card) {
+  border-radius: 12px;
+}
 ```
 
-常用变量:`--kite-accent`、`--kite-font`、`--kite-fg`(正文色)、`--kite-muted`(次要文字)、`--kite-card`(卡片底色)、`--kite-sheet`(播放列表底色)、`--kite-offset`。
-
-可用的 part:`<kite-player>` 有 `root`、`bar`、`panel`、`lyrics`、`controls`、`queue`;两种卡片有 `card`。内部类名不是公开接口,升级时可能变化。
+Common properties: `--kite-accent`, `--kite-font`, `--kite-fg`, `--kite-muted`, `--kite-card`, `--kite-sheet`, `--kite-offset`. Parts: `root`, `bar`, `panel`, `lyrics`, `controls` and `queue` on `<kite-player>`; `card` on both cards. Internal class names are not part of the API.
 
 ## React
 
 ```tsx
-import { usePlayer, usePlayerState, usePlaybackTime } from "@violetjs/kite-player/react";
+import { KitePlayer, KiteTrack, usePlayerState, usePlaybackTime } from "@violetjs/kite-player/react";
 
-function NowPlaying() {
-  const player = usePlayer({ api: "https://music.example.com" });
-  const current = usePlayerState((s) => s.current);
-  const playing = usePlayerState((s) => s.playing);
-  const time = usePlaybackTime(); // 每帧更新,只在这个组件里重新渲染
-  if (!current) return null;
+export function Layout({ children }) {
   return (
-    <button onClick={() => player.toggle()}>
-      {playing ? "暂停" : "播放"} {current.title} {Math.floor(time)}s
-    </button>
+    <>
+      {children}
+      <KitePlayer api="https://music.example.com" playlists="3778678" />
+    </>
   );
+}
+
+export function NowPlaying() {
+  const current = usePlayerState((s) => s.current);
+  const time = usePlaybackTime(); // updates every frame, only in this component
+  return current ? <p>{current.title} · {Math.floor(time)}s</p> : <KiteTrack song="1973665667" size="s" />;
 }
 ```
 
-hooks 拿到的和元素是同一个播放核心,可以只用 hooks 按自己的设计画界面,也可以和元素混用(比如布局里放 `<kite-player>`,文章里用自己的 React 卡片)。服务端渲染时 hooks 返回初始状态,不会造成水合不一致。
+`KitePlayer`, `KiteTrack` and `KitePlaylist` render the custom elements and forward a ref to them (call `open()` on the player). `usePlayer`, `usePlayerState` and `usePlaybackTime` share the same core, so you can draw your own UI and mix it with the elements. Both work with server-side rendering; the elements register on the first client render.
 
-## 播放核心
+## Playback core
 
-不用元素和 React 时,直接用核心:
+Without the elements:
 
 ```js
-import { getPlayer, createKiteSource } from "@violetjs/kite-player";
+import { createKiteSource, getPlayer } from "@violetjs/kite-player";
 
 const player = getPlayer({ source: createKiteSource("https://music.example.com") });
 await player.playPlaylist("3778678");
 player.subscribe((state) => console.log(state.current?.title, state.time));
 ```
 
-常用方法:`playPlaylist(id, start?)`、`playTrack(trackOrId)`、`play()`、`pause()`、`toggle()`、`next()`、`prev()`、`seek(秒)`、`playChorus()`、`setMode("sequence" | "loop" | "one" | "shuffle")`、`setVolume(0~1)`;`subscribe` 订阅状态,`onTime` 每帧拿到播放秒数。状态字段见类型定义 `PlayerState`。
+Methods: `playPlaylist(id, start?)`, `playTrack(trackOrId)`, `play()`, `pause()`, `toggle()`, `next()`, `prev()`, `seek(seconds)`, `playChorus()`, `setMode("sequence" | "loop" | "one" | "shuffle")`, `setVolume(0..1)`. `subscribe` receives every state change; `onTime` is called on every animation frame while playing. See the `PlayerState` type for all fields.
 
-### 自定义数据来源
+### Custom data source
 
-已经有自己后端的站点可以不用 kite-server,实现 `DataSource` 交给播放核心:
+Apps with their own backend can skip kite-server and pass a `DataSource`:
 
 ```ts
 import { getPlayer, type DataSource } from "@violetjs/kite-player";
@@ -144,23 +221,18 @@ const source: DataSource = {
 getPlayer({ source });
 ```
 
-返回的数据结构与 `/player/v1` 相同(`Playlist`、`Track`、`Lyrics` 类型)。
+Responses use the same shapes as `/player/v1` (the `Playlist`, `Track` and `Lyrics` types). The demo's `demo/demo.js` is a complete offline example, including a simulated audio element.
 
-## 其它框架
+## Other frameworks
 
-三个元素是标准的 Custom Elements,任何能渲染自定义标签的框架都能用(Vue、Svelte、Astro、Rust 的 Dioxus / Leptos 等):在页面里引入上面的 `<script>`,然后像普通 HTML 标签一样写 `<kite-player>`。框架里怎么写自定义标签和属性,以各框架的文档为准。
+The three elements are standard custom elements. Load the script (or import `@violetjs/kite-player/element`) and write `<kite-player>` like any other tag in Vue, Svelte, Astro, Dioxus, Leptos and so on; see each framework's guide for passing attributes to custom elements.
 
-## 本地开发
+## Requirements
 
-```sh
-npm ci
-npm run check   # 类型检查 + 测试 + 构建
-```
+- Written for the feature set of Chrome and Edge 87, Safari 14.1 and Firefox 85 or later. Container queries are not used, and `color-mix()` is only an enhancement with a fallback.
+- The npm build is ES2022 modules for bundlers; the single-file build targets ES2020.
+- TypeScript 5 or later for the bundled type definitions.
 
-样式源码在 `src/element/styles/*.css`,构建时压缩后内联进 JS(Shadow DOM 的样式要随脚本分发);暗色变量只写在 `*.dark.css` 里,构建时展开成 `theme="dark"` 与跟随系统两份。
+## License
 
-`demo/index.html` 是本地演示页:先用公开模式启动 kite-server(`KITE_PUBLIC_ADDR=127.0.0.1:3793`、`KITE_PUBLIC_PLAYLISTS=3778678`、`KITE_PUBLIC_ORIGINS=http://127.0.0.1:5174`),`npm run build` 后在本目录起一个静态服务器(如 `python3 -m http.server 5174`),打开 `http://127.0.0.1:5174/demo/index.html`。演示页里的单曲不在歌单白名单时,加到 `KITE_PUBLIC_SONGS`。
-
-## 许可
-
-MIT
+[MIT](https://github.com/VOD-Studio/kite/blob/main/packages/kite-player/LICENSE)

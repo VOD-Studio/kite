@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8EC5FC"/><stop offset=".55" stop-color="#E0C3FC"/><stop offset="1" stop-color="#FFD3B4"/></linearGradient>
+    <linearGradient id="wing" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E6E9F5"/></linearGradient>
+  </defs>
+  <rect width="600" height="600" fill="url(#sky)"/>
+  <circle cx="455" cy="150" r="70" fill="#FFF4E0" opacity=".85"/>
+  <g fill="#FFFFFF" opacity=".75">
+    <ellipse cx="120" cy="430" rx="110" ry="34"/><ellipse cx="200" cy="410" rx="80" ry="40"/>
+    <ellipse cx="470" cy="470" rx="130" ry="36"/><ellipse cx="420" cy="452" rx="70" ry="34"/>
+  </g>
+  <path d="M90 360 C 180 300, 250 330, 330 270" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round" opacity=".9"/>
+  <g transform="translate(330 175) rotate(-12)">
+    <path d="M0 95 L190 0 L60 120 Z" fill="url(#wing)"/>
+    <path d="M60 120 L190 0 L95 165 Z" fill="#C9CFE6"/>
+    <path d="M0 95 L60 120 L70 175 Z" fill="#AEB6D6"/>
+  </g>
+</svg>
