@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -94,12 +95,17 @@ func main() {
 	slog.InfoContext(startupCtx, "shutting down server...")
 
 	ctx, cancel := context.WithTimeout(startupCtx, 5*time.Second)
+	stops := []func(context.Context) error{app.Shutdown}
 	if pub != nil {
-		if perr := pub.Shutdown(ctx); perr != nil {
-			slog.ErrorContext(startupCtx, "public server shutdown", slog.String("error", perr.Error()))
-		}
+		stops = append(stops, func(ctx context.Context) error {
+			if perr := pub.Shutdown(ctx); perr != nil {
+				slog.ErrorContext(ctx, "public server shutdown", slog.String("error", perr.Error()))
+			}
+			// 公开模式关得不干净不影响退出码,以 REST / gRPC 为准。
+			return nil
+		})
 	}
-	err = app.Shutdown(ctx)
+	err = shutdownAll(ctx, stops...)[0]
 	cancel() // 显式调用:下面的 os.Exit 不会执行 defer
 	if err != nil {
 		slog.ErrorContext(startupCtx, "server forced to shutdown", slog.String("error", err.Error()))
@@ -125,4 +131,21 @@ func runPublicLogin(args []string) int {
 		return 1
 	}
 	return 0
+}
+
+// shutdownAll 同时关闭各个监听,返回与 stops 一一对应的错误。
+// 同时关闭让每个监听都有完整的宽限时间:一个监听上的慢请求不会耗尽共用的 deadline、
+// 让后关闭的监听拿到已过期的 ctx 而被强行中断。
+func shutdownAll(ctx context.Context, stops ...func(context.Context) error) []error {
+	errs := make([]error, len(stops))
+	var wg sync.WaitGroup
+	for i, stop := range stops {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs[i] = stop(ctx)
+		}()
+	}
+	wg.Wait()
+	return errs
 }
