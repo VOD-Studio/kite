@@ -37,7 +37,7 @@ export default defineConfig([
     esbuildPlugins: [rawCss],
   },
   {
-    // 静态博客:<script src> 一个文件即可,自动注册 <kite-player> 等元素。
+    // 静态页面:<script src> 一个文件即可,自动注册 <kite-player> 等元素。
     entry: { "kite-player": "src/element.ts" },
     format: ["iife"],
     globalName: "KitePlayer",

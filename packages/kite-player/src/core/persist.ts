@@ -1,6 +1,6 @@
 import type { PlayMode, Track } from "./types";
 
-/** 跨页面续播需要记住的内容(每个访客自己的浏览器里)。 */
+/** 跨页面续播需要记住的内容(每个听众自己的浏览器里)。 */
 export interface Snapshot {
   queue: Track[];
   index: number;

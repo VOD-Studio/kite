@@ -141,6 +141,16 @@ describe("<kite-player>", () => {
     rows[1]?.click();
     expect(player.state.current?.id).toBe("2");
   });
+
+  it("抽屉打开后,其它歌单的标签显示歌单名", async () => {
+    const el = await mount(`<kite-player playlists="100,200"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar .open-queue")?.click();
+    await settle(el);
+    await settle(el);
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>(".tabs button")].map((b) => b.textContent);
+    expect(tabs).toEqual(["写作时听", "写作时听"]);
+  });
 });
 
 describe("<kite-track>", () => {

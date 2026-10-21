@@ -1,5 +1,8 @@
 import { createElement, forwardRef, type HTMLAttributes } from "react";
-import { define, type KitePlayerElement, type KitePlaylistElement, type KiteTrackElement } from "../element";
+import { define } from "../element/define";
+import type { KitePlayerElement } from "../element/kite-player";
+import type { KitePlaylistElement } from "../element/kite-playlist";
+import type { KiteTrackElement } from "../element/kite-track";
 
 // 三个组件只是对应自定义元素的薄封装:属性都是字符串,React 18 / 19 都按 attribute 传下去。
 // 元素在第一次渲染时注册(服务端渲染时 customElements 不存在,define 会跳过)。
