@@ -7,6 +7,16 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## 0.5.1 (2026-10-21)
+
+## What's Changed
+* fix(ci): 逐架构镜像校验改按各自 manifest digest 拉取 by @DefectingCat in https://github.com/VOD-Studio/kite/pull/98
+
+## New Contributors
+* @DefectingCat made their first contribution in https://github.com/VOD-Studio/kite/pull/98
+
+**Full Changelog**: https://github.com/VOD-Studio/kite/compare/v0.5.0...v0.5.1
+
 ## 0.5.0 (2026-10-21)
 
 ## What's Changed
