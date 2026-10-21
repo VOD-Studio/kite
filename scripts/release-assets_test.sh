@@ -31,14 +31,16 @@ cat > "$tmp/bin/docker" <<'SHIM'
 #!/usr/bin/env bash
 set -euo pipefail
 case "$*" in
+  'buildx imagetools inspect '*'.Manifests'*)
+    printf '[{"platform":{"os":"linux","architecture":"amd64"},"digest":"sha256:%s"},{"platform":{"os":"linux","architecture":"arm64"},"digest":"sha256:%s"}]' "${DIGEST//a/b}" "${DIGEST//a/c}" ;;
   'buildx imagetools inspect '*) printf '{"digest":"sha256:%s"}' "$DIGEST" ;;
   'image inspect '*) printf '{"org.opencontainers.image.revision":"%s","org.opencontainers.image.version":"0.5.0"}' "${IMAGE_SHA:-abc}" ;;
-  'pull '*) : ;;
+  'pull '*) printf '%s\n' "$*" >> "$PULL_LOG"; : ;;
   *) exit 99 ;;
 esac
 SHIM
 chmod +x "$tmp/bin/"* "$tmp/tooling/"*.sh
-export PATH="$tmp/bin:$PATH" ASSETS="$tmp/assets" TAG=v0.5.0 SOURCE_SHA=abc GITHUB_OUTPUT="$tmp/output"
+export PATH="$tmp/bin:$PATH" ASSETS="$tmp/assets" TAG=v0.5.0 SOURCE_SHA=abc GITHUB_OUTPUT="$tmp/output" PULL_LOG="$tmp/pulls.log"
 export DIGEST=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 for prefix in kite kite-server; do
   for os in linux macOS windows; do
@@ -61,6 +63,11 @@ cp "$tmp/kite-deployer_v0.5.0.tar.gz" "$ASSETS/"
 echo bundle > "$ASSETS/kite_0.5.0_checksums.txt.sigstore.json"
 echo bundle > "$ASSETS/kite-deployer_v0.5.0.tar.gz.sigstore.json"
 "$tmp/tooling/release-verify.sh"
+# Regression guard: each architecture must be pulled by its own manifest digest,
+# never twice via the index digest (docker refuses to overwrite a digest ref).
+[[ $(wc -l < "$PULL_LOG") -eq 2 ]] || { echo 'FAIL 应恰好按架构拉取两次'; exit 1; }
+pulled=$(sed -E 's/.*@//' "$PULL_LOG" | LC_ALL=C sort -u)
+[[ "$pulled" != *"sha256:$DIGEST"* && $(wc -l <<<"$pulled") -eq 2 ]] || { echo 'FAIL 未按各架构自身 digest 拉取'; exit 1; }
 # An already-public application's original assets remain verifiable without a deployer.
 rm "$ASSETS/kite-deployer_v0.5.0.tar.gz" "$ASSETS/kite-deployer_v0.5.0.tar.gz.sigstore.json"
 "$tmp/tooling/release-verify.sh"
