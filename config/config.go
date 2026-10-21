@@ -66,6 +66,13 @@ type PublicConfig struct {
 	Quality string
 }
 
+// AuthToken 是一条服务访问令牌:Name 标识调用方(限流与审计的单位),Token 是令牌本体。
+// 单令牌部署(兼容旧配置)Name 为空。
+type AuthToken struct {
+	Name  string
+	Token string
+}
+
 // ServerConfig 是 gRPC + gateway 服务相关配置。
 type ServerConfig struct {
 	// GRPCAddr 是 gRPC 监听地址(host:port)。默认只绑本机回环,见 docs/server-security.md。
@@ -75,12 +82,25 @@ type ServerConfig struct {
 	HTTPAddr string
 
 	// AuthToken 是调用方访问本服务必须携带的 bearer token(与上游网易云 cookie 无关)。
-	// 与 AuthTokenFile 互斥;都为空表示不启用鉴权,此时只允许绑回环地址。
+	// 与 AuthTokenFile / AuthTokensFile 互斥;都不为空表示不启用鉴权,此时只允许绑回环地址。
 	AuthToken string
 
 	// AuthTokenFile 是存放 token 的文件路径(Docker secret / k8s secret 的惯用方式),
 	// 内容首尾空白会被去掉。
 	AuthTokenFile string
+
+	// AuthTokensFile 是多令牌文件路径:每行「名称:令牌」,空行与 # 开头的行忽略,
+	// 用于按调用方发放令牌(限流 / 审计 / 吊销的单位,见 docs/server-security.md)。
+	// 与 AuthToken / AuthTokenFile 互斥。
+	AuthTokensFile string
+
+	// RatePerMinute 是每个调用方每分钟允许的请求数,0 表示不限流。
+	RatePerMinute int
+
+	// TLSCertFile / TLSKeyFile 是 TLS 证书与私钥文件,必须同时设置;
+	// 设置后 gRPC 与 REST 监听都走 TLS。
+	TLSCertFile string
+	TLSKeyFile  string
 
 	// Env 是运行环境（dev / prod）。
 	//
@@ -176,25 +196,86 @@ func Default() Config {
 	}
 }
 
-// ResolveAuthToken 返回最终生效的访问令牌:AuthToken 或 AuthTokenFile 的内容(去掉首尾空白)。
-// 两者同时设置视为配置歧义,返回错误;都不设返回空串(不启用鉴权)。
-func (s ServerConfig) ResolveAuthToken() (string, error) {
-	if s.AuthToken != "" && s.AuthTokenFile != "" {
-		return "", errors.New("KITE_SERVER_AUTH_TOKEN 与 KITE_SERVER_AUTH_TOKEN_FILE 只能设置一个")
+// ResolveAuthTokens 返回最终生效的全部访问令牌。
+// 三个来源(AuthToken / AuthTokenFile / AuthTokensFile)同时设置超过一个视为配置歧义,返回错误;
+// 都不设返回 nil(不启用鉴权)。单令牌来源返回一个 Name 为空的条目,行为与旧版一致。
+func (s ServerConfig) ResolveAuthTokens() ([]AuthToken, error) {
+	sources := 0
+	if s.AuthToken != "" {
+		sources++
 	}
-	if s.AuthTokenFile == "" {
-		return s.AuthToken, nil
+	if s.AuthTokenFile != "" {
+		sources++
 	}
-	b, err := os.ReadFile(s.AuthTokenFile)
+	if s.AuthTokensFile != "" {
+		sources++
+	}
+	if sources > 1 {
+		return nil, errors.New("KITE_SERVER_AUTH_TOKEN / KITE_SERVER_AUTH_TOKEN_FILE / KITE_SERVER_AUTH_TOKENS_FILE 只能设置一个")
+	}
+	switch {
+	case s.AuthToken != "":
+		return []AuthToken{{Token: s.AuthToken}}, nil
+	case s.AuthTokenFile != "":
+		b, err := os.ReadFile(s.AuthTokenFile)
+		if err != nil {
+			return nil, fmt.Errorf("读取 token 文件: %w", err)
+		}
+		token := strings.TrimSpace(string(b))
+		if token == "" {
+			// 文件存在但为空:静默当作「未配置」会让服务在以为有鉴权时裸奔。
+			return nil, fmt.Errorf("token 文件 %s 为空", s.AuthTokenFile)
+		}
+		return []AuthToken{{Token: token}}, nil
+	case s.AuthTokensFile != "":
+		return parseAuthTokensFile(s.AuthTokensFile)
+	default:
+		return nil, nil
+	}
+}
+
+// parseAuthTokensFile 解析多令牌文件:每行「名称:令牌」,以第一个冒号分隔(令牌本身可以含冒号),
+// 空行与 # 开头的行忽略。名称为空、重名或重值(同一令牌发给两个调用方)都会让限流与吊销产生
+// 歧义,直接拒绝启动。
+func parseAuthTokensFile(path string) ([]AuthToken, error) {
+	b, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("读取 token 文件: %w", err)
+		return nil, fmt.Errorf("读取 tokens 文件: %w", err)
 	}
-	token := strings.TrimSpace(string(b))
-	if token == "" {
-		// 文件存在但为空:静默当作「未配置」会让服务在以为有鉴权时裸奔。
-		return "", fmt.Errorf("token 文件 %s 为空", s.AuthTokenFile)
+	var tokens []AuthToken
+	names := map[string]bool{}
+	values := map[string]bool{}
+	for lineNo, line := range strings.Split(string(b), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		name, token, ok := strings.Cut(line, ":")
+		if !ok {
+			return nil, fmt.Errorf("tokens 文件 %s 第 %d 行缺少「名称:令牌」分隔符", path, lineNo+1)
+		}
+		name = strings.TrimSpace(name)
+		token = strings.TrimSpace(token)
+		if name == "" {
+			return nil, fmt.Errorf("tokens 文件 %s 第 %d 行名称为空", path, lineNo+1)
+		}
+		if token == "" {
+			return nil, fmt.Errorf("tokens 文件 %s 第 %d 行令牌为空", path, lineNo+1)
+		}
+		if names[name] {
+			return nil, fmt.Errorf("tokens 文件 %s 第 %d 行名称 %q 重复", path, lineNo+1, name)
+		}
+		if values[token] {
+			return nil, fmt.Errorf("tokens 文件 %s 第 %d 行令牌与其它调用方重复", path, lineNo+1)
+		}
+		names[name] = true
+		values[token] = true
+		tokens = append(tokens, AuthToken{Name: name, Token: token})
 	}
-	return token, nil
+	if len(tokens) == 0 {
+		return nil, fmt.Errorf("tokens 文件 %s 为空", path)
+	}
+	return tokens, nil
 }
 
 // Addr 返回 Redis 地址（host:port 格式）。
@@ -213,6 +294,10 @@ func Load() Config {
 	cfg.Server.HTTPAddr = envStr("KITE_SERVER_HTTP_ADDR", cfg.Server.HTTPAddr)
 	cfg.Server.AuthToken = envStr("KITE_SERVER_AUTH_TOKEN", cfg.Server.AuthToken)
 	cfg.Server.AuthTokenFile = envStr("KITE_SERVER_AUTH_TOKEN_FILE", cfg.Server.AuthTokenFile)
+	cfg.Server.AuthTokensFile = envStr("KITE_SERVER_AUTH_TOKENS_FILE", cfg.Server.AuthTokensFile)
+	cfg.Server.RatePerMinute = envInt("KITE_SERVER_RATE_PER_MINUTE", cfg.Server.RatePerMinute)
+	cfg.Server.TLSCertFile = envStr("KITE_SERVER_TLS_CERT", cfg.Server.TLSCertFile)
+	cfg.Server.TLSKeyFile = envStr("KITE_SERVER_TLS_KEY", cfg.Server.TLSKeyFile)
 	cfg.Server.Env = envStr("KITE_SERVER_ENV", cfg.Server.Env)
 	cfg.Provider.UpstreamTimeout = envInt("KITE_PROVIDER_UPSTREAM_TIMEOUT", cfg.Provider.UpstreamTimeout)
 	cfg.Provider.MaxRetries = envInt("KITE_PROVIDER_MAX_RETRIES", cfg.Provider.MaxRetries)

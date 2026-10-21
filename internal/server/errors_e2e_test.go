@@ -34,7 +34,7 @@ func startE2E(t *testing.T, upstreamBody string) (mmpb.SongServiceClient, *runti
 	t.Cleanup(up.Close)
 
 	eng := engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(up.URL))
-	srv, _ := newGRPCServer(eng, session.NoopStore{}, nil)
+	srv, _ := newGRPCServer(eng, session.NoopStore{}, nil, nil, nil)
 
 	lis := bufconn.Listen(1 << 20)
 	go func() { _ = srv.Serve(lis) }()
