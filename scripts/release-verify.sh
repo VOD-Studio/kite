@@ -62,11 +62,16 @@ digest=$(docker buildx imagetools inspect "$image:$TAG" --format '{{json .Manife
 verified="$image@$digest"
 cosign verify --certificate-identity-regexp "$identity" --certificate-oidc-issuer "$issuer" "$verified" > "$work/signature.json"
 jq -e --arg digest "$digest" 'length > 0 and all(.[]; .critical.image["docker-manifest-digest"] == $digest)' "$work/signature.json" >/dev/null
+# 逐架构校验必须按该架构自身的 manifest digest 拉取:用同一个 index digest 拉两次,
+# docker 不允许把 repo@sha256:<index> 引用重新指向另一架构的镜像("cannot overwrite digest");
+# 且 inspect index 引用永远只看到第一次拉到的架构,arm64 一轮会静默变成 amd64。
+manifests=$(docker buildx imagetools inspect "$image:$TAG" --format '{{json .Manifests}}')
 for arch in amd64 arm64; do
-  export DOCKER_DEFAULT_PLATFORM="linux/$arch"
-  docker pull --platform "$DOCKER_DEFAULT_PLATFORM" "$verified"
-  labels=$(docker image inspect "$verified" --format '{{json .Config.Labels}}')
+  arch_digest=$(jq -er --arg arch "$arch" 'map(select(.platform.os == "linux" and .platform.architecture == $arch)) | if length != 1 then error("linux/" + $arch + " manifest 数量: " + (length | tostring)) else .[0].digest end | select(test("^sha256:[0-9a-f]{64}$"))' <<<"$manifests")
+  arch_ref="$image@$arch_digest"
+  docker pull --platform "linux/$arch" "$arch_ref"
+  labels=$(docker image inspect "$arch_ref" --format '{{json .Config.Labels}}')
   jq -e --arg sha "$SOURCE_SHA" --arg version "$version" '."org.opencontainers.image.revision" == $sha and ."org.opencontainers.image.version" == $version' <<< "$labels" >/dev/null
-  "$root/docker-smoke.sh" "$verified"
+  "$root/docker-smoke.sh" "$arch_ref"
 done
 printf 'image=%s\n' "$verified" >> "$GITHUB_OUTPUT"
