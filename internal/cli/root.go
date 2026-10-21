@@ -14,6 +14,7 @@ import (
 	"github.com/VOD-Studio/kite/internal/cli/album"
 	"github.com/VOD-Studio/kite/internal/cli/artist"
 	"github.com/VOD-Studio/kite/internal/cli/auth"
+	"github.com/VOD-Studio/kite/internal/cli/comment"
 	"github.com/VOD-Studio/kite/internal/cli/config"
 	"github.com/VOD-Studio/kite/internal/cli/fm"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
@@ -156,6 +157,7 @@ func NewRootCommand() *cobra.Command {
 		album.NewCommand(k),
 		artist.NewCommand(k),
 		playlist.NewCommand(k),
+		comment.NewCommand(k), // 评论域 Phase A(#28):评论列表/热评 + 写操作
 	} {
 		c.GroupID = "music"
 		root.AddCommand(c)

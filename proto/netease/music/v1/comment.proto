@@ -1,0 +1,203 @@
+syntax = "proto3";
+
+package netease.music.v1;
+
+option go_package = "github.com/VOD-Studio/kite/gen/go/netease/music/v1;mmpb";
+
+// 评论域 Phase A(#28):本文件只落消息,不建 service。
+// endpoint 声明与 CLI 直连先用这些消息;rpc 建模(CommentService)与
+// gRPC / REST 暴露留第二阶段,落地时在此追加 service 定义并补 rpc 守护登记。
+
+// 评论资源类型(上游以 threadId 前缀区分:歌曲 R_SO_4_、MV R_MV_5_、
+// 歌单 A_PL_0_、专辑 R_AL_3_)。
+enum CommentResourceType {
+  // 未指定(上游不接受,endpoint 层报错)。
+  COMMENT_RESOURCE_TYPE_UNSPECIFIED = 0;
+  // 歌曲(R_SO_4_)。
+  COMMENT_RESOURCE_TYPE_SONG = 1;
+  // MV(R_MV_5_)。
+  COMMENT_RESOURCE_TYPE_MV = 2;
+  // 歌单(A_PL_0_)。
+  COMMENT_RESOURCE_TYPE_PLAYLIST = 3;
+  // 专辑(R_AL_3_)。
+  COMMENT_RESOURCE_TYPE_ALBUM = 4;
+}
+
+// 评论排序方式(上游 sortType:99 推荐 / 2 热度 / 3 时间)。
+enum CommentSortType {
+  // 未指定,按推荐处理。
+  COMMENT_SORT_TYPE_UNSPECIFIED = 0;
+  // 按推荐(上游 99)。
+  COMMENT_SORT_TYPE_RECOMMEND = 1;
+  // 按热度(上游 2)。
+  COMMENT_SORT_TYPE_HOT = 2;
+  // 按时间(上游 3;翻页用 cursor,见 CommentListRequest.cursor)。
+  COMMENT_SORT_TYPE_TIME = 3;
+}
+
+// 评论作者(精简档案)。
+message CommentUser {
+  // 用户 ID。
+  int64 user_id = 1;
+  // 昵称。
+  string nickname = 2;
+  // 头像 URL。
+  string avatar_url = 3;
+  // VIP 类型(0 普通)。
+  int32 vip_type = 4;
+}
+
+// 被回复评论的引用(楼层引用,非全量楼中楼)。
+message BeRepliedComment {
+  // 被回复的评论 ID。
+  int64 comment_id = 1;
+  // 被回复内容。
+  string content = 2;
+  // 被回复评论的作者。
+  CommentUser user = 3;
+}
+
+// 一条评论。
+message Comment {
+  // 评论 ID。
+  int64 comment_id = 1;
+  // 内容。
+  string content = 2;
+  // 发布时间(毫秒时间戳)。
+  int64 time = 3;
+  // 上游格式化的发布日期(如 2014-10-20)。
+  string time_str = 4;
+  // 点赞数。
+  int64 liked_count = 5;
+  // 当前调用方是否已赞(per-user,匿名调用恒 false)。
+  bool liked = 6;
+  // 回复数(评论列表接口返回;热门评论接口无此字段,为 0)。
+  int32 reply_count = 7;
+  // 作者。
+  CommentUser user = 8;
+  // 楼层引用(无回复时为空)。
+  repeated BeRepliedComment be_replied = 9;
+}
+
+// CommentList 请求(上游 /api/v2/resource/comments,评论列表)。
+message CommentListRequest {
+  // 资源类型(必填)。
+  CommentResourceType resource_type = 1;
+  // 资源 ID(必填)。
+  int64 resource_id = 2;
+  // 排序方式,默认按推荐。
+  CommentSortType sort = 3;
+  // 页码,1 起(默认 1)。按推荐/热度时上游以页码换算 cursor;
+  // 按时间时上游只认 cursor,page_no 仅第 1 页有效。
+  int32 page_no = 4;
+  // 每页数量(默认 20)。
+  int32 page_size = 5;
+  // 按时间排序的翻页游标(上一页响应的 cursor);其余排序忽略。
+  string cursor = 6;
+}
+
+// CommentList 响应。
+message CommentListResponse {
+  // 当前页评论。
+  repeated Comment comments = 1;
+  // 评论总数。
+  int64 total_count = 2;
+  // 是否还有更多。
+  bool has_more = 3;
+  // 翻页游标(按时间排序时传回下一页请求)。
+  string cursor = 4;
+}
+
+// HotComments 请求(上游 /weapi/v1/resource/hotcomments/{threadId},热门评论)。
+message HotCommentsRequest {
+  // 资源类型(必填)。
+  CommentResourceType resource_type = 1;
+  // 资源 ID(必填)。
+  int64 resource_id = 2;
+  // 返回数量(默认 20)。
+  int32 limit = 3;
+  // 偏移量(默认 0)。
+  int32 offset = 4;
+  // 取该毫秒时间之前的热评(翻页续传,默认 0)。
+  int64 before_time = 5;
+}
+
+// HotComments 响应。
+message HotCommentsResponse {
+  // 热门评论。
+  repeated Comment hot_comments = 1;
+  // 置顶评论(通常为空)。
+  repeated Comment top_comments = 2;
+  // 热评总数。
+  int64 total = 3;
+  // 是否还有更多。
+  bool has_more = 4;
+}
+
+// --- 评论写操作(需登录态) ---
+
+// LikeComment 请求(上游 /weapi/v1/comment/like 与 /unlike)。
+message LikeCommentRequest {
+  // 资源类型(必填)。
+  CommentResourceType resource_type = 1;
+  // 资源 ID(必填)。
+  int64 resource_id = 2;
+  // 评论 ID(必填)。
+  int64 comment_id = 3;
+  // true 点赞 / false 取消点赞。
+  bool like = 4;
+}
+
+// LikeComment 响应。
+message LikeCommentResponse {
+  // 操作后的点赞状态(回填请求值,上游响应仅 code)。
+  bool liked = 1;
+}
+
+// AddComment 请求(上游 /weapi/resource/comments/add)。
+message AddCommentRequest {
+  // 资源类型(必填)。
+  CommentResourceType resource_type = 1;
+  // 资源 ID(必填)。
+  int64 resource_id = 2;
+  // 评论内容(必填)。
+  string content = 3;
+}
+
+// AddComment 响应。
+message AddCommentResponse {
+  // 新评论 ID(上游匿名拦截验证受限,登录态下的实际回填形状留第二阶段核对;
+  // 拿不到时为 0,操作是否成功以调用不报错为准)。
+  int64 comment_id = 1;
+}
+
+// ReplyComment 请求(上游 /weapi/resource/comments/reply)。
+message ReplyCommentRequest {
+  // 资源类型(必填)。
+  CommentResourceType resource_type = 1;
+  // 资源 ID(必填)。
+  int64 resource_id = 2;
+  // 被回复的评论 ID(必填)。
+  int64 comment_id = 3;
+  // 回复内容(必填)。
+  string content = 4;
+}
+
+// ReplyComment 响应。
+message ReplyCommentResponse {
+  // 新回复 ID(说明同 AddCommentResponse.comment_id)。
+  int64 comment_id = 1;
+}
+
+// DeleteComment 请求(上游 /weapi/resource/comments/delete,只能删自己的评论)。
+message DeleteCommentRequest {
+  // 资源类型(必填)。
+  CommentResourceType resource_type = 1;
+  // 资源 ID(必填)。
+  int64 resource_id = 2;
+  // 评论 ID(必填)。
+  int64 comment_id = 3;
+}
+
+// DeleteComment 响应(上游响应仅 code,操作成功以调用不报错为准)。
+message DeleteCommentResponse {}
