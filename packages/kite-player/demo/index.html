@@ -5,52 +5,104 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>kite-player 演示</title>
 <style>
-  :root { color-scheme: light; }
-  body { margin: 0; background: #F4F5F7; color: #15171C; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", sans-serif; }
-  header { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; height: 64px; padding: 0 max(20px, calc(50vw - 520px)); background: rgba(255,255,255,.85); box-shadow: 0 1px 0 rgba(21,23,28,.06); }
-  header b { font-size: 18px; }
-  main { max-width: 680px; margin: 0 auto; padding: 48px 20px 240px; }
-  h1 { font-size: 36px; line-height: 1.3; margin: 0 0 12px; }
-  .meta { color: #5D6370; font-size: 14px; margin-bottom: 32px; }
-  p { font-size: 17px; line-height: 1.85; color: #2A2E36; }
+  :root {
+    color-scheme: light;
+    --bg: #F4F5F7; --fg: #15171C; --muted: #5D6370; --line: rgba(21,23,28,.08); --code: #FFFFFF; --chip: rgba(21,23,28,.06); --chip-on: #15171C; --chip-on-fg: #FFFFFF;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0F1115; --fg: #ECEDEF; --muted: #A9AEB9; --line: rgba(255,255,255,.08); --code: #17191E; --chip: rgba(255,255,255,.08); --chip-on: #ECEDEF; --chip-on-fg: #15171C;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0F1115; --fg: #ECEDEF; --muted: #A9AEB9; --line: rgba(255,255,255,.08); --code: #17191E; --chip: rgba(255,255,255,.08); --chip-on: #ECEDEF; --chip-on-fg: #15171C;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 760px; margin: 0 auto; padding: 56px 20px 200px; }
+  h1 { margin: 0; font-size: 34px; line-height: 1.25; letter-spacing: -.01em; }
+  .lead { margin: 10px 0 0; font-size: 16px; line-height: 1.7; color: var(--muted); }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 22px; font-size: 13px; color: var(--muted); }
+  .toolbar button { height: 30px; padding: 0 14px; border: 0; border-radius: 15px; background: var(--chip); color: var(--fg); font: inherit; cursor: pointer; }
+  .toolbar button[aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-fg); }
+  .toolbar .sep { width: 1px; height: 18px; margin: 0 6px; background: var(--line); }
+  section { margin-top: 56px; }
+  h2 { margin: 0; font-size: 21px; line-height: 1.4; }
+  h2 + p { margin: 6px 0 0; font-size: 14.5px; line-height: 1.7; color: var(--muted); }
+  h3 { margin: 28px 0 0; font-size: 14px; font-weight: 600; color: var(--muted); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; }
+  pre { margin: 10px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--code); box-shadow: 0 0 0 1px var(--line); overflow-x: auto; }
+  kite-track, kite-playlist { margin: 12px 0 0; }
+  .live-only { display: none; }
+  :root[data-live] .live-only { display: block; }
+  :root[data-live] .demo-only { display: none; }
 </style>
+<script src="../dist/kite-player.iife.js"></script>
+<script src="demo.js"></script>
 </head>
 <body>
-<header><b>我的博客</b><span>文章 · 归档 · 关于</span></header>
 <main>
-  <h1>写长文的时候,我会放这几首歌</h1>
-  <div class="meta">kite-player 本地演示 · 数据来自 kite-server 公开模式</div>
-  <p>写东西的时候需要一点背景声。太安静容易走神,太吵又写不下去,所以我按写作状态攒了几个歌单。</p>
-  <kite-track song="1973665667" size="s"></kite-track>
-  <p>标准卡片带当前歌词和完整控制,是不写 size 时的默认样子:</p>
-  <kite-track song="1303464858"></kite-track>
-  <p>VIP 歌曲在站长没有登录网易云时会说明原因:</p>
-  <kite-track song="287398" size="s"></kite-track>
-  <p>整篇围绕一首歌时可以用大卡片:</p>
-  <kite-track song="1973665667" size="l"></kite-track>
-  <p>歌单卡片列出前几首,点任意一首从那首开始播放:</p>
-  <kite-playlist playlist="3778678"></kite-playlist>
-  <p>往下滚动时,右下角的播放条会收成一个圆;往回滚动又会展开。</p>
-  <p>这一段只是为了让页面足够长。</p><p>这一段只是为了让页面足够长。</p><p>这一段只是为了让页面足够长。</p>
+  <h1>kite-player</h1>
+  <p class="lead">网页音乐播放器:悬浮播放条、展开面板、逐字歌词、单曲与歌单卡片。
+    <span class="demo-only">这一页用的是示例数据,离线运行,不播放真实音频。</span>
+    <span class="live-only">这一页连接的是地址里 <code>api</code> 指定的 kite-server。</span>
+  </p>
+  <div class="toolbar" role="group" aria-label="主题">
+    主题
+    <button data-theme="auto" aria-pressed="true">跟随系统</button>
+    <button data-theme="light" aria-pressed="false">浅色</button>
+    <button data-theme="dark" aria-pressed="false">深色</button>
+  </div>
+
+  <section id="player">
+    <h2>悬浮播放器</h2>
+    <p>在页面右下角(手机上在底部)。点封面或歌名展开;向下滚动收成圆形,往回滚动再展开;右下角按钮打开播放列表。</p>
+    <pre><code>&lt;kite-player api="https://music.example.com" playlists="歌单ID,歌单ID"&gt;&lt;/kite-player&gt;</code></pre>
+  </section>
+
+  <section id="tracks">
+    <h2>单曲卡片</h2>
+    <p>与播放器共用同一个播放核心:在卡片里播放,播放器同步;窄的容器里自动换成紧凑布局。</p>
+    <h3>size="s"</h3>
+    <kite-track song="t2" size="s"></kite-track>
+    <h3>size="m"(默认)</h3>
+    <kite-track song="t1"></kite-track>
+    <h3>size="l"</h3>
+    <kite-track song="t3" size="l"></kite-track>
+    <pre><code>&lt;kite-track song="歌曲ID" size="s | m | l"&gt;&lt;/kite-track&gt;</code></pre>
+  </section>
+
+  <section id="locked">
+    <h2>不能播放的歌</h2>
+    <p>VIP 或数字专辑的歌,在服务没有登录对应账号时会说明原因,不会出现点了没反应的情况。</p>
+    <kite-track song="t7" size="s"></kite-track>
+  </section>
+
+  <section id="playlists">
+    <h2>歌单卡片</h2>
+    <p>点任意一首,从那首开始播放整个歌单。</p>
+    <h3>size="m"(默认)</h3>
+    <kite-playlist playlist="p1"></kite-playlist>
+    <h3>size="l"</h3>
+    <kite-playlist playlist="p2" size="l"></kite-playlist>
+    <pre><code>&lt;kite-playlist playlist="歌单ID" size="m | l"&gt;&lt;/kite-playlist&gt;</code></pre>
+  </section>
 </main>
-<kite-player api="http://127.0.0.1:3793" playlists="3778678"></kite-player>
-<script src="../dist/kite-player.iife.js"></script>
+<kite-player playlists="p1,p2"></kite-player>
 <script>
-  // 演示用:?state=open-cover|open-lyrics|sheet|immersive|orb&play=1&seek=秒,用于截图检查各个状态。
-  const q = new URLSearchParams(location.search);
-  const el = document.querySelector("kite-player");
-  const player = KitePlayer.getPlayer();
-  setTimeout(async () => {
-    if (q.get("play")) void player.play();
-    if (q.get("seek")) player.seek(Number(q.get("seek")));
-    const st = q.get("state");
-    if (st === "orb") window.scrollTo(0, 600);
-    if (st === "open-cover") el.open("cover");
-    if (st === "open-lyrics") el.open("lyrics");
-    if (st === "sheet") el.shadowRoot.querySelector(".bar .open-queue").click();
-    if (st === "immersive") { el.open("lyrics"); setTimeout(() => el.shadowRoot.querySelector(".immersive").click(), 600); }
-    if (q.get("scroll")) window.scrollTo(0, Number(q.get("scroll")));
-  }, 1500);
+  // 主题切换:页面自己的颜色 + 每个元素的 theme 属性。
+  const buttons = document.querySelectorAll(".toolbar button");
+  function setTheme(theme) {
+    if (theme === "auto") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = theme;
+    document.querySelectorAll("kite-player, kite-track, kite-playlist").forEach((el) => el.setAttribute("theme", theme));
+    buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.theme === theme)));
+  }
+  buttons.forEach((b) => b.addEventListener("click", () => setTheme(b.dataset.theme)));
+  const initial = new URLSearchParams(location.search).get("theme");
+  if (initial === "light" || initial === "dark") setTheme(initial);
 </script>
 </body>
 </html>

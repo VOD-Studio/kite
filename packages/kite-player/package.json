@@ -1,25 +1,36 @@
 {
   "name": "@violetjs/kite-player",
   "version": "0.1.0",
-  "description": "kite 网页播放器:播放核心、Web Component 界面与 React hooks,配合 kite-server 公开模式(/player/v1)使用",
+  "description": "A music player for any web page, backed by your own kite-server: a floating player, track and playlist cards, word-by-word lyrics. Custom elements built with Lit, plus React components.",
+  "keywords": [
+    "music",
+    "player",
+    "audio",
+    "lyrics",
+    "web-components",
+    "custom-elements",
+    "lit",
+    "react",
+    "netease",
+    "kite"
+  ],
   "license": "MIT",
-  "type": "module",
+  "homepage": "https://github.com/VOD-Studio/kite/tree/main/packages/kite-player#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/VOD-Studio/kite.git",
     "directory": "packages/kite-player"
   },
-  "homepage": "https://github.com/VOD-Studio/kite/blob/main/docs/player.md",
-  "keywords": [
-    "music",
-    "player",
-    "web-component",
-    "netease",
-    "kite"
-  ],
+  "bugs": {
+    "url": "https://github.com/VOD-Studio/kite/issues"
+  },
+  "type": "module",
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "README.zh-CN.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -49,7 +60,11 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "npm run typecheck && npm run test && npm run build"
+    "check": "npm run typecheck && npm run test && npm run build",
+    "screenshots": "npm run build && node scripts/screenshots.mjs"
+  },
+  "dependencies": {
+    "lit": "^3.3.3"
   },
   "peerDependencies": {
     "react": ">=18"
@@ -78,8 +93,5 @@
   },
   "allowScripts": {
     "esbuild@0.27.7": true
-  },
-  "dependencies": {
-    "lit": "^3.3.3"
   }
 }
