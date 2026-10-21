@@ -1,7 +1,7 @@
 // Package public 是给网页播放器用的公开只读 HTTP 适配器(/player/v1)。
 //
 // 与 internal/server 平行:不要求访问令牌,所以只暴露白名单里的歌单与歌曲,
-// 播放链接带 HMAC 签名并会过期,按来源 IP 限流,可选用站长本人的网易云登录态取 VIP 播放链接。
+// 播放链接带 HMAC 签名并会过期,按来源 IP 限流,可选用服务账号(部署者自己的网易云账号)取 VIP 播放链接。
 // 与 CLI 一样直连 engine + endpoint,不经 gRPC service。协议与部署见 docs/player.md。
 package public
 
@@ -30,7 +30,7 @@ type Options struct {
 	Origins []string
 	// AnyOrigin 表示 Origins 里出现了 *。
 	AnyOrigin bool
-	// SessionFile 是站长登录态文件路径,空表示只按匿名播放。
+	// SessionFile 是服务账号登录态文件路径,空表示只按匿名播放。
 	SessionFile string
 	// SigningKey 是播放链接签名密钥。
 	SigningKey []byte

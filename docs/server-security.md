@@ -104,7 +104,7 @@ docker run --rm \
 
 ## 公开只读模式(网页播放器)
 
-设置 `KITE_PUBLIC_ADDR` 时另开一个**不要求令牌**的 HTTP 监听(`/player/v1`),给博客里的网页播放器用。
+设置 `KITE_PUBLIC_ADDR` 时另开一个**不要求令牌**的 HTTP 监听(`/player/v1`),给网页播放器用。
 它是上面规则里唯一刻意的例外,因此范围被收得很窄:只有 GET 接口;只返回 `KITE_PUBLIC_PLAYLISTS` /
 `KITE_PUBLIC_SONGS` 白名单里的内容(白名单为空则拒绝启动);播放链接带 HMAC 签名并会过期;按来源 IP 限流;
 跨域只允许 `KITE_PUBLIC_ORIGINS`。gRPC / REST 的令牌规则不受影响。配置与协议见 [player.md](player.md)。

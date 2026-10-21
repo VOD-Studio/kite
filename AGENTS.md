@@ -8,7 +8,7 @@ Go 实现的网易云能力服务 + 命令行工具(单体仓库)。分支 / com
 
 | 入口 | 说明 |
 |---|---|
-| `cmd/server` | gRPC(`:3722`)+ grpc-gateway REST(`:3721`),默认只绑 `127.0.0.1`,对外监听必须配令牌;SIGINT/SIGTERM 优雅关闭。设 `KITE_PUBLIC_ADDR` 时另开公开只读模式(`/player/v1`,给网页播放器用,见 [`docs/player.md`](docs/player.md));子命令 `server public-login` 扫码登录站长账号。 |
+| `cmd/server` | gRPC(`:3722`)+ grpc-gateway REST(`:3721`),默认只绑 `127.0.0.1`,对外监听必须配令牌;SIGINT/SIGTERM 优雅关闭。设 `KITE_PUBLIC_ADDR` 时另开公开只读模式(`/player/v1`,给网页播放器用,见 [`docs/player.md`](docs/player.md));子命令 `server public-login` 扫码登录服务账号(部署者自己的网易云账号)。 |
 | `cmd/kite` | CLI。**直连 engine + endpoint 声明,不经 gRPC / service。** |
 | `cmd/kite-probe` | 部署专用静态探针,验证 REST/gRPC 健康、服务鉴权及缺失网易云登录态;随镜像和部署安装包分发,不作为第三个用户产品。 |
 | `cmd/kite-docs` | 命令树 markdown 生成器(`make docs` 调用)。 |
@@ -49,7 +49,7 @@ cmd/*
 - **需要多次上游调用的读取放 `internal/netease/compose`**(约定):每一步仍是 endpoint 声明、经 `engine.Execute` 执行;gRPC、CLI 等前端都调同一个组合函数,不各自再拼。组合用到的 endpoint 用 `AuthOptional`,保证 `Execute` 与 CLI 的 `ExecuteWithCookie` 凭据行为一致。
 - **CLI 与 TUI 平行不耦合**:两者共用的东西必须先提到 CLI 之外(如 `localstate`、`recall`),再各自引用。禁止 `tui → cli`。
 - **`internal/cli/mcp`(`kite mcp`)只暴露只读工具**:与 CLI 一样直连 engine + endpoint;不得绑定写类 / 登录类 endpoint,工具表与 `docs/mcp.md` 一致。由 `internal/cli/mcp/server_test.go` 守护。
-- **`internal/public` 只读、只暴露白名单**:与 CLI 一样直连 engine + endpoint,不经 service;只注册 GET 路由,白名单之外的歌单 / 歌曲 / 歌词一律拒绝,播放链接必须验签;站长登录态只用于取播放链接。由 `internal/public/public_test.go` 守护,协议见 `docs/player.md`。
+- **`internal/public` 只读、只暴露白名单**:与 CLI 一样直连 engine + endpoint,不经 service;只注册 GET 路由,白名单之外的歌单 / 歌曲 / 歌词一律拒绝,播放链接必须验签;服务账号的登录态只用于取播放链接。由 `internal/public/public_test.go` 守护,协议见 `docs/player.md`。
 - **`internal/cli/kit` 只做 CLI 呈现**:渲染、进度、Kit 装配。与前端无关的东西(文件路径、会话、配置、召回池)不要放进来。
 - **proto 是 RPC 契约的唯一真相**(`proto/netease/music/v1/`)。改 RPC 先改 proto 再 `make proto`;不要手写与 proto 冲突的类型。
 - **proto ↔ CLI 一一对应由 `internal/cli/rpc_guard_test.go` 守护**:新增 rpc 要么接 CLI 命令,要么在 `rpcsWithoutCliAllowlist` 登记理由。

@@ -15,7 +15,7 @@ var (
 )
 
 // signer 给播放链接签名:只有出现在白名单歌单 / 歌曲响应里的链接才能换到上游直链,
-// 带了站长登录态时也不会变成「任意 ID 都能解析 VIP 链接」的开放代理。
+// 带了服务账号登录态时也不会变成「任意 ID 都能解析 VIP 链接」的开放代理。
 type signer struct {
 	key []byte
 	ttl time.Duration

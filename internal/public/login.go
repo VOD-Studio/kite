@@ -17,7 +17,7 @@ import (
 // pollInterval 是轮询二维码状态的间隔,与网易云网页端一致。
 const pollInterval = 2 * time.Second
 
-// Login 走网易云扫码登录,把站长的登录态写到 path。二维码与进度输出到 out。
+// Login 走网易云扫码登录,把服务账号的登录态写到 path。二维码与进度输出到 out。
 // 二维码过期会自动换新的;ctx 结束(例如 Ctrl-C)时返回 ctx 的错误。
 func Login(ctx context.Context, eng *engine.Engine, path string, out io.Writer) error {
 	if path == "" {
@@ -29,7 +29,7 @@ func Login(ctx context.Context, eng *engine.Engine, path string, out io.Writer) 
 			return err
 		}
 		url := authendpoint.QrcodeURL(key)
-		_, _ = fmt.Fprintf(out, "用网易云音乐 App 扫码登录站长账号:\n\n%s\n%s\n\n", termqr.Render(url), url)
+		_, _ = fmt.Fprintf(out, "用网易云音乐 App 扫码登录服务账号:\n\n%s\n%s\n\n", termqr.Render(url), url)
 
 		sess, expired, err := waitQrcode(ctx, eng, key, out)
 		if err != nil {

@@ -50,7 +50,7 @@ type PublicConfig struct {
 	// Origins 是允许跨域调用的站点(如 https://blog.example.com),逗号分隔;* 表示不限。
 	Origins string
 
-	// SessionFile 是站长网易云登录态文件(server public-login 生成),空表示只按匿名播放。
+	// SessionFile 是服务账号的网易云登录态文件(server public-login 生成),空表示只按匿名播放。
 	SessionFile string
 
 	// SigningKeyFile 是播放链接签名密钥文件,空表示每次启动随机生成(重启后旧链接失效)。
