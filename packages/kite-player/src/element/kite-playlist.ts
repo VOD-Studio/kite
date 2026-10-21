@@ -118,7 +118,15 @@ export class KitePlaylistElement extends LitElement {
           (t, i) => html`<button class=${classMap({ row: true, locked: !t.playable, cur: inThis && t.id === cur })} role="listitem" data-i=${i} @click=${() => this.play(i)}>
             <span class="idx">${i + 1}</span>
             <span class="t"><b>${t.title}</b><span>${artists(t)}</span></span>
-            <span class="d">${t.playable ? formatTime(t.durationMs / 1000) : t.access === "vip" ? html`<span class="tg vip">VIP</span>` : "—"}</span>
+            <span class="d"
+              >${t.playable
+                ? formatTime(t.durationMs / 1000)
+                : t.access === "vip"
+                  ? html`<span class="tg vip">VIP</span>`
+                  : t.access === "paid"
+                    ? html`<span class="tg out">数字专辑</span>`
+                    : "—"}</span
+            >
           </button>`,
         )}
       </div>

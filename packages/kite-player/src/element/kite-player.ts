@@ -835,6 +835,7 @@ export class KitePlayerElement extends LitElement {
     const ids = this.tabIds();
     const tab = ids.includes(this.ui.tab) ? this.ui.tab : (ids[0] ?? "queue");
     const s = this.player.state;
+    this.prefetchTabNames(ids);
     if (tab === "queue" || tab === s.playlist?.id) {
       this.patch({ tab, sheetReady: true, sheetStatus: "ready", sheetTracks: s.queue, sheetName: s.playlist?.name ?? "", sheetKey: this.ui.sheetKey + 1 });
       return;
@@ -848,6 +849,22 @@ export class KitePlayerElement extends LitElement {
     } catch (err) {
       if (this.ui.tab !== tab) return;
       this.patch({ sheetStatus: "error", sheetMessage: (err as Error).message || "歌单加载失败" });
+    }
+  }
+
+  /** prefetchTabNames 取其它标签的歌单(播放核心会缓存),标签上显示歌单名而不是「歌单」。 */
+  private prefetchTabNames(ids: string[]): void {
+    for (const id of ids) {
+      if (id === "queue" || id === this.player.state.playlist?.id || this.tabPlaylists.has(id)) continue;
+      this.player.loadPlaylist(id).then(
+        (pl) => {
+          this.tabPlaylists.set(id, pl);
+          this.requestUpdate();
+        },
+        () => {
+          // 取不到时标签显示「歌单」,点开时再报错。
+        },
+      );
     }
   }
 
