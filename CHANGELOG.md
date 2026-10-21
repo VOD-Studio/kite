@@ -7,6 +7,14 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## 0.5.0 (2026-10-21)
+
+## What's Changed
+* feat(player): 网页播放器 @violetjs/kite-player 与 kite-server 公开模式 by @xunrua in https://github.com/VOD-Studio/kite/pull/95
+
+
+**Full Changelog**: https://github.com/VOD-Studio/kite/compare/v0.4.2...v0.5.0
+
 ## 0.4.2 (2026-10-21)
 
 ## What's Changed
