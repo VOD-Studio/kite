@@ -7,6 +7,16 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## 0.5.2 (2026-10-21)
+
+## What's Changed
+* fix(ci): imagetools 模板输入无 .Manifests 字段,改从 .Manifest.manifests 取子清单 by @DefectingCat in https://github.com/VOD-Studio/kite/pull/100
+* chore(deps): bump the go-minor group across 1 directory with 16 updates by @dependabot[bot] in https://github.com/VOD-Studio/kite/pull/61
+* chore(deps): bump golang from 1.26.9-alpine to 1.27.2-alpine by @dependabot[bot] in https://github.com/VOD-Studio/kite/pull/50
+
+
+**Full Changelog**: https://github.com/VOD-Studio/kite/compare/v0.5.1...v0.5.2
+
 ## 0.5.1 (2026-10-21)
 
 ## What's Changed
