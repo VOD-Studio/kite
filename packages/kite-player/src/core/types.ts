@@ -22,7 +22,7 @@ export interface Track {
   album: Album;
   durationMs: number;
   access: Access;
-  /** 按站点登录态推断能否播放,最终以播放链接为准。 */
+  /** 按服务端网易云账号的登录态推断能否播放,最终以播放链接为准。 */
   playable: boolean;
   /** 播放地址,直接作为 <audio src>。 */
   stream: string;
@@ -65,14 +65,14 @@ export interface Lyrics {
 
 export interface SourceInfo {
   version: string;
-  /** 站长登录态:none 未配置、active 可播 VIP、expired 已失效。 */
+  /** 服务端网易云账号的登录态:none 未配置、active 可播 VIP、expired 已失效。 */
   login: "none" | "active" | "expired";
   quality: string;
 }
 
 /**
  * 数据来源。默认实现是 createKiteSource(对接 kite-server 公开模式);
- * 自己有后端的站点可以传入自己的实现。
+ * 有自己后端的应用可以传入自己的实现。
  */
 export interface DataSource {
   playlist(id: string): Promise<Playlist>;

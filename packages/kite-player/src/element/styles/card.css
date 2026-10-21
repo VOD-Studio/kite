@@ -9,7 +9,6 @@
   --kite-track: rgba(21,23,28,.08);
   display: block;
   margin: 24px 0;
-  container: card / inline-size;
   color: var(--kite-fg);
 }
 .ell {
@@ -30,9 +29,15 @@
   box-shadow: 0 0 0 1px var(--kite-line), 0 10px 30px -22px rgba(21,23,28,.3);
   transition: box-shadow .3s var(--ease), background-color .3s;
 }
+/* color-mix 的值里有 var(),不支持的浏览器会把整条声明当作计算期无效(而不是退回上一条),所以用 @supports 分开写。 */
 .card.cur {
-  background: linear-gradient(90deg, color-mix(in srgb, var(--kite-accent) 7%, transparent), transparent 60%), var(--kite-card);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--kite-accent) 20%, transparent), 0 14px 34px -22px color-mix(in srgb, var(--kite-accent) 45%, transparent);
+  box-shadow: 0 0 0 1px var(--kite-accent), 0 10px 30px -22px rgba(21,23,28,.3);
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .card.cur {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--kite-accent) 7%, transparent), transparent 60%), var(--kite-card);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--kite-accent) 20%, transparent), 0 14px 34px -22px color-mix(in srgb, var(--kite-accent) 45%, transparent);
+  }
 }
 .cover {
   position: relative;
@@ -185,8 +190,13 @@
   color: #7A5310;
 }
 .tg.out {
-  border: 1px solid color-mix(in srgb, var(--kite-accent) 55%, transparent);
+  border: 1px solid currentColor;
   color: var(--kite-accent);
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .tg.out {
+    border-color: color-mix(in srgb, var(--kite-accent) 55%, transparent);
+  }
 }
 .progress {
   position: relative;
@@ -231,11 +241,16 @@
 }
 .lyric-line .u {
   color: transparent;
-  background-image: linear-gradient(90deg, var(--kite-fg) 50%, color-mix(in srgb, var(--kite-fg) 32%, transparent) 50%);
+  background-image: linear-gradient(90deg, var(--kite-fg) 50%, var(--kite-muted) 50%);
   background-size: 200% 100%;
   background-position: calc((1 - var(--p, 0)) * 100%) 0;
   -webkit-background-clip: text;
   background-clip: text;
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .lyric-line .u {
+    background-image: linear-gradient(90deg, var(--kite-fg) 50%, color-mix(in srgb, var(--kite-fg) 32%, transparent) 50%);
+  }
 }
 .error {
   margin-top: 4px;
@@ -294,34 +309,33 @@
   align-items: center;
   gap: 10px;
 }
-@container card (max-width: 480px) {
-  .s {
-    height: 80px;
-    gap: 14px;
-    padding: 12px 14px 12px 12px;
-  }
-  .s .cover {
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
-  }
-  .s .title {
-    font-size: 16px;
-  }
-  .s .title .who {
-    font-size: 12.5px;
-    margin-left: 6px;
-  }
-  .s .sub {
-    font-size: 12.5px;
-  }
-  .s .chip {
-    display: none;
-  }
-  .s .blob {
-    width: 42px;
-    height: 42px;
-  }
+/* 紧凑布局:卡片宽度 ≤ 480px 时宿主带 data-narrow(见 util.ts 的 watchNarrow)。 */
+:host([data-narrow]) .s {
+  height: 80px;
+  gap: 14px;
+  padding: 12px 14px 12px 12px;
+}
+:host([data-narrow]) .s .cover {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+}
+:host([data-narrow]) .s .title {
+  font-size: 16px;
+}
+:host([data-narrow]) .s .title .who {
+  font-size: 12.5px;
+  margin-left: 6px;
+}
+:host([data-narrow]) .s .sub {
+  font-size: 12.5px;
+}
+:host([data-narrow]) .s .chip {
+  display: none;
+}
+:host([data-narrow]) .s .blob {
+  width: 42px;
+  height: 42px;
 }
 
 /* 标准卡片 */
@@ -385,49 +399,48 @@
   flex: 1;
   margin-left: 10px;
 }
-@container card (max-width: 520px) {
-  .m {
-    grid-template-columns: 92px minmax(0, 1fr);
-    gap: 14px;
-    padding: 14px;
-  }
-  .m .cover {
-    width: 92px;
-    height: 92px;
-    border-radius: 14px;
-  }
-  .m .title {
-    font-size: 17px;
-    line-height: 24px;
-  }
-  .m .who {
-    font-size: 13px;
-  }
-  .m .chip {
-    display: none;
-  }
-  .m .lyric {
-    margin-top: 8px;
-    min-height: 0;
-  }
-  .m .lyric-line {
-    font-size: 13.5px;
-    line-height: 20px;
-  }
-  .m .lyric-tr {
-    display: none;
-  }
-  .m .controls .ib {
-    display: none;
-  }
-  .m .controls .progress {
-    margin-left: 4px;
-  }
-  .m .controls .blob {
-    order: 2;
-    width: 42px;
-    height: 42px;
-  }
+/* 紧凑布局:卡片宽度 ≤ 520px 时宿主带 data-narrow(见 util.ts 的 watchNarrow)。 */
+:host([data-narrow]) .m {
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+}
+:host([data-narrow]) .m .cover {
+  width: 92px;
+  height: 92px;
+  border-radius: 14px;
+}
+:host([data-narrow]) .m .title {
+  font-size: 17px;
+  line-height: 24px;
+}
+:host([data-narrow]) .m .who {
+  font-size: 13px;
+}
+:host([data-narrow]) .m .chip {
+  display: none;
+}
+:host([data-narrow]) .m .lyric {
+  margin-top: 8px;
+  min-height: 0;
+}
+:host([data-narrow]) .m .lyric-line {
+  font-size: 13.5px;
+  line-height: 20px;
+}
+:host([data-narrow]) .m .lyric-tr {
+  display: none;
+}
+:host([data-narrow]) .m .controls .ib {
+  display: none;
+}
+:host([data-narrow]) .m .controls .progress {
+  margin-left: 4px;
+}
+:host([data-narrow]) .m .controls .blob {
+  order: 2;
+  width: 42px;
+  height: 42px;
 }
 
 /* 大卡片 */
@@ -567,41 +580,40 @@
 .l .progress .bar b {
   background: #FFFFFF;
 }
-@container card (max-width: 520px) {
-  .l {
-    padding: 20px;
-    border-radius: 22px;
-  }
-  .l .top {
-    gap: 16px;
-  }
-  .l .cover {
-    width: 112px;
-    height: 112px;
-    border-radius: 14px;
-  }
-  .l .title {
-    font-size: 22px;
-    line-height: 30px;
-  }
-  .l .who {
-    font-size: 13.5px;
-  }
-  .l .chip {
-    display: none;
-  }
-  .l .lyric-line {
-    font-size: 19px;
-    line-height: 27px;
-  }
-  .l .controls {
-    flex-wrap: wrap;
-  }
-  .l .controls .progress {
-    order: -1;
-    flex-basis: 100%;
-    margin: 0 0 12px;
-  }
+/* 紧凑布局:卡片宽度 ≤ 520px 时宿主带 data-narrow(见 util.ts 的 watchNarrow)。 */
+:host([data-narrow]) .l {
+  padding: 20px;
+  border-radius: 22px;
+}
+:host([data-narrow]) .l .top {
+  gap: 16px;
+}
+:host([data-narrow]) .l .cover {
+  width: 112px;
+  height: 112px;
+  border-radius: 14px;
+}
+:host([data-narrow]) .l .title {
+  font-size: 22px;
+  line-height: 30px;
+}
+:host([data-narrow]) .l .who {
+  font-size: 13.5px;
+}
+:host([data-narrow]) .l .chip {
+  display: none;
+}
+:host([data-narrow]) .l .lyric-line {
+  font-size: 19px;
+  line-height: 27px;
+}
+:host([data-narrow]) .l .controls {
+  flex-wrap: wrap;
+}
+:host([data-narrow]) .l .controls .progress {
+  order: -1;
+  flex-basis: 100%;
+  margin: 0 0 12px;
 }
 
 /* 歌单卡片 */
@@ -759,55 +771,54 @@
   max-height: 432px;
   overflow-y: auto;
 }
-@container card (max-width: 520px) {
-  .pl {
-    padding: 14px;
-  }
-  .pl .head {
-    gap: 14px;
-  }
-  .stack {
-    width: 84px;
-    height: 72px;
-  }
-  .stack .c3 {
-    left: 28px;
-    top: 8px;
-    width: 56px;
-    height: 56px;
-  }
-  .stack .c2 {
-    left: 14px;
-    top: 4px;
-    width: 64px;
-    height: 64px;
-  }
-  .stack .c1 {
-    width: 72px;
-    height: 72px;
-    border-radius: 13px;
-  }
-  .pl .name {
-    font-size: 17px;
-    line-height: 24px;
-  }
-  .pl .meta {
-    font-size: 12.5px;
-  }
-  .playall {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    justify-content: center;
-    border-radius: 22px;
-  }
-  .playall span {
-    display: none;
-  }
-  .row .t {
-    flex-direction: column;
-    gap: 0;
-  }
+/* 紧凑布局:卡片宽度 ≤ 520px 时宿主带 data-narrow(见 util.ts 的 watchNarrow)。 */
+:host([data-narrow]) .pl {
+  padding: 14px;
+}
+:host([data-narrow]) .pl .head {
+  gap: 14px;
+}
+:host([data-narrow]) .stack {
+  width: 84px;
+  height: 72px;
+}
+:host([data-narrow]) .stack .c3 {
+  left: 28px;
+  top: 8px;
+  width: 56px;
+  height: 56px;
+}
+:host([data-narrow]) .stack .c2 {
+  left: 14px;
+  top: 4px;
+  width: 64px;
+  height: 64px;
+}
+:host([data-narrow]) .stack .c1 {
+  width: 72px;
+  height: 72px;
+  border-radius: 13px;
+}
+:host([data-narrow]) .pl .name {
+  font-size: 17px;
+  line-height: 24px;
+}
+:host([data-narrow]) .pl .meta {
+  font-size: 12.5px;
+}
+:host([data-narrow]) .playall {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 22px;
+}
+:host([data-narrow]) .playall span {
+  display: none;
+}
+:host([data-narrow]) .row .t {
+  flex-direction: column;
+  gap: 0;
 }
 
 .skeleton {

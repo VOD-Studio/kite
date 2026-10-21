@@ -1,6 +1,7 @@
 // 样式源码是同目录的 .css 文件。Shadow DOM 的样式必须随 JS 分发(<script> 引入时也只需要一个文件),
 // 所以构建时把它们压缩后内联成字符串(见 tsup.config.ts 的 rawCss)。
-// 站点只需覆盖 --kite-* 变量,或用 ::part() 微调;内部类名不是公开接口。
+// 使用方只需覆盖 --kite-* 变量,或用 ::part() 微调;内部类名不是公开接口。
+import { unsafeCSS } from "lit";
 import base from "./base.css?raw";
 import cardDark from "./card.dark.css?raw";
 import card from "./card.css?raw";
@@ -18,3 +19,7 @@ export function withDark(dark: string): string {
 
 export const playerStyles = base + player + withDark(playerDark);
 export const cardStyles = base + card + withDark(cardDark);
+
+/** Lit 的样式表(浏览器支持时用 adoptedStyleSheets,同类元素共享一份)。源码是本包自己的 CSS。 */
+export const playerSheet = unsafeCSS(playerStyles);
+export const cardSheet = unsafeCSS(cardStyles);

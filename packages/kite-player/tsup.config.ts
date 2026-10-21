@@ -27,7 +27,7 @@ const rawCss: EsbuildPlugin = {
 export default defineConfig([
   {
     // npm 用户:ESM + 类型声明,react 由使用方提供。
-    entry: { index: "src/index.ts", element: "src/element.ts", react: "src/react.ts" },
+    entry: { index: "src/index.ts", element: "src/element.ts", react: "src/react/index.ts" },
     format: ["esm"],
     dts: true,
     sourcemap: true,

@@ -59,7 +59,7 @@ const initialState: PlayerState = {
 
 /**
  * Player 是页面里唯一的播放核心:一个 <audio>、一个队列。
- * 所有界面(播放条、面板、文章卡片、React 组件)都只是它的视图,在哪里操作都同步。
+ * 所有界面(播放条、面板、卡片、React 组件)都只是它的视图,在哪里操作都同步。
  */
 export class Player {
   readonly store = new Store<PlayerState>(initialState);
@@ -141,7 +141,7 @@ export class Player {
     return p;
   }
 
-  /** info 返回数据来源的站点信息(音质、站长登录态);来源不支持时返回 null。 */
+  /** info 返回数据来源的服务信息(音质、服务端网易云账号的登录态);来源不支持时返回 null。 */
   info(): Promise<SourceInfo | null> {
     if (!this.infoPromise) {
       const fn = this.source?.info;
@@ -150,7 +150,7 @@ export class Player {
     return this.infoPromise;
   }
 
-  /** lyricsFor 读取某首歌的歌词(不必是当前播放的歌,给文章卡片预览用)。 */
+  /** lyricsFor 读取某首歌的歌词(不必是当前播放的歌,给卡片预览用)。 */
   lyricsFor(track: Track): Promise<Lyrics> {
     return this.requireSource().lyrics(track);
   }
@@ -172,7 +172,7 @@ export class Player {
     });
   }
 
-  /** loadTrack 读取单曲(用于文章里单独嵌入的歌)。 */
+  /** loadTrack 读取单曲(用于页面里单独嵌入的歌)。 */
   loadTrack(id: string): Promise<Track> {
     return this.requireSource().track(id);
   }
@@ -556,10 +556,13 @@ export class Player {
   }
 }
 
+/** unplayableMessage 是歌曲不能播放时给听众的说明。 */
+export function unplayableMessage(track: Track): string {
+  return track.access === "vip" ? "这首是 VIP 歌曲,当前服务没有登录 VIP 账号" : "这首歌暂时无法播放(版权限制)";
+}
+
 function unplayable(track: Track): { reason: string; message: string } {
-  return track.access === "vip"
-    ? { reason: "UNPLAYABLE", message: "这首是 VIP 歌曲:站长登录网易云后才能播放" }
-    : { reason: "UNPLAYABLE", message: "这首歌暂时无法播放(版权限制)" };
+  return { reason: "UNPLAYABLE", message: unplayableMessage(track) };
 }
 
 /** 页面级单例:同一页面里的所有播放器界面共用它。 */
