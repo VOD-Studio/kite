@@ -27,7 +27,10 @@ history.jsonl
 
 # IDE
 .idea/
-.vscode/
+.vscode/*
+# biome 机制是仓库约定(格式化/导入排序/本地二进制),设置与扩展推荐入库
+!.vscode/settings.json
+!.vscode/extensions.json
 
 # GoReleaser 产物(也覆盖 packages/kite-player 的构建输出)
 dist/
