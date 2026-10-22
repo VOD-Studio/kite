@@ -23,7 +23,7 @@ type signer struct {
 }
 
 // streamQuery 返回某首歌播放链接的查询串。过期时间按 10 分钟取整,
-// 让同一时间段内的链接一致,浏览器与 CDN 缓存才有效。
+// 同一时间段内的签名一致;账号在请求播放时另行选择,不绑定在签名上。
 func (s signer) streamQuery(id int64) string {
 	exp := s.now().Add(s.ttl).Truncate(10 * time.Minute).Unix()
 	e := strconv.FormatInt(exp, 10)

@@ -23,7 +23,8 @@ kite 自带一个网页播放器组件 [`@violetjs/kite-player`](../packages/kit
 | `KITE_PUBLIC_PLAYLISTS` | 空 | 允许公开的歌单 ID,逗号分隔。歌单里的歌自动允许 |
 | `KITE_PUBLIC_SONGS` | 空 | 允许单独嵌入的歌曲 ID,逗号分隔 |
 | `KITE_PUBLIC_ORIGINS` | 空 | 允许跨域调用的站点,如 `https://blog.example.com`;`*` 表示不限 |
-| `KITE_PUBLIC_SESSION_FILE` | 空 | 服务账号(部署者自己的网易云账号)的登录态文件,配置后 VIP 歌按这个账号播放 |
+| `KITE_PUBLIC_SESSION_FILE` | 空 | 单账号部署的网易云登录态文件;与 `KITE_PUBLIC_ACCOUNTS` 互斥 |
+| `KITE_PUBLIC_ACCOUNTS` | 空 | 多账号部署的有序 JSON 数组:`[{"id":"primary","sessionFile":"/data/primary.json"},{"id":"secondary","sessionFile":"/data/secondary.json"}]` |
 | `KITE_PUBLIC_SIGNING_KEY_FILE` | 空(每次启动随机) | 播放链接签名密钥文件,至少 16 字节 |
 | `KITE_PUBLIC_RATE_PER_MINUTE` | `120` | 每个来源 IP 每分钟的请求数 |
 | `KITE_PUBLIC_TRUST_PROXY` | `false` | 在反向代理之后时设为 `true`,按 `X-Forwarded-For` 限流 |
@@ -39,19 +40,39 @@ kite 自带一个网页播放器组件 [`@violetjs/kite-player`](../packages/kit
 
 ## 服务账号的 VIP 登录态(可选)
 
-不登录时只能播免费歌,VIP 歌在播放器里置灰并说明原因。要播 VIP 歌,用部署者自己的 VIP 账号扫码登录一次:
+服务账号由部署者配置,只用于为白名单内容取播放链接及维护自身登录态,不用于歌单、歌曲、歌词等读取。与 gRPC / REST 的通用托管账号集合隔离,不自动借用其它调用方的账号;听众不需要、也不能在公开接口登录自己的网易云账号。
+
+### 配置与登录
+
+**单账号部署**保留 `KITE_PUBLIC_SESSION_FILE=/data/session.json`,然后执行 `server public-login`。也可用 `server public-login --file /data/session.json` 显式写入指定文件。
+
+**多账号部署**改用以下配置,不要同时设置 `KITE_PUBLIC_SESSION_FILE`:
 
 ```bash
-# 容器里(登录态文件放在挂载卷上)
-docker exec -it kite server public-login
-# 或指定文件
-server public-login --file /data/kite/session.json
+export KITE_PUBLIC_ACCOUNTS='[{"id":"primary","sessionFile":"/data/primary.json"},{"id":"secondary","sessionFile":"/data/secondary.json"}]'
+server public-login --account primary
+server public-login --account secondary
 ```
 
-- 登录态写入 `KITE_PUBLIC_SESSION_FILE`(权限 0600),运行中的 kite-server 30 秒内自动读取,无需重启。
-- 每天自动续期一次,新 cookie 写回同一个文件。失效时 `/player/v1/info` 的 `login` 变为 `expired`,VIP 歌回退为不可播,日志提示重新登录。
-- 服务账号的登录态只用于给白名单内容取播放链接,不用于任何其它接口。
-- **所有听众都在用这个账号播放 VIP 歌曲**。访问量大时账号可能被上游判为异常,版权风险也由部署者承担。
+容器里通过 `docker exec -it kite server public-login --account primary` 操作,每次扫码使用对应的部署者账号。参数详情以 `server public-login --help` 为准。
+
+- 数组顺序决定轮询顺序。`id` 为 1–64 个字母、数字、下划线或连字符,首字符必须为字母或数字;ID 不得重复。`sessionFile` 必须是非空绝对路径,各账号不得使用同一路径(包含已有符号链接别名)。
+- 无效 JSON、未知字段、空数组、重复账号/路径、两种账号配置并用都拒绝启动。未设置任何账号配置时按匿名播放。
+- 多账号配置下登录必须用 `--account ID` 或显式 `--file 路径`;`--account` 只能选择已配置 ID,不能与 `--file` 同用。`--file` 只指定本地写入目标,不会把该文件自动加入运行中的公开服务。
+- 登录态文件权限为 `0600`,放在持久卷中。重新扫码会原子替换对应文件,运行中的服务在 30 秒内读取,无需重启。账号列表或顺序变更需要更新配置并重启服务。
+- 每个账号独立读取、每天独立续期一次,启动时对已超过一天的凭据先续期;新 Cookie 只写回该账号自己的文件。某个账号续期失败不会阻塞其它账号。
+- 上游明确拒绝登录态时,仅该请求实际使用的凭据版本标为失效;旧播放/续期响应不会把较新的登录态失效或覆盖。失效文件不会因重复读取而重新激活,需重新扫码更新。日志包含文件路径,不包含 Cookie。
+
+### 播放选择、权益与匿名行为
+
+- 每个通过签名校验的播放请求按配置顺序轮询**当前可用**的账号,跳过缺失、不可读、无效或已失效的登录态。轮询范围是单个公开服务实例,不是按听众、IP、歌单或歌曲固定绑定;并发请求的顺序由服务端串行选择决定。
+- 一次请求只使用一个账号。无歌曲权益/版权限制时返回 `404 UNPLAYABLE`;上游仅给试听时原样跳转并带 `X-Kite-Trial`;上游限流、网络等错误沿用 `502 UPSTREAM_ERROR`。这些结果都**不换号重试**,也不把无权益或限流当作账号失效。
+- 上游明确报告选中账号登录态失效时,本次返回 `404 UNPLAYABLE`,不重新选择账号或匿名重试;后续请求跳过该失效版本。
+- 没有可用账号时,只发送匿名请求,不携带任何部署者 Cookie,也不借用引擎会话池。免费歌曲仍可播放;VIP 曲目的 `playable` 预估为 `false`,实际播放仍以上游是否返回链接/试听为准。匿名也无链接则返回 `404 UNPLAYABLE`。
+- `/player/v1/info.login` 保留 `none` / `active` / `expired`:至少一个可用账号为 `active`;没有可用账号且至少一个已失效为 `expired`;其它情况(未配置或文件均不可读/无有效凭据)为 `none`。它是聚合状态,不公布账号 ID、数量、昵称或 Cookie,`active` 不保证任何账号拥有歌曲权益。
+- 播放链接签名仍绑定歌曲和过期时间,不绑定账号;公开请求中的账号 ID、Cookie 或通用托管账号请求头不能控制账号选择。播放直链缓存按实际凭据摘要、歌曲及音质隔离,凭据改变后不会复用旧账号的权益结果。播放跳转、状态和含 `playable` 的响应使用 `Cache-Control: no-store`,不让浏览器/CDN 绕过本次选择或复用旧状态;匿名元数据仍可在服务内共享缓存。
+
+**多账号不是绕过上游风控、访问限额或版权限制的机制。** 所有听众仍共享这些部署者账号及其权益,访问量大时账号可能被判异常;多账号不保证降低此风险,版权与账号风险由部署者承担。
 
 ## 部署示例(Docker Compose + Caddy)
 
@@ -110,7 +131,7 @@ secrets:
 
 | 接口 | 说明 |
 |---|---|
-| `/player/v1/info` | `{version, login, quality}`;`login` 是 `none` / `active` / `expired` |
+| `/player/v1/info` | `{version, login, quality}`;`login` 是所有已配置服务账号的聚合状态:`none` / `active` / `expired`,规则见上文 |
 | `/player/v1/playlists/{id}` | 歌单 `{id, name, cover, trackCount, tracks: [Track]}`;`tracks` 按歌单顺序,最多 1000 首 |
 | `/player/v1/tracks/{id}` | 单曲 `Track` |
 | `/player/v1/tracks/{id}/lyrics` | 歌词 `{lines, chorus, instrumental}` |

@@ -2,6 +2,7 @@ package public
 
 import (
 	"context"
+	"crypto/sha256"
 	"strconv"
 	"time"
 
@@ -154,11 +155,8 @@ func (c *cachedCatalog) Chorus(ctx context.Context, id int64) ([]*mmpb.ChorusSeg
 }
 
 func (c *cachedCatalog) StreamURL(ctx context.Context, id int64, level mmpb.SongLevel, cookie string) (*mmpb.SongURL, error) {
-	// 有无登录态拿到的链接不同(VIP 歌匿名时为空),按凭据分开缓存;不把 cookie 本身放进 key。
-	scope := "anon"
-	if cookie != "" {
-		scope = "owner"
-	}
-	key := idKey(id) + ":" + strconv.Itoa(int(level)) + ":" + scope
+	// 按实际凭据隔离权益与直链;重新登录/续期后不会复用旧凭据结果,也不把 cookie 放进 key。
+	scope := sha256.Sum256([]byte(cookie))
+	key := idKey(id) + ":" + strconv.Itoa(int(level)) + ":" + string(scope[:])
 	return cached(c.stream, key, streamTTL, func() (*mmpb.SongURL, error) { return c.next.StreamURL(ctx, id, level, cookie) })
 }
