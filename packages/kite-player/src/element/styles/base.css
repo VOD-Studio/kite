@@ -10,6 +10,13 @@
   /* 没有封面时的占位(暗色值在各自的 *.dark.css)。 */
   --kite-ph-bg: linear-gradient(135deg, #E6E9EF, #D5DAE2);
   --kite-ph-fg: #8A909C;
+  /* 歌曲标签的颜色(暗色值在各自的 *.dark.css)。 */
+  --kite-tag-vip: #96651A;
+  --kite-tag-vip-bg: rgba(214,160,64,.12);
+  --kite-tag-vip-line: rgba(196,142,48,.45);
+  --kite-tag-paid: #44659E;
+  --kite-tag-paid-bg: rgba(68,101,158,.09);
+  --kite-tag-paid-line: rgba(68,101,158,.38);
   font-family: var(--kite-font);
   -webkit-font-smoothing: antialiased;
 }
@@ -38,6 +45,44 @@ img {
 }
 [hidden] {
   display: none !important;
+}
+/* 歌曲标签(VIP、数字专辑、仅试听):同一个形状,只用颜色区分类别。播放列表行与卡片共用。 */
+.rtag, .tg {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  height: 16px;
+  padding: 0 5px;
+  border: 1px solid var(--t-line);
+  border-radius: 4px;
+  background: var(--t-bg);
+  color: var(--t-fg);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+.rtag.vip, .tg.vip {
+  --t-fg: var(--kite-tag-vip);
+  --t-bg: var(--kite-tag-vip-bg);
+  --t-line: var(--kite-tag-vip-line);
+}
+.rtag.paid, .tg.out {
+  --t-fg: var(--kite-tag-paid);
+  --t-bg: var(--kite-tag-paid-bg);
+  --t-line: var(--kite-tag-paid-line);
+}
+.rtag.trial, .tg.trial {
+  --t-fg: var(--kite-accent);
+  --t-bg: rgba(211,58,64,.08);
+  --t-line: rgba(211,58,64,.42);
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .rtag.trial, .tg.trial {
+    --t-bg: color-mix(in srgb, var(--kite-accent) 9%, transparent);
+    --t-line: color-mix(in srgb, var(--kite-accent) 42%, transparent);
+  }
 }
 .ell {
   display: block;

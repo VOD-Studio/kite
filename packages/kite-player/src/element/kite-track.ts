@@ -324,12 +324,17 @@ export class KiteTrackElement extends LitElement {
     const s = this.player.state;
     if (!this.track || s.current?.id !== this.track.id || !this.hasUpdated) return;
     if (!this.dragging && s.duration > 0) this.setPct(Math.min(1, t / s.duration));
+    // 文字和逐字进度没变时不写,写一次就要重新排版 / 绘制。
     const cur = this.renderRoot.querySelector(".t-cur");
-    if (cur) cur.textContent = formatTime(t);
+    const time = formatTime(t);
+    if (cur && cur.textContent !== time) cur.textContent = time;
     const line = s.lyrics?.lines[s.lyricIndex];
     if (line && this.units.length) {
       const p = wordProgress(line, t * 1000);
-      this.units.forEach((u, k) => u.style.setProperty("--p", String(Math.round((p[k] ?? 0) * 100) / 100)));
+      this.units.forEach((u, k) => {
+        const v = String(Math.round((p[k] ?? 0) * 100) / 100);
+        if (u.style.getPropertyValue("--p") !== v) u.style.setProperty("--p", v);
+      });
     }
   }
 

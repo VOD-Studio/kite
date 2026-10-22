@@ -199,37 +199,6 @@ img[data-err], img:not([src]) {
     transform: scaleY(1);
   }
 }
-.tg {
-  display: inline-block;
-  flex: none;
-  height: 16px;
-  padding: 0 5px;
-  border-radius: 4px;
-  font-size: 10px;
-  line-height: 15px;
-  font-weight: 700;
-}
-.tg.vip {
-  background: #F6E7C8;
-  color: #7A5310;
-}
-.tg.out {
-  border: 1px solid currentColor;
-  color: var(--kite-accent);
-}
-.tg.trial {
-  border: 1px solid currentColor;
-  color: var(--kite-accent);
-}
-@supports (color: color-mix(in srgb, red 50%, blue)) {
-  .tg.out {
-    border-color: color-mix(in srgb, var(--kite-accent) 55%, transparent);
-  }
-  .tg.trial {
-    border-color: color-mix(in srgb, var(--kite-accent) 55%, transparent);
-    background: color-mix(in srgb, var(--kite-accent) 10%, transparent);
-  }
-}
 .progress {
   position: relative;
   display: flex;
@@ -247,12 +216,15 @@ img[data-err], img:not([src]) {
   background: var(--kite-track);
   overflow: hidden;
 }
+/* 进度每帧都在变:用 scaleX,不改宽度,不触发重新布局。 */
 .bar b {
   position: absolute;
   left: 0;
+  right: 0;
   top: 0;
   bottom: 0;
-  width: calc(var(--pct, 0) * 100%);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--pct, 0));
   border-radius: 2px;
   background: var(--kite-accent);
 }
@@ -545,9 +517,16 @@ img[data-err], img:not([src]) {
   gap: 6px;
   margin-top: 10px;
 }
+/* 大卡片在封面的深色环境色上:标签换成浅色。 */
 .l .tg.out {
-  border-color: rgba(255,255,255,.45);
-  color: rgba(255,255,255,.85);
+  --t-fg: rgba(255,255,255,.9);
+  --t-bg: rgba(255,255,255,.12);
+  --t-line: rgba(255,255,255,.4);
+}
+.l .tg.vip {
+  --t-fg: #F2D08C;
+  --t-bg: rgba(242,208,140,.14);
+  --t-line: rgba(242,208,140,.45);
 }
 .l .chip {
   margin-top: 12px;
