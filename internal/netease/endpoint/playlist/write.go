@@ -32,10 +32,9 @@ var Subscribe = &engine.Endpoint[*mmpb.SubscribeRequest, *mmpb.SubscribeResponse
 		return map[string]any{"id": fmt.Sprintf("%d", req.GetPlaylistId())}, nil
 	},
 	MapResponse: func(_ *mmpb.SubscribeRequest, raw json.RawMessage) (*mmpb.SubscribeResponse, error) {
-		var resp struct {
+		resp := engine.DecodeLoose[struct {
 			Subscribed bool `json:"subscribed"` // 操作后是否已收藏
-		}
-		_ = json.Unmarshal(raw, &resp) // 写操作响应宽松解析:缺字段按零值
+		}](raw) // 写操作响应宽松解析:缺字段按零值
 		return &mmpb.SubscribeResponse{Subscribed: resp.Subscribed}, nil
 	},
 }
@@ -51,13 +50,12 @@ var Create = &engine.Endpoint[*mmpb.CreateRequest, *mmpb.CreateResponse]{
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.CreateRequest, raw json.RawMessage) (*mmpb.CreateResponse, error) {
-		var resp struct {
+		resp := engine.DecodeLoose[struct {
 			ID       int64 `json:"id"` // 新建歌单ID（部分版本在 playlist.id）
 			Playlist struct {
 				ID int64 `json:"id"` // 歌单ID
 			} `json:"playlist"` // 歌单信息
-		}
-		_ = json.Unmarshal(raw, &resp)
+		}](raw)
 		id := resp.ID
 		if id == 0 {
 			id = resp.Playlist.ID
@@ -134,12 +132,11 @@ var UpdateTracks = &engine.Endpoint[*mmpb.UpdateTracksRequest, *mmpb.UpdateTrack
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.UpdateTracksRequest, raw json.RawMessage) (*mmpb.UpdateTracksResponse, error) {
-		var resp struct {
+		resp := engine.DecodeLoose[struct {
 			Body []struct {
 				TrackID int64 `json:"trackId"` // 歌曲ID
 			} `json:"body"` // 成功操作的歌曲
-		}
-		_ = json.Unmarshal(raw, &resp)
+		}](raw)
 		out := &mmpb.UpdateTracksResponse{}
 		for _, b := range resp.Body {
 			out.BodyTrackIds = append(out.BodyTrackIds, b.TrackID)

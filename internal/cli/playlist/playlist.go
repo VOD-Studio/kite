@@ -63,11 +63,6 @@ func annotatePlaylistRpcs(c *cobra.Command) {
 	}
 }
 
-// withID 注册 --id 歌单 ID flag(非必填,由位置参数补,#38)。
-func withID(c *cobra.Command, id *int64) {
-	c.Flags().Int64Var(id, "id", 0, "歌单 ID")
-}
-
 // parseIDs 把 "1,2,3" 解析成 int64 切片,空串或含非数字时报错。
 func parseIDs(s string) ([]int64, error) {
 	if strings.TrimSpace(s) == "" {
@@ -86,21 +81,8 @@ func parseIDs(s string) ([]int64, error) {
 }
 
 func newDetail(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "detail",
-		Short: "歌单详情",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, playlistendpoint.GetPlaylist, &mmpb.GetPlaylistRequest{PlaylistId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.ReadCmd(k, "detail", "歌单详情", "歌单 ID", playlistendpoint.GetPlaylist,
+		func(id int64) *mmpb.GetPlaylistRequest { return &mmpb.GetPlaylistRequest{PlaylistId: id} })
 }
 
 func newTracks(k *kit.Kit) *cobra.Command {
@@ -117,279 +99,117 @@ func newTracks(k *kit.Kit) *cobra.Command {
 			return kit.RenderCompose(k, compose.PlaylistTracks, &mmpb.AllTracksRequest{PlaylistId: rid})
 		},
 	}
-	withID(c, &id)
+	c.Flags().Int64Var(&id, "id", 0, "歌单 ID")
 	return c
 }
 
 func newSubscribers(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "subscribers",
-		Short: "歌单收藏者",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, playlistendpoint.Subscribers, &mmpb.SubscribersRequest{PlaylistId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.ReadCmd(k, "subscribers", "歌单收藏者", "歌单 ID", playlistendpoint.Subscribers,
+		func(id int64) *mmpb.SubscribersRequest { return &mmpb.SubscribersRequest{PlaylistId: id} })
 }
 
 func newHighQuality(k *kit.Kit) *cobra.Command {
 	var cat string
 	var limit int
-	c := &cobra.Command{
-		Use:   "highquality",
-		Short: "精品歌单",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, playlistendpoint.HighQuality, &mmpb.HighQualityRequest{Cat: cat, Limit: int32(limit)})
-		},
-	}
-	c.Flags().StringVar(&cat, "cat", "全部", "分类")
-	c.Flags().IntVar(&limit, "limit", 10, "返回数量")
-	return c
+	return kit.ReadCmd(k, "highquality", "精品歌单", "", playlistendpoint.HighQuality,
+		func(int64) *mmpb.HighQualityRequest { return &mmpb.HighQualityRequest{Cat: cat, Limit: int32(limit)} },
+		func(c *cobra.Command) {
+			c.Flags().StringVar(&cat, "cat", "全部", "分类")
+			c.Flags().IntVar(&limit, "limit", 10, "返回数量")
+		})
 }
 
 func newHighQualityTags(k *kit.Kit) *cobra.Command {
-	return &cobra.Command{
-		Use:   "highquality-tags",
-		Short: "精品歌单标签",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, playlistendpoint.HighQualityTags, &mmpb.HighQualityTagsRequest{})
-		},
-	}
+	return kit.ReadCmd(k, "highquality-tags", "精品歌单标签", "", playlistendpoint.HighQualityTags,
+		func(int64) *mmpb.HighQualityTagsRequest { return &mmpb.HighQualityTagsRequest{} })
 }
 
 func newCatList(k *kit.Kit) *cobra.Command {
-	return &cobra.Command{
-		Use:   "catlist",
-		Short: "歌单分类列表",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, playlistendpoint.CatList, &mmpb.CatListRequest{})
-		},
-	}
+	return kit.ReadCmd(k, "catlist", "歌单分类列表", "", playlistendpoint.CatList,
+		func(int64) *mmpb.CatListRequest { return &mmpb.CatListRequest{} })
 }
 
 func newHot(k *kit.Kit) *cobra.Command {
-	return &cobra.Command{
-		Use:   "hot",
-		Short: "热门歌单",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, playlistendpoint.BrowseHot, &mmpb.BrowseHotRequest{})
-		},
-	}
+	return kit.ReadCmd(k, "hot", "热门歌单", "", playlistendpoint.BrowseHot,
+		func(int64) *mmpb.BrowseHotRequest { return &mmpb.BrowseHotRequest{} })
 }
 
 func newSimilar(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "similar",
-		Short: "相似歌单(按歌曲)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, playlistendpoint.SimilarPlaylists, &mmpb.SimilarPlaylistsRequest{SongId: rid})
-		},
-	}
-	c.Flags().Int64Var(&id, "id", 0, "歌曲 ID")
-	return c
+	return kit.ReadCmd(k, "similar", "相似歌单(按歌曲)", "歌曲 ID", playlistendpoint.SimilarPlaylists,
+		func(id int64) *mmpb.SimilarPlaylistsRequest { return &mmpb.SimilarPlaylistsRequest{SongId: id} })
 }
 
 func newRelated(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "related",
-		Short: "相关歌单推荐",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, playlistendpoint.RelatedPlaylistRecommend, &mmpb.RelatedPlaylistRecommendRequest{PlaylistId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.ReadCmd(k, "related", "相关歌单推荐", "歌单 ID", playlistendpoint.RelatedPlaylistRecommend,
+		func(id int64) *mmpb.RelatedPlaylistRecommendRequest {
+			return &mmpb.RelatedPlaylistRecommendRequest{PlaylistId: id}
+		})
 }
 
 func newSubscribe(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "subscribe",
-		Short: "收藏/取消收藏歌单(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("收藏/取消收藏歌单 %d", rid)); err != nil {
-				return err
-			}
-			return kit.RenderExec(k, playlistendpoint.Subscribe, &mmpb.SubscribeRequest{PlaylistId: rid})
+	return kit.WriteCmd(k, "subscribe", "收藏/取消收藏歌单(写操作,登录态)", "歌单 ID", "", playlistendpoint.Subscribe,
+		func(req *mmpb.SubscribeRequest) string {
+			return fmt.Sprintf("收藏/取消收藏歌单 %d", req.GetPlaylistId())
 		},
-	}
-	withID(c, &id)
-	return c
+		func(id int64) *mmpb.SubscribeRequest { return &mmpb.SubscribeRequest{PlaylistId: id} })
 }
 
 func newCreate(k *kit.Kit) *cobra.Command {
 	var name string
 	var privacy bool
-	c := &cobra.Command{
-		Use:   "create",
-		Short: "创建歌单(写操作,登录态)",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("创建歌单 %s", name)); err != nil {
-				return err
-			}
-			return kit.RenderExec(k, playlistendpoint.Create, &mmpb.CreateRequest{Name: name, Privacy: privacy})
-		},
-	}
-	c.Flags().StringVar(&name, "name", "", "歌单名")
-	c.Flags().BoolVar(&privacy, "privacy", false, "是否隐私")
-	_ = c.MarkFlagRequired("name")
-	return c
+	return kit.WriteCmd(k, "create", "创建歌单(写操作,登录态)", "", "", playlistendpoint.Create,
+		func(req *mmpb.CreateRequest) string { return fmt.Sprintf("创建歌单 %s", req.GetName()) },
+		func(int64) *mmpb.CreateRequest { return &mmpb.CreateRequest{Name: name, Privacy: privacy} },
+		func(c *cobra.Command) {
+			c.Flags().StringVar(&name, "name", "", "歌单名")
+			c.Flags().BoolVar(&privacy, "privacy", false, "是否隐私")
+			_ = c.MarkFlagRequired("name")
+		})
 }
 
 func newDelete(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "delete",
-		Short: "删除歌单(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("删除歌单 %d", rid)); err != nil {
-				return err
-			}
-			if _, err = kit.Exec(k, k.CookieCtx(), playlistendpoint.Delete, &mmpb.DeleteRequest{PlaylistId: rid}); err != nil {
-				return err
-			}
-			fmt.Println("已删除")
-			return nil
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.WriteCmd(k, "delete", "删除歌单(写操作,登录态)", "歌单 ID", "已删除", playlistendpoint.Delete,
+		func(req *mmpb.DeleteRequest) string { return fmt.Sprintf("删除歌单 %d", req.GetPlaylistId()) },
+		func(id int64) *mmpb.DeleteRequest { return &mmpb.DeleteRequest{PlaylistId: id} })
 }
 
 func newUpdateName(k *kit.Kit) *cobra.Command {
-	var id int64
 	var name string
-	c := &cobra.Command{
-		Use:   "update-name",
-		Short: "歌单改名(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("把歌单 %d 改名为 %q", rid, name)); err != nil {
-				return err
-			}
-			if _, err = kit.Exec(k, k.CookieCtx(), playlistendpoint.UpdateName, &mmpb.UpdateNameRequest{PlaylistId: rid, Name: name}); err != nil {
-				return err
-			}
-			fmt.Println("已更新")
-			return nil
+	return kit.WriteCmd(k, "update-name", "歌单改名(写操作,登录态)", "歌单 ID", "已更新", playlistendpoint.UpdateName,
+		func(req *mmpb.UpdateNameRequest) string {
+			return fmt.Sprintf("把歌单 %d 改名为 %q", req.GetPlaylistId(), req.GetName())
 		},
-	}
-	withID(c, &id)
-	c.Flags().StringVar(&name, "name", "", "新名称")
-	_ = c.MarkFlagRequired("name")
-	return c
+		func(id int64) *mmpb.UpdateNameRequest { return &mmpb.UpdateNameRequest{PlaylistId: id, Name: name} },
+		func(c *cobra.Command) {
+			c.Flags().StringVar(&name, "name", "", "新名称")
+			_ = c.MarkFlagRequired("name")
+		})
 }
 
 func newUpdateDesc(k *kit.Kit) *cobra.Command {
-	var id int64
 	var desc string
-	c := &cobra.Command{
-		Use:   "update-desc",
-		Short: "修改歌单描述(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("修改歌单 %d 的描述", rid)); err != nil {
-				return err
-			}
-			if _, err = kit.Exec(k, k.CookieCtx(), playlistendpoint.UpdateDesc, &mmpb.UpdateDescRequest{PlaylistId: rid, Desc: desc}); err != nil {
-				return err
-			}
-			fmt.Println("已更新")
-			return nil
+	return kit.WriteCmd(k, "update-desc", "修改歌单描述(写操作,登录态)", "歌单 ID", "已更新", playlistendpoint.UpdateDesc,
+		func(req *mmpb.UpdateDescRequest) string {
+			return fmt.Sprintf("修改歌单 %d 的描述", req.GetPlaylistId())
 		},
-	}
-	withID(c, &id)
-	c.Flags().StringVar(&desc, "desc", "", "新描述")
-	_ = c.MarkFlagRequired("desc")
-	return c
+		func(id int64) *mmpb.UpdateDescRequest { return &mmpb.UpdateDescRequest{PlaylistId: id, Desc: desc} },
+		func(c *cobra.Command) {
+			c.Flags().StringVar(&desc, "desc", "", "新描述")
+			_ = c.MarkFlagRequired("desc")
+		})
 }
 
 func newUpdateTags(k *kit.Kit) *cobra.Command {
-	var id int64
 	var tags string
-	c := &cobra.Command{
-		Use:   "update-tags",
-		Short: "修改歌单标签(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("把歌单 %d 的标签改为 %q", rid, tags)); err != nil {
-				return err
-			}
-			if _, err = kit.Exec(k, k.CookieCtx(), playlistendpoint.UpdateTags, &mmpb.UpdateTagsRequest{PlaylistId: rid, Tags: tags}); err != nil {
-				return err
-			}
-			fmt.Println("已更新")
-			return nil
+	return kit.WriteCmd(k, "update-tags", "修改歌单标签(写操作,登录态)", "歌单 ID", "已更新", playlistendpoint.UpdateTags,
+		func(req *mmpb.UpdateTagsRequest) string {
+			return fmt.Sprintf("把歌单 %d 的标签改为 %q", req.GetPlaylistId(), req.GetTags())
 		},
-	}
-	withID(c, &id)
-	c.Flags().StringVar(&tags, "tags", "", "标签,分号分隔")
-	_ = c.MarkFlagRequired("tags")
-	return c
+		func(id int64) *mmpb.UpdateTagsRequest { return &mmpb.UpdateTagsRequest{PlaylistId: id, Tags: tags} },
+		func(c *cobra.Command) {
+			c.Flags().StringVar(&tags, "tags", "", "标签,分号分隔")
+			_ = c.MarkFlagRequired("tags")
+		})
 }
 
 func newUpdateTracks(k *kit.Kit) *cobra.Command {
@@ -427,7 +247,7 @@ func newUpdateTracks(k *kit.Kit) *cobra.Command {
 			return kit.RenderExec(k, playlistendpoint.UpdateTracks, &mmpb.UpdateTracksRequest{PlaylistId: rid, Op: op, TrackIds: ids})
 		},
 	}
-	withID(c, &id)
+	c.Flags().Int64Var(&id, "id", 0, "歌单 ID")
 	c.Flags().StringVar(&opStr, "op", "add", "操作: add=添加 del=删除")
 	c.Flags().StringVar(&tracks, "tracks", "", "歌曲 ID,逗号分隔")
 	_ = c.MarkFlagRequired("tracks")

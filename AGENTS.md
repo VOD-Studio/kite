@@ -12,6 +12,7 @@ Go 实现的网易云能力服务 + 命令行工具(单体仓库)。分支 / com
 | `cmd/kite` | CLI。**直连 engine + endpoint 声明,不经 gRPC / service。** |
 | `cmd/kite-probe` | 部署专用静态探针,验证 REST/gRPC 健康、服务鉴权及缺失网易云登录态;随镜像和部署安装包分发,不作为第三个用户产品。 |
 | `cmd/kite-docs` | 命令树 markdown 生成器(`make docs` 调用)。 |
+| `cmd/kite-gen-service` | service 一行转发胶水生成器(`make service-gen` 调用,映射表在 `internal/servicegen`)。 |
 | `cmd/demo` | 进度条等终端组件的演示脚本,非交付产物、不发布。 |
 | `packages/kite-player` | 网页播放器 npm 包 `@violetjs/kite-player`(TypeScript:播放核心 + Web Components + React hooks),只经 HTTP 消费公开模式 `/player/v1`,不参与 Go 构建。用法见 [`packages/kite-player/README.md`](packages/kite-player/README.md),手动发布见 CONTRIBUTING「npm 发布」。 |
 
@@ -34,7 +35,7 @@ cmd/*
   │    internal/termqr      终端二维码渲染(CLI 扫码登录与 kite-server public-login 共用)
   │
   └─ 核心(不得依赖上面任何一层)
-       internal/netease/engine    请求引擎:Execute / ExecuteWithCookie / 重试 / 熔断
+       internal/netease/engine    请求引擎:Execute / ExecuteWithCookie / ExecuteWithSetCookie / 重试 / 熔断
        internal/netease/endpoint  API 声明(每接口一个包级 var)
        internal/netease/compose   跨接口组合:一次读取需要多次上游调用时(如按 trackIds 分页取歌曲)
        internal/netease/session   cookie 池接口
@@ -44,8 +45,9 @@ cmd/*
 
 ### 关键约束
 
-- **共享边界是 engine + endpoint,不是 service。** 三个前端都消费 endpoint 声明;执行语义只在 `engine.Execute` / `engine.ExecuteWithCookie` 定义,**调用方不得拷贝**。决策与取舍见 [ADR](docs/adr/shared-boundary-engine.md)。
+- **共享边界是 engine + endpoint,不是 service。** 三个前端都消费 endpoint 声明;执行语义只在 `engine.Execute` / `engine.ExecuteWithCookie` / `engine.ExecuteWithSetCookie`(登录类接口要 Set-Cookie)定义,**调用方不得拷贝**、不得绕过声明式 endpoint 调 engine 的 `RawDo*` 原始入口(由 `internal/archtest` 守护)。决策与取舍见 [ADR](docs/adr/shared-boundary-engine.md)。
 - **`internal/service` 是 gRPC adapter**:方法恒一行调 engine(或 `compose`),不放业务逻辑,不被 CLI / TUI 引用。
+- **重复样板只写一份,由 archtest 守护**:`internal/netease/endpoint` 的响应解码用 `engine.Decode` / `DecodeLoose`(endpoint 包内不得再手写 `json.Unmarshal` 严格解码样板);CLI 的 ID 型命令骨架用 `kit.ReadCmd` / `LoginReadCmd` / `WriteCmd`(ResolveID 与 RenderExec/ConfirmFatal 同函数必须走构造器,或在 archtest 的 allowlist 登记理由);service 一行转发由 `internal/servicegen` 生成(未登记 rpc 生成器报错 + freshness 测试防漂移)。
 - **需要多次上游调用的读取放 `internal/netease/compose`**(约定):每一步仍是 endpoint 声明、经 `engine.Execute` 执行;gRPC、CLI 等前端都调同一个组合函数,不各自再拼。组合用到的 endpoint 用 `AuthOptional`,保证 `Execute` 与 CLI 的 `ExecuteWithCookie` 凭据行为一致。
 - **CLI 与 TUI 平行不耦合**:两者共用的东西必须先提到 CLI 之外(如 `localstate`、`recall`),再各自引用。禁止 `tui → cli`。
 - **`internal/cli/mcp`(`kite mcp`)只暴露只读工具**:与 CLI 一样直连 engine + endpoint;不得绑定写类 / 登录类 endpoint,工具表与 `docs/mcp.md` 一致。由 `internal/cli/mcp/server_test.go` 守护。
@@ -72,6 +74,7 @@ cmd/*
 - **`make proto`** —— 改 `proto/` 后重新生成到 `gen/`。`gen/` **提交进版本控制**(代码硬依赖它,clone 即可编译),改完 `git add gen/`;CI 校验漂移。决策见 [ADR](docs/adr/generated-code-commit-policy.md)。
 - **`make proto-lint`** —— 检查 proto 规范。
 - **`make docs`** —— 改命令树后刷新 `docs/cmd/`。`TestDocsFreshness` 依赖它,不跑会红。
+- **`make service-gen`** —— 改 proto rpc 或 `internal/servicegen` 映射表后刷新 `internal/service/*_gen.go`。freshness 测试依赖它,不跑会红;新增 rpc 必须在映射表登记(转发或手写),否则生成器报错。
 - **`make upstream-smoke`** —— 真实上游冒烟(需要外网,手动运行,不进 CI):对网易云真实接口逐个调用服务端 RPC,断言响应非空。**改了 endpoint 路径 / 解码器后必跑**——单元测试的夹具与解码器出自同一个假设,上游改了路径 / 字段名 / 类型都发现不了。
 - **`make interop-rust`** —— Rust 客户端互操作冒烟(需要 `cargo`,较慢,CI 的 `Rust Interop` job 跑它)。改 proto、鉴权或错误契约后建议本地跑一次。
 - **`make interop-go`** —— Go 互操作冒烟(需要访问 buf.build,CI 的 `Go Interop` job 跑它):用 BSR 上生成的 SDK 对真实 kite-server 运行 `docs/integration.md` 的示例。示例与 `interop/go/kite.go` 逐字一致(测试守护),改示例先改文档再同步。

@@ -1,0 +1,215 @@
+{
+ "code": 200,
+ "data": [
+  {
+   "id": 34787197,
+   "cover": "http://p1.music.126.net/Ybd44ji92hIMIIaqxxPwnw==/109951173768959640.jpg",
+   "name": "中国人会飞",
+   "playCount": 115513,
+   "briefDesc": null,
+   "desc": null,
+   "artistName": "Chalky Wong",
+   "artistId": 12704500,
+   "duration": 0,
+   "mark": 0,
+   "mv": {
+    "authId": 4584648,
+    "status": 0,
+    "id": 34787197,
+    "title": "中国人会飞",
+    "subTitle": "",
+    "appTitle": "",
+    "aliaName": "",
+    "transName": "",
+    "pic4v3": 109951173768947923,
+    "pic16v9": 109951173768959640,
+    "caption": 0,
+    "captionLanguage": "其它",
+    "style": null,
+    "mottos": "",
+    "oneword": null,
+    "appword": "",
+    "stars": null,
+    "desc": "",
+    "area": "大陆",
+    "type": "官方版",
+    "subType": "完整版",
+    "neteaseonly": 0,
+    "upban": 1,
+    "topWeeks": "",
+    "publishTime": "2026-08-07",
+    "online": 1786940128399,
+    "score": 0,
+    "plays": 0,
+    "monthplays": 0,
+    "weekplays": 0,
+    "dayplays": 0,
+    "fee": 0,
+    "valid": 99,
+    "artists": [
+     {
+      "id": 12704500,
+      "name": "Chalky Wong"
+     },
+     {
+      "id": 31055231,
+      "name": "揽佬SKAI ISYOURGOD"
+     }
+    ],
+    "videos": [
+     {
+      "tagSign": {
+       "br": 240,
+       "type": "MP4",
+       "tagSign": "MP4_240P",
+       "resolution": 240,
+       "mvtype": "MP4"
+      },
+      "tag": "MP4_240P",
+      "url": "cloudmusic/d6a2/core/7958/a29d5991b05218225a8d03e6a7f59a0b.mp4",
+      "duration": 123000.0,
+      "size": 8276800,
+      "width": 426,
+      "height": 240,
+      "container": "mp4",
+      "md5": "",
+      "check": false
+     },
+     {
+      "tagSign": {
+       "br": 1080,
+       "type": "MP4",
+       "tagSign": "MP4_1080P",
+       "resolution": 1080,
+       "mvtype": "MP4"
+      },
+      "tag": "MP4_1080P",
+      "url": "cloudmusic/d6a2/core/7958/0976e8c9786bb9361439e42770bbb94d.mp4",
+      "duration": 123000.0,
+      "size": 98539068,
+      "width": 1920,
+      "height": 1080,
+      "container": "mp4",
+      "md5": "",
+      "check": false
+     }
+    ]
+   },
+   "lastRank": 5,
+   "score": 29,
+   "subed": false,
+   "artists": [
+    {
+     "id": 12704500,
+     "name": "Chalky Wong"
+    },
+    {
+     "id": 31055231,
+     "name": "揽佬SKAI ISYOURGOD"
+    }
+   ]
+  },
+  {
+   "id": 34796477,
+   "cover": "http://p1.music.126.net/dncn4SnUw2YFB917eiNqLw==/109951173919953021.jpg",
+   "name": "时光洪流",
+   "playCount": 44708,
+   "briefDesc": null,
+   "desc": null,
+   "artistName": "程响",
+   "artistId": 7424,
+   "duration": 0,
+   "mark": 0,
+   "mv": {
+    "authId": 0,
+    "status": 0,
+    "id": 34796477,
+    "title": "时光洪流",
+    "subTitle": "",
+    "appTitle": "",
+    "aliaName": "",
+    "transName": "",
+    "pic4v3": 109951173919941366,
+    "pic16v9": 109951173919953021,
+    "caption": 0,
+    "captionLanguage": "其它",
+    "style": null,
+    "mottos": "",
+    "oneword": null,
+    "appword": "",
+    "stars": null,
+    "desc": "",
+    "area": "华语",
+    "type": "官方版",
+    "subType": "完整版",
+    "neteaseonly": 0,
+    "upban": 1,
+    "topWeeks": "",
+    "publishTime": "2026-09-10",
+    "online": 1789036396632,
+    "score": 0,
+    "plays": 0,
+    "monthplays": 0,
+    "weekplays": 0,
+    "dayplays": 0,
+    "fee": 0,
+    "valid": 99,
+    "artists": [
+     {
+      "id": 7424,
+      "name": "程响"
+     }
+    ],
+    "videos": [
+     {
+      "tagSign": {
+       "br": 240,
+       "type": "MP4",
+       "tagSign": "MP4_240P",
+       "resolution": 240,
+       "mvtype": "MP4"
+      },
+      "tag": "MP4_240P",
+      "url": "cloudmusic/obj/core/82855779265/637c873a036bb782b966ef0aed2abd77.mp4",
+      "duration": 274000.0,
+      "size": 18145635,
+      "width": 426,
+      "height": 240,
+      "container": "mp4",
+      "md5": "",
+      "check": false
+     },
+     {
+      "tagSign": {
+       "br": 1080,
+       "type": "MP4",
+       "tagSign": "MP4_1080P",
+       "resolution": 1080,
+       "mvtype": "MP4"
+      },
+      "tag": "MP4_1080P",
+      "url": "cloudmusic/obj/core/82855779265/46b494a4574893e385280795cc69c791.mp4",
+      "duration": 274000.0,
+      "size": 116522263,
+      "width": 1920,
+      "height": 1080,
+      "container": "mp4",
+      "md5": "",
+      "check": false
+     }
+    ]
+   },
+   "lastRank": 2,
+   "score": 12,
+   "subed": false,
+   "artists": [
+    {
+     "id": 7424,
+     "name": "程响"
+    }
+   ]
+  }
+ ],
+ "hasMore": false,
+ "updateTime": 1792583935609
+}

@@ -3,6 +3,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +17,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
@@ -41,9 +44,44 @@ func run() error {
 	if token == "" || strings.ContainsAny(token, "\r\n") {
 		return errors.New("服务令牌为空或含换行")
 	}
+
+	// 部署启用 KITE_SERVER_TLS_* 时,探针同样走 TLS:
+	//   KITE_PROBE_CACERT  私有 CA 证书文件(隐含开启 TLS,REST 与 gRPC 都用它验证服务端证书)
+	//   KITE_PROBE_TLS     证书由公共 CA 签发时置 true,用系统信任链验证
+	// 两者都不设置时保持明文探测(生产部署链路现状)。
+	tlsConf, err := probeTLSConfig()
+	if err != nil {
+		return err
+	}
+	httpURL := envOr("KITE_PROBE_HTTP_URL", "http://kite:3721")
+	if tlsConf != nil {
+		httpURL = httpsURL(httpURL)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return probe(ctx, envOr("KITE_PROBE_HTTP_URL", "http://kite:3721"), envOr("KITE_PROBE_GRPC_ADDR", "kite:3722"), token)
+	return probe(ctx, httpURL, envOr("KITE_PROBE_GRPC_ADDR", "kite:3722"), token, tlsConf)
+}
+
+// probeTLSConfig 按探测环境变量构造客户端 TLS 配置;两个变量都未设置返回 nil(明文探测)。
+func probeTLSConfig() (*tls.Config, error) {
+	caPath := envOr("KITE_PROBE_CACERT", "")
+	if caPath == "" && !strings.EqualFold(envOr("KITE_PROBE_TLS", ""), "true") {
+		return nil, nil
+	}
+	conf := &tls.Config{}
+	if caPath == "" {
+		return conf, nil // 公共 CA:沿用系统信任链(nil RootCAs)
+	}
+	caPEM, err := os.ReadFile(caPath)
+	if err != nil {
+		return nil, fmt.Errorf("读取 KITE_PROBE_CACERT: %w", err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(caPEM) {
+		return nil, fmt.Errorf("KITE_PROBE_CACERT %s 里没有可用的 PEM 证书", caPath)
+	}
+	conf.RootCAs = pool
+	return conf, nil
 }
 
 func envOr(key, fallback string) string {
@@ -53,9 +91,14 @@ func envOr(key, fallback string) string {
 	return fallback
 }
 
-func probe(ctx context.Context, httpURL, grpcAddr, token string) error {
+// httpsURL 把明文探测地址升级为 https:TLS 探测模式下,默认地址与旧配置仍是 http:// 写法,
+// 部署者只需配 KITE_PROBE_CACERT / KITE_PROBE_TLS 一个变量。
+func httpsURL(url string) string { return strings.Replace(url, "http://", "https://", 1) }
+
+// probe 对指定地址做部署验证。tlsConf 非 nil 时 REST 与 gRPC 都走 TLS 并按它验证服务端证书。
+func probe(ctx context.Context, httpURL, grpcAddr, token string, tlsConf *tls.Config) error {
 	// 内部服务名必须直接解析,不能因 runner/宿主机的代理环境而探测到另一个入口。
-	transport := &http.Transport{Proxy: nil}
+	transport := &http.Transport{Proxy: nil, TLSClientConfig: tlsConf}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport}
 	base := strings.TrimRight(httpURL, "/")
@@ -96,7 +139,12 @@ func probe(ctx context.Context, httpURL, grpcAddr, token string) error {
 		}
 	}
 
-	conn, err := grpc.NewClient(grpcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithNoProxy())
+	// 探针部署环境里服务端证书多为内部 CA 签发;tlsConf 携带 KITE_PROBE_CACERT 的信任根。
+	creds := insecure.NewCredentials()
+	if tlsConf != nil {
+		creds = credentials.NewTLS(tlsConf)
+	}
+	conn, err := grpc.NewClient(grpcAddr, grpc.WithTransportCredentials(creds), grpc.WithNoProxy())
 	if err != nil {
 		return fmt.Errorf("创建 gRPC 客户端: %w", err)
 	}

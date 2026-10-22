@@ -64,41 +64,33 @@ var RelatedPlaylistRecommend = &engine.Endpoint[*mmpb.RelatedPlaylistRecommendRe
 	},
 }
 
+// similarPlaylistItem 是相似/相关歌单列表的歌单项(顶层与 data 内层共用)。
+type similarPlaylistItem struct {
+	ID          int64  `json:"id"`          // 歌单ID
+	Name        string `json:"name"`        // 歌单名
+	CoverImgURL string `json:"coverImgUrl"` // 封面URL
+	PicURL      string `json:"picUrl"`      // 封面URL（rcmd 接口可能用 picUrl）
+	PlayCount   int64  `json:"playCount"`   // 播放数
+	TrackCount  int    `json:"trackCount"`  // 曲目数
+	Creator     struct {
+		UserID   int64  `json:"userId"`   // 创建者用户ID
+		Nickname string `json:"nickname"` // 创建者昵称
+	} `json:"creator"` // 创建者
+}
+
 // parseSimilarPlaylists 解析相似/相关歌单列表响应（{playlists:[...]} 或 {data:{playlists:[...]}}）。
 //
 // 与 parsePlaylistSlice 同构，但 simi/rcmd 接口的响应字段集合略有差异（可能不带 total/trackCount），
 // 故独立解析，宽松映射可用字段。
 func parseSimilarPlaylists(raw json.RawMessage) ([]*mmpb.Playlist, error) {
-	var resp struct {
-		Playlists []struct {
-			ID          int64  `json:"id"`          // 歌单ID
-			Name        string `json:"name"`        // 歌单名
-			CoverImgURL string `json:"coverImgUrl"` // 封面URL
-			PicURL      string `json:"picUrl"`      // 封面URL（rcmd 接口可能用 picUrl）
-			PlayCount   int64  `json:"playCount"`   // 播放数
-			TrackCount  int    `json:"trackCount"`  // 曲目数
-			Creator     struct {
-				UserID   int64  `json:"userId"`   // 创建者用户ID
-				Nickname string `json:"nickname"` // 创建者昵称
-			} `json:"creator"` // 创建者
-		} `json:"playlists"`
-		// eapi rcmd 接口可能把列表嵌在 data 里。
-		Data struct {
-			Playlists []struct {
-				ID          int64  `json:"id"`          // 歌单ID
-				Name        string `json:"name"`        // 歌单名
-				CoverImgURL string `json:"coverImgUrl"` // 封面URL
-				PicURL      string `json:"picUrl"`      // 封面URL
-				PlayCount   int64  `json:"playCount"`   // 播放数
-				TrackCount  int    `json:"trackCount"`  // 曲目数
-				Creator     struct {
-					UserID   int64  `json:"userId"`   // 创建者用户ID
-					Nickname string `json:"nickname"` // 创建者昵称
-				} `json:"creator"` // 创建者
-			} `json:"playlists"`
+	// eapi rcmd 接口可能把列表嵌在 data 里,顶层与内层同构。
+	resp, err := engine.Decode[struct {
+		Playlists []similarPlaylistItem `json:"playlists"`
+		Data      struct {
+			Playlists []similarPlaylistItem `json:"playlists"`
 		} `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &resp); err != nil {
+	}](raw, "相似歌单")
+	if err != nil {
 		return nil, err
 	}
 	items := resp.Playlists

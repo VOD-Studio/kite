@@ -22,6 +22,7 @@ kite 的 gRPC 服务面向多种语言的客户端(Rust、Go、TypeScript……)
 | `CANCELED` | `CANCELED` | 499 | 调用方取消了请求 | — |
 | `DEADLINE_EXCEEDED` | `DEADLINE_EXCEEDED` | 504 | 请求超时 | 按需重试 |
 | `SERVER_AUTH_FAILED` | `UNAUTHENTICATED` | 401 | 缺少或错误的**服务访问令牌**(与上游登录无关,见 [服务部署与访问控制](server-security.md)) | 检查令牌配置;**不要**重试,更不要去重新登录网易云 |
+| `SERVER_RATE_LIMITED` | `RESOURCE_EXHAUSTED` | 429 | 被**本服务**限流:该令牌超出了 `KITE_SERVER_RATE_PER_MINUTE` 额度(与上游限流的 `RATE_LIMITED` 无关) | 退避后重试;长期超限请向服务部署方申请更高额度或独立令牌 |
 
 `ErrorInfo` 的其它字段:
 
@@ -91,7 +92,7 @@ pub fn classify(status: &Status) -> Action {
     match details.error_info() {
         Some(info) if info.domain == "kite.music" => match info.reason.as_str() {
             "LOGIN_REQUIRED" => Action::Relogin,
-            "RATE_LIMITED" | "UPSTREAM_UNAVAILABLE" | "CIRCUIT_OPEN" => Action::RetryLater,
+            "RATE_LIMITED" | "SERVER_RATE_LIMITED" | "UPSTREAM_UNAVAILABLE" | "CIRCUIT_OPEN" => Action::RetryLater,
             _ => Action::GiveUp,
         },
         // 没有 ErrorInfo(例如网络层错误)时退回 gRPC code。

@@ -1,9 +1,10 @@
 // Package engine 是网易云共享执行引擎，是 kite 的核心深模块。
 //
 // Engine 持有 transport（HTTP）、SessionStore（cookie 池）、Cache（缓存）、
-// retryPolicy、circuitBreaker。所有入口(RawDo* / Execute*)背后是同一条管线 do：
-// 熔断检查 → 重试 { 凭据解析 → 加密 → HTTP 请求 → 错误映射 } → 返回原始 JSON。
-// 入口之间只在「凭据从哪来」上不同(credentialPolicy)，其余只写一份。
+// retryPolicy、circuitBreaker。所有入口(Execute / ExecuteWithCookie /
+// ExecuteWithSetCookie / RawDoWithCookieAndInput)背后是同一条管线 do：
+// 熔断检查 → 重试 { 凭据解析 → 加密 → HTTP 请求 → 错误映射 }。
+// 入口之间只在「凭据从哪来」上不同(credentialPolicy),其余只写一份。
 //
 // deletion test：删掉这条管线，这些复杂度会散落到 357 个调用点。
 package engine
@@ -122,32 +123,21 @@ func New(opts ...Option) *Engine {
 type credentialPolicy int
 
 const (
-	// credFromPool 是会话池路径(RawDo / RawDoWithCookie / Execute):
+	// credFromPool 是会话池路径(Execute):
 	// AuthLoggedIn 的接口 ctx 里的 cookie 优先,否则取会话池;AuthOptional 只带 ctx 里的 cookie,
 	// 没有就匿名;匿名接口不携带任何用户 cookie。池里取出的 session 失效时上报。
 	credFromPool credentialPolicy = iota
-	// credFromContext 是 ctx cookie 路径(RawDoWithCookieAndInput / ExecuteWithCookie):
+	// credFromContext 是 ctx cookie 路径(RawDoWithCookieAndInput / ExecuteWithCookie / ExecuteWithSetCookie):
 	// 无条件使用 ctx 里的 cookie(哪怕是匿名接口),从不碰会话池,也不上报。
 	// 写操作 / 登录类接口 / 本地持有 cookie 的调用方(CLI、gRPC cookie 拦截器路径)用它。
 	credFromContext
 )
 
-// RawDo 执行一次调用(会话池路径),只返回原始 JSON。
+// RawDoWithCookieAndInput 走 ctx cookie 路径执行一次原始调用(Meta + 网易云参数),
+// 返回原始 JSON 与响应的 Set-Cookie,不经 endpoint 声明(MapRequest / MapResponse)。
 //
-// 不碰 proto 类型,只接收元数据 + 网易云参数。流程:熔断检查 → withRetry(凭据解析 → 加密 → 请求 → 错误映射)。
-func (e *Engine) RawDo(ctx context.Context, meta Meta, params map[string]any) (json.RawMessage, error) {
-	raw, _, err := e.do(ctx, meta, params, credFromPool)
-	return raw, err
-}
-
-// RawDoWithCookie 同 RawDo,但额外返回响应的 Set-Cookie(登录类接口用)。
-func (e *Engine) RawDoWithCookie(ctx context.Context, meta Meta, params map[string]any) (json.RawMessage, string, error) {
-	return e.do(ctx, meta, params, credFromPool)
-}
-
-// RawDoWithCookieAndInput 走 ctx cookie 路径:cookie 从 context 取(interceptor / CLI 注入),
-// 不走 session 池选取。写操作 / auth 接口用,同时返回响应的 Set-Cookie。
-// cookie 由调用方经 metadata "x-netease-cookie" 传入,interceptor 注入 context。
+// 登录类接口已改为声明式 endpoint(engine.ExecuteWithSetCookie);本入口只作为
+// engine 特征化测试的原始管线 seam 保留,生产代码不得新增调用(由 archtest 守护)。
 func (e *Engine) RawDoWithCookieAndInput(ctx context.Context, meta Meta, params map[string]any) (json.RawMessage, string, error) {
 	return e.do(ctx, meta, params, credFromContext)
 }

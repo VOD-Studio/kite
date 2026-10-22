@@ -39,53 +39,26 @@ func annotateRecommendRpcs(c *cobra.Command) {
 
 func newPlaylists(k *kit.Kit) *cobra.Command {
 	var limit int
-	c := &cobra.Command{
-		Use:   "playlists",
-		Short: "推荐歌单",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, recommendendpoint.RecommendPlaylists, &mmpb.RecommendPlaylistsRequest{Limit: int32(limit)})
+	return kit.ReadCmd(k, "playlists", "推荐歌单", "", recommendendpoint.RecommendPlaylists,
+		func(int64) *mmpb.RecommendPlaylistsRequest {
+			return &mmpb.RecommendPlaylistsRequest{Limit: int32(limit)}
 		},
-	}
-	c.Flags().IntVar(&limit, "limit", 10, "返回数量")
-	return c
+		func(c *cobra.Command) { c.Flags().IntVar(&limit, "limit", 10, "返回数量") })
 }
 
 func newNewSongs(k *kit.Kit) *cobra.Command {
 	var limit int
-	c := &cobra.Command{
-		Use:   "new-songs",
-		Short: "推荐新歌",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, recommendendpoint.RecommendNewSongs, &mmpb.RecommendNewSongsRequest{Limit: int32(limit)})
-		},
-	}
-	c.Flags().IntVar(&limit, "limit", 10, "返回数量")
-	return c
+	return kit.ReadCmd(k, "new-songs", "推荐新歌", "", recommendendpoint.RecommendNewSongs,
+		func(int64) *mmpb.RecommendNewSongsRequest { return &mmpb.RecommendNewSongsRequest{Limit: int32(limit)} },
+		func(c *cobra.Command) { c.Flags().IntVar(&limit, "limit", 10, "返回数量") })
 }
 
 func newDailyPlaylists(k *kit.Kit) *cobra.Command {
-	return &cobra.Command{
-		Use:   "daily-playlists",
-		Short: "每日推荐歌单(登录态)",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			return kit.RenderExec(k, recommendendpoint.DailyRecommendPlaylists, &mmpb.DailyRecommendPlaylistsRequest{})
-		},
-	}
+	return kit.LoginReadCmd(k, "daily-playlists", "每日推荐歌单(登录态)", "", recommendendpoint.DailyRecommendPlaylists,
+		func(int64) *mmpb.DailyRecommendPlaylistsRequest { return &mmpb.DailyRecommendPlaylistsRequest{} })
 }
 
 func newDailySongs(k *kit.Kit) *cobra.Command {
-	return &cobra.Command{
-		Use:   "daily-songs",
-		Short: "每日推荐歌曲",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, recommendendpoint.GetDailyRecommend, &mmpb.GetDailyRecommendRequest{})
-		},
-	}
+	return kit.ReadCmd(k, "daily-songs", "每日推荐歌曲", "", recommendendpoint.GetDailyRecommend,
+		func(int64) *mmpb.GetDailyRecommendRequest { return &mmpb.GetDailyRecommendRequest{} })
 }

@@ -114,7 +114,7 @@ secrets:
 | `/player/v1/playlists/{id}` | 歌单 `{id, name, cover, trackCount, tracks: [Track]}`;`tracks` 按歌单顺序,最多 1000 首 |
 | `/player/v1/tracks/{id}` | 单曲 `Track` |
 | `/player/v1/tracks/{id}/lyrics` | 歌词 `{lines, chorus, instrumental}` |
-| `/player/v1/tracks/{id}/stream?exp=&sig=` | 302 跳转到上游直链(https) |
+| `/player/v1/tracks/{id}/stream?exp=&sig=` | 302 跳转到上游直链(https);服务账号对该歌无权益、上游只给试听片段时,响应带 `X-Kite-Trial: start=0; end=30000`(毫秒) |
 | `/healthz` | 健康检查,不限流 |
 
 `Track`:
@@ -135,6 +135,7 @@ secrets:
 
 - `access`:`free` / `vip` / `paid`(数字专辑)。`playable` 是按站点当前登录态推断的结果,最终以播放链接为准。
 - `stream` 是相对本服务的地址,直接作为 `<audio src>`;上游直链几十分钟后过期,播放中断时重新请求 `stream` 即可。
+- `stream` 的 302 响应在**试听片段**时带 `X-Kite-Trial` 头(`start=0; end=30000`,毫秒):站点账号对该歌无权益时上游只给约 30 秒的片段,自建后端可据此区分完整版;完整版没有这个头。`<audio>` 不读响应头,组件本身不消费它。
 
 歌词 `lines` 已经合并好原文、翻译、音译和逐字时间(毫秒):
 

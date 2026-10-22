@@ -6,7 +6,6 @@ package qrtui
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"regexp"
 	"strings"
@@ -39,19 +38,19 @@ type fakeDeps struct {
 
 type pollResult struct {
 	code      mmpb.QrcodeCode
-	raw       json.RawMessage
+	sess      *mmpb.Session
 	setCookie string
 	err       error
 }
 
-func (f *fakeDeps) check(context.Context) (mmpb.QrcodeCode, json.RawMessage, string, error) {
+func (f *fakeDeps) check(context.Context) (mmpb.QrcodeCode, *mmpb.Session, string, error) {
 	if f.idx >= len(f.codes) {
 		// 队列耗尽返回 WAITING(避免无限循环测试卡死)。
 		return mmpb.QrcodeCode_QRCODE_CODE_WAITING, nil, "", nil
 	}
 	r := f.codes[f.idx]
 	f.idx++
-	return r.code, r.raw, r.setCookie, r.err
+	return r.code, r.sess, r.setCookie, r.err
 }
 
 func (f *fakeDeps) now() time.Time {
@@ -105,15 +104,15 @@ func TestUpdate_PollMsgScanned(t *testing.T) {
 }
 
 func TestUpdate_PollMsgConfirmedFillsCookieAndQuits(t *testing.T) {
-	raw := json.RawMessage(`{"account":{"id":12345}}`)
+	sess := &mmpb.Session{UserId: 12345}
 	m := newTestModel(&fakeDeps{})
 	out := applyMsg(t, m, pollMsg{
 		code:      mmpb.QrcodeCode_QRCODE_CODE_CONFIRMED,
-		raw:       raw,
+		sess:      sess,
 		setCookie: "MUSIC_U=abc; path=/",
 	})
 	require.Equal(t, stateConfirmed, out.state)
-	require.Equal(t, raw, out.confirmedRaw)
+	require.Equal(t, sess, out.confirmedSess)
 	require.Equal(t, "MUSIC_U=abc; path=/", out.confirmedCookie)
 }
 
@@ -332,14 +331,14 @@ func TestClassicIntensity_BandShape(t *testing.T) {
 // Run 耦合真实终端,这里只测 Result 结构在 confirmed/expired model 下的派生逻辑。
 // 完整的 Run 流程依赖人工 smoke。
 func TestResultFromModel_Confirmed(t *testing.T) {
-	raw := json.RawMessage(`{"x":1}`)
+	sess := &mmpb.Session{UserId: 1}
 	m := model{
 		state:           stateConfirmed,
-		confirmedRaw:    raw,
+		confirmedSess:   sess,
 		confirmedCookie: "cookie",
 	}
 	require.True(t, m.state == stateConfirmed)
-	require.Equal(t, raw, m.confirmedRaw)
+	require.Equal(t, sess, m.confirmedSess)
 }
 
 func TestResultFromModel_NotConfirmedStates(t *testing.T) {

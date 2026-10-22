@@ -88,7 +88,7 @@ func TestGateway_CallerCookieReachesAccountReads(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	eng := engine.New(engine.WithCache(&memCache{m: map[string][]byte{}}), engine.WithBaseURL(up.URL))
-	app, err := NewApp(Options{GRPCAddr: "127.0.0.1:0", HTTPAddr: "127.0.0.1:0", AuthToken: testToken}, eng, session.NoopStore{})
+	app, err := NewApp(Options{GRPCAddr: "127.0.0.1:0", HTTPAddr: "127.0.0.1:0", AuthTokens: single(testToken)}, eng, session.NoopStore{})
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

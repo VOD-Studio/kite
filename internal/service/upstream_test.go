@@ -28,6 +28,8 @@ import (
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cache"
 	commentendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/comment"
+	mvendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/mv"
+	toplistendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/toplist"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
@@ -37,9 +39,11 @@ const (
 	artistID   = 6452     // 周杰伦
 	playlistID = 3778678  // 热歌榜
 	userID     = 32953014 // 网易云 API 作者的公开账号
-	mvID       = 14514682 // 公开 MV(评论区样例;评论域 #28 冒烟引入)
+	mvID       = 5436712  // 莫文蔚《广岛之恋》MV(MV 域 #32 冒烟)
+	// commentMvID 是公开 MV(评论区样例;评论域 #28 冒烟引入)。
 	// stablePlaylistID 是评论区稳定的普通歌单(榜单歌单的热评会随榜单更新清空,
 	// 不能拿来做热评冒烟;ID 与 endpoint/playlist 的 testdata 夹具同源)。
+	commentMvID      = 14514682
 	stablePlaylistID = 2219770152
 )
 
@@ -54,6 +58,7 @@ type smokeCase struct {
 // 显式登记而不是删掉用例——这样它不会悄悄被遗忘;问题修复后(不再为空)会提示移除登记。
 var knownEmpty = map[string]string{
 	"Playlist.RelatedPlaylistRecommend": "匿名调用时上游 /eapi/playlist/detail/rcmd/get 对所有歌单都返回 data=null(可能需要登录态或接口已变),见 #78",
+	"Auth.LoginStatus":                  "匿名调用时上游不返回账号信息,空响应即「未登录」语义,是预期行为",
 }
 
 func TestUpstreamSmoke(t *testing.T) {
@@ -61,8 +66,19 @@ func TestUpstreamSmoke(t *testing.T) {
 	song, album, artist := NewSongServer(eng), NewAlbumServer(eng), NewArtistServer(eng)
 	playlist, user := NewPlaylistServer(eng), NewUserServer(eng)
 	recommend, search := NewRecommendServer(eng), NewSearchServer(eng)
+	authsrv := NewAuthServer(eng, nil)
 
 	cases := []smokeCase{
+		// --- 登录(匿名可验证的子集:取二维码 key / 匿名登录态) ---
+		{"Auth.LoginQrcode", func(c context.Context) (proto.Message, error) {
+			return authsrv.LoginQrcode(c, &mmpb.LoginQrcodeRequest{})
+		}, func(t *testing.T, r proto.Message) {
+			require.NotEmpty(t, r.(*mmpb.LoginQrcodeResponse).GetQrcode().GetKey(), "二维码 key 非空")
+			require.NotEmpty(t, r.(*mmpb.LoginQrcodeResponse).GetQrcode().GetUrl(), "二维码 URL 非空")
+		}},
+		{"Auth.LoginStatus", func(c context.Context) (proto.Message, error) {
+			return authsrv.LoginStatus(c, &mmpb.LoginStatusRequest{})
+		}, nil},
 		// --- 歌曲 ---
 		{"Song.GetSongDetail", func(c context.Context) (proto.Message, error) {
 			return song.GetSongDetail(c, &mmpb.GetSongDetailRequest{SongId: songID})
@@ -230,7 +246,7 @@ func TestUpstreamSmoke(t *testing.T) {
 		}},
 		{"Comment.List(mv)", func(c context.Context) (proto.Message, error) {
 			return engine.Execute(eng, c, commentendpoint.List, &mmpb.CommentListRequest{
-				ResourceType: mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_MV, ResourceId: mvID, PageSize: 3,
+				ResourceType: mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_MV, ResourceId: commentMvID, PageSize: 3,
 			})
 		}, func(t *testing.T, r proto.Message) {
 			require.NotEmpty(t, r.(*mmpb.CommentListResponse).GetComments())
@@ -250,6 +266,59 @@ func TestUpstreamSmoke(t *testing.T) {
 			})
 		}, func(t *testing.T, r proto.Message) {
 			require.NotEmpty(t, r.(*mmpb.HotCommentsResponse).GetHotComments())
+		}},
+		// --- MV(#32 第一阶段)---
+		// 只有 endpoint 声明、无 service 方法,直接经 engine.Execute 冒烟
+		// (第二阶段 MvService 落地后换回 server 方法,与本文件其余用例一致)。
+		// SubscribedMvs(收藏 MV 列表)需登录态,不在此列;上游对匿名调用
+		// 恒返回空列表,带 cookie 的真实验证由 CLI `kite mv subscribed` 承接。
+		{"Mv.GetMv", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, mvendpoint.Detail, &mmpb.GetMvRequest{MvId: mvID})
+		}, func(t *testing.T, r proto.Message) {
+			mv := r.(*mmpb.GetMvResponse).GetMv()
+			require.Equal(t, "广岛之恋", mv.GetName())
+			require.NotEmpty(t, mv.GetUrls(), "多清晰度播放地址为空——brs 解析可能与上游不符")
+		}},
+		{"Mv.TopMvs", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, mvendpoint.Top, &mmpb.TopMvsRequest{})
+		}, func(t *testing.T, r proto.Message) {
+			mvs := r.(*mmpb.TopMvsResponse).GetMvs()
+			require.NotEmpty(t, mvs, "MV 排行榜为空——解码器可能与上游现行响应形状不符")
+			require.NotEmpty(t, mvs[0].GetName())
+			require.NotEmpty(t, mvs[0].GetPublishTime(), "发行日期为空说明未从嵌套 mv.publishTime 取值")
+			require.Positive(t, mvs[0].GetPlayCount())
+		}},
+		{"Mv.SimilarMvs", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, mvendpoint.Similar, &mmpb.SimilarMvsRequest{MvId: mvID})
+		}, func(t *testing.T, r proto.Message) {
+			mvs := r.(*mmpb.SimilarMvsResponse).GetMvs()
+			require.NotEmpty(t, mvs, "相关 MV 为空——解码器可能与上游现行响应形状不符")
+			require.NotEmpty(t, mvs[0].GetName())
+			require.Positive(t, mvs[0].GetDurationMs(), "时长为 0 说明 duration 字段名与上游不符")
+		}},
+		// --- 排行榜(#29 第一阶段)---
+		// 只有 endpoint 声明、无 service 方法,直接经 engine.Execute 冒烟
+		// (第二阶段 ToplistService 落地后换回 server 方法,与本文件其余用例一致)。
+		{"Toplist.List", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, toplistendpoint.List, &mmpb.ToplistsRequest{})
+		}, func(t *testing.T, r proto.Message) {
+			tl := r.(*mmpb.ToplistsResponse).GetToplists()
+			require.NotEmpty(t, tl, "榜单列表为空——解码器可能与上游现行响应形状不符")
+			require.NotEmpty(t, tl[0].GetName())
+			require.Positive(t, tl[0].GetTrackCount())
+		}},
+		{"Toplist.Detail", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, toplistendpoint.Detail, &mmpb.ToplistDetailRequest{})
+		}, func(t *testing.T, r proto.Message) {
+			tl := r.(*mmpb.ToplistDetailResponse).GetToplists()
+			require.NotEmpty(t, tl, "榜单详情为空——解码器可能与上游现行响应形状不符")
+			withPreview := 0
+			for _, item := range tl {
+				if len(item.GetPreviewTracks()) > 0 {
+					withPreview++
+				}
+			}
+			require.NotZero(t, withPreview, "没有任何榜单带前三歌曲概要——概要字段名可能与上游不符")
 		}},
 	}
 

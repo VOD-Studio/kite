@@ -1,15 +1,12 @@
-// Package service 的 RecommendService impl。
+// Package service 的 RecommendService impl 结构体;一行转发方法由 recommend_gen.go 生成。
 package service
 
 import (
-	"context"
-
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
-	recommendendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/recommend"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
-// RecommendServer 实现 RecommendServiceServer。
+// RecommendServer 实现 RecommendServiceServer，持有 *engine.Engine。
 type RecommendServer struct {
 	mmpb.UnimplementedRecommendServiceServer
 	eng *engine.Engine
@@ -18,25 +15,4 @@ type RecommendServer struct {
 // NewRecommendServer 创建 RecommendServer。
 func NewRecommendServer(eng *engine.Engine) *RecommendServer {
 	return &RecommendServer{eng: eng}
-}
-
-// GetDailyRecommend 获取每日推荐。恒一行。
-func (s *RecommendServer) GetDailyRecommend(ctx context.Context, req *mmpb.GetDailyRecommendRequest) (*mmpb.GetDailyRecommendResponse, error) {
-	resp, err := engine.Execute(s.eng, ctx, recommendendpoint.GetDailyRecommend, req)
-	return resp, err
-}
-
-// DailyRecommendPlaylists 获取每日推荐歌单（结果按调用方而异，走 cookie override）。
-func (s *RecommendServer) DailyRecommendPlaylists(ctx context.Context, req *mmpb.DailyRecommendPlaylistsRequest) (*mmpb.DailyRecommendPlaylistsResponse, error) {
-	return executeOverride(s.eng, ctx, recommendendpoint.DailyRecommendPlaylists, req)
-}
-
-// RecommendPlaylists 获取推荐歌单。
-func (s *RecommendServer) RecommendPlaylists(ctx context.Context, req *mmpb.RecommendPlaylistsRequest) (*mmpb.RecommendPlaylistsResponse, error) {
-	return engine.Execute(s.eng, ctx, recommendendpoint.RecommendPlaylists, req)
-}
-
-// RecommendNewSongs 获取推荐新音乐。
-func (s *RecommendServer) RecommendNewSongs(ctx context.Context, req *mmpb.RecommendNewSongsRequest) (*mmpb.RecommendNewSongsResponse, error) {
-	return engine.Execute(s.eng, ctx, recommendendpoint.RecommendNewSongs, req)
 }

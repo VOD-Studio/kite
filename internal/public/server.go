@@ -42,7 +42,7 @@ type Server struct {
 func New(eng *engine.Engine, opts Options) *Server {
 	s := newServer(engineCatalog{eng: eng}, opts, time.Now)
 	s.auth = func(ctx context.Context) error {
-		s.owner.runRefresh(ctx, eng.RawDoWithCookieAndInput)
+		s.owner.runRefresh(ctx, eng)
 		return nil
 	}
 	return s
@@ -227,12 +227,12 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cookie := s.owner.cookie()
-	url, err := s.cat.StreamURL(r.Context(), id, s.opts.Level, cookie)
+	su, err := s.cat.StreamURL(r.Context(), id, s.opts.Level, cookie)
 	if err != nil && !errors.Is(err, merrors.ErrNotFound) {
 		writeUpstreamError(w, err)
 		return
 	}
-	if url == "" {
+	if su.GetUrl() == "" {
 		msg := "这首歌暂时无法播放(版权限制或需要 VIP)"
 		if cookie == "" {
 			msg = "这首是 VIP 歌曲,当前服务没有登录 VIP 账号"
@@ -240,11 +240,16 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "UNPLAYABLE", msg)
 		return
 	}
-	target, ok := streamTarget(url)
+	target, ok := streamTarget(su.GetUrl())
 	if !ok {
 		slog.Warn("上游返回了不在网易云域名下的播放链接,拒绝跳转", slog.Int64("id", id))
 		writeError(w, http.StatusBadGateway, "UPSTREAM_ERROR", "上游返回的播放链接无效")
 		return
+	}
+	if su.GetTrial() {
+		// 服务账号对该歌无权益时上游只给试听片段:把区间透传给消费方
+		// (<audio> 不读响应头,自建后端按需消费),毫秒,完整版没有这个头。
+		w.Header().Set("X-Kite-Trial", fmt.Sprintf("start=%d; end=%d", su.GetTrialStartMs(), su.GetTrialEndMs()))
 	}
 	// 直链几十分钟后过期:只让浏览器短暂复用,过期后播放器会重新请求这里。
 	w.Header().Set("Cache-Control", "private, max-age=60")

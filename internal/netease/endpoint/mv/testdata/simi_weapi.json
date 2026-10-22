@@ -1,0 +1,65 @@
+{
+ "mvs": [
+  {
+   "id": 142002,
+   "cover": "http://p1.music.126.net/_lF0atFA17veynfMTl3_Lw==/363938348829213.jpg",
+   "name": "超级面对面 第29期 陶喆：温情的我依然有姿态",
+   "playCount": 514638,
+   "briefDesc": null,
+   "desc": null,
+   "artistName": "陶喆",
+   "artistId": 5196,
+   "duration": 539000,
+   "mark": 0,
+   "artists": [
+    {
+     "id": 5196,
+     "name": "陶喆",
+     "alias": [
+      "David Tao",
+      "陶绪忠"
+     ],
+     "transNames": null
+    },
+    {
+     "id": 37576510,
+     "name": "超级面对面",
+     "alias": [],
+     "transNames": null
+    }
+   ],
+   "alg": "rt"
+  },
+  {
+   "id": 144001,
+   "cover": "http://p1.music.126.net/EqlFbFzCanjWBrZJEREYQQ==/6037418348118157.jpg",
+   "name": "超级面对面 第30期 曾轶可：我真的是颗辣糖 来尝尝",
+   "playCount": 422433,
+   "briefDesc": null,
+   "desc": null,
+   "artistName": "曾轶可",
+   "artistId": 10750,
+   "duration": 518000,
+   "mark": 0,
+   "artists": [
+    {
+     "id": 10750,
+     "name": "曾轶可",
+     "alias": [
+      "绵羊天使",
+      "羊"
+     ],
+     "transNames": null
+    },
+    {
+     "id": 37576510,
+     "name": "超级面对面",
+     "alias": [],
+     "transNames": null
+    }
+   ],
+   "alg": "rt"
+  }
+ ],
+ "code": 200
+}

@@ -278,10 +278,10 @@ func TestRawDoWithCookieAndInput_ContextCookieToUpstream(t *testing.T) {
 	}
 }
 
-// TestRawDo_UserAgentOverride 验证 Meta.UserAgent 透传到上游请求头:
+// TestRawExecute_UserAgentOverride 验证 Meta.UserAgent 透传到上游请求头:
 // 空值回落桌面默认 UA,非空(如 MobileUserAgent)原样发出。
 // 该接线是 song url CDN 节点分配的关键(桌面 UA 拿到的链接 403,移动端正常)。
-func TestRawDo_UserAgentOverride(t *testing.T) {
+func TestRawExecute_UserAgentOverride(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -305,7 +305,7 @@ func TestRawDo_UserAgentOverride(t *testing.T) {
 			t.Cleanup(srv.Close)
 
 			eng := engine.New(engine.WithBaseURL(srv.URL))
-			_, err := eng.RawDo(context.Background(), engine.Meta{
+			_, _, err := eng.RawDoWithCookieAndInput(context.Background(), engine.Meta{
 				Path: "/weapi/x", Method: "POST", Crypto: engine.CryptoWeAPI, UserAgent: tt.ua,
 			}, map[string]any{})
 			require.NoError(t, err)

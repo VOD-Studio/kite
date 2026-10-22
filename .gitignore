@@ -36,3 +36,7 @@ dist/
 node_modules/
 interop/rust/target/
 interop/rust/kite.binpb
+
+# Python 字节码缓存(scripts-check 跑 scripts/*_test.sh 时生成)
+__pycache__/
+*.pyc

@@ -31,7 +31,7 @@ var Suggest = &engine.Endpoint[*mmpb.SuggestRequest, *mmpb.SuggestResponse]{
 		return map[string]any{"s": req.GetKeyword()}, nil
 	},
 	MapResponse: func(_ *mmpb.SuggestRequest, raw json.RawMessage) (*mmpb.SuggestResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Result struct {
 				Songs []struct {
 					Name string `json:"name"`
@@ -46,9 +46,9 @@ var Suggest = &engine.Endpoint[*mmpb.SuggestRequest, *mmpb.SuggestResponse]{
 					Name string `json:"name"`
 				} `json:"playlists"`
 			} `json:"result"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析搜索建议失败: %w", err)
+		}](raw, "搜索建议")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.SuggestResponse{}
 		for _, s := range resp.Result.Songs {
@@ -86,16 +86,16 @@ var Hot = &engine.Endpoint[*mmpb.HotRequest, *mmpb.HotResponse]{
 	MapResponse: func(_ *mmpb.HotRequest, raw json.RawMessage) (*mmpb.HotResponse, error) {
 		// 真机响应: {"code":200,"result":{"hots":[{"first":"薛之谦","second":1,"iconType":1}]}}
 		// first=热搜词 second=排名;无 iconUrl 字段。
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Result struct {
 				Hots []struct {
 					First  string `json:"first"`
 					Second int32  `json:"second"`
 				} `json:"hots"`
 			} `json:"result"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析热搜失败: %w", err)
+		}](raw, "热搜")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.HotResponse{}
 		for _, h := range resp.Result.Hots {
@@ -124,7 +124,7 @@ var HotDetail = &engine.Endpoint[*mmpb.HotDetailRequest, *mmpb.HotDetailResponse
 		return map[string]any{}, nil
 	},
 	MapResponse: func(_ *mmpb.HotDetailRequest, raw json.RawMessage) (*mmpb.HotDetailResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Data []struct {
 				SearchWord string `json:"searchWord"`
 				Score      int32  `json:"score"`
@@ -132,9 +132,9 @@ var HotDetail = &engine.Endpoint[*mmpb.HotDetailRequest, *mmpb.HotDetailResponse
 				CoverURL   string `json:"coverImgUrl"`
 				IconURL    string `json:"iconUrl"`
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析热搜详细失败: %w", err)
+		}](raw, "热搜详细")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.HotDetailResponse{}
 		for _, d := range resp.Data {
@@ -164,13 +164,13 @@ var DefaultKeyword = &engine.Endpoint[*mmpb.DefaultKeywordRequest, *mmpb.Default
 		return map[string]any{}, nil
 	},
 	MapResponse: func(_ *mmpb.DefaultKeywordRequest, raw json.RawMessage) (*mmpb.DefaultKeywordResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Data struct {
 				Keyword string `json:"realkeyword"`
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析默认搜索词失败: %w", err)
+		}](raw, "默认搜索词")
+		if err != nil {
+			return nil, err
 		}
 		return &mmpb.DefaultKeywordResponse{Keyword: resp.Data.Keyword}, nil
 	},

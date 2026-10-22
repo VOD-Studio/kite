@@ -13,6 +13,7 @@ import { playerSheet } from "./styles";
 import {
   $,
   artists,
+  canPlay,
   canAnimate,
   flyEvent,
   openEvent,
@@ -271,7 +272,9 @@ export class KitePlayerElement extends LitElement {
         <span class="ring" style=${styleMap({ "--pct": String(pct) })}></span><span class="disc-img"><img alt="" src=${ifDefined(t?.album.cover || undefined)} /></span>
       </button>
       <button class="bar-text expand" aria-label="展开播放器" @click=${this.onExpand}>
-        <span class="bar-title ell">${t?.title ?? ""}</span><span class="bar-sub">${keyed(ticker, html`<span class="ell">${ticker}</span>`)}</span>
+        <span class="bar-line"
+          ><span class="bar-title ell">${t?.title ?? ""}</span>${t?.trial ? html`<span class="rtag trial">仅试听</span>` : nothing}</span
+        ><span class="bar-sub">${keyed(ticker, html`<span class="ell">${ticker}</span>`)}</span>
       </button>
       <div class="bar-ctl">
         <button class="ib desk prev" aria-label="上一首" @click=${this.prev}>${icons.prev}</button>
@@ -287,7 +290,7 @@ export class KitePlayerElement extends LitElement {
     const ui = this.ui;
     const cover = t?.album.cover || undefined;
     const who = artists(t);
-    const tag = t?.access === "vip" ? "VIP" : t?.access === "paid" ? "数字专辑" : "";
+    const tag = [t?.trial ? "仅试听" : "", t?.access === "vip" ? "VIP" : t?.access === "paid" ? "数字专辑" : ""].filter(Boolean).join(" · ");
     const lyr = s.lyrics;
     const empty = !lyr || lyr.instrumental || lyr.lines.length === 0;
     const chorus = lyr?.chorus[0];
@@ -401,12 +404,15 @@ export class KitePlayerElement extends LitElement {
         (t, i) => `${i}:${t.id}`,
         (t, i) => {
           const isCur = t.id === cur;
-          const tag = t.access === "vip" ? html`<span class="rtag vip">VIP</span>` : t.access === "paid" ? html`<span class="rtag paid">数字专辑</span>` : nothing;
+          const tag = [
+            t.trial ? html`<span class="rtag trial">仅试听</span>` : nothing,
+            t.access === "vip" ? html`<span class="rtag vip">VIP</span>` : t.access === "paid" ? html`<span class="rtag paid">数字专辑</span>` : nothing,
+          ];
           const sub = [artists(t), t.album.name].filter(Boolean).join(" · ");
-          return html`<button class=${classMap({ row: true, locked: !t.playable, cur: isCur })} role="listitem" data-i=${i} style="--i:${Math.min(i, 12)}" @click=${() => this.pickRow(i)}>
+          return html`<button class=${classMap({ row: true, locked: !canPlay(t), cur: isCur })} role="listitem" data-i=${i} style="--i:${Math.min(i, 12)}" @click=${() => this.pickRow(i)}>
             <span class="row-main"
               ><span class="row-title"><span class="ell">${t.title}</span>${isCur ? eq : nothing}</span><span class="row-sub">${tag}<span class="ell">${sub}</span></span></span
-            >${t.playable ? html`<span class="row-dur">${formatTime(t.durationMs / 1000)}</span>` : html`<span class="lock">${icons.lock}</span>`}
+            >${canPlay(t) ? html`<span class="row-dur">${formatTime(t.durationMs / 1000)}</span>` : html`<span class="lock">${icons.lock}</span>`}
           </button>`;
         },
       ),
@@ -671,7 +677,7 @@ export class KitePlayerElement extends LitElement {
     try {
       const pl = await this.player.loadPlaylist(first);
       if (this.player.state.queue.length > 0) return;
-      const i = pl.tracks.findIndex((t) => t.playable);
+      const i = pl.tracks.findIndex(canPlay);
       this.player.setQueue(pl.tracks, Math.max(i, 0), { id: pl.id, name: pl.name }, false);
     } catch (err) {
       this.toast((err as Error).message || "歌单加载失败");
@@ -877,7 +883,7 @@ export class KitePlayerElement extends LitElement {
   private pickRow(i: number): void {
     const t = this.ui.sheetTracks[i];
     if (!t) return;
-    if (!t.playable) {
+    if (!canPlay(t)) {
       this.toast(unplayableMessage(t));
       return;
     }

@@ -46,7 +46,7 @@ var URL = &engine.Endpoint[*mmpb.GetSongURLRequest, *mmpb.GetSongURLResponse]{
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.GetSongURLRequest, raw json.RawMessage) (*mmpb.GetSongURLResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Code int `json:"code"`
 			Data []struct {
 				ID   int64  `json:"id"`
@@ -54,18 +54,33 @@ var URL = &engine.Endpoint[*mmpb.GetSongURLRequest, *mmpb.GetSongURLResponse]{
 				Br   int64  `json:"br"`
 				Size int64  `json:"size"`
 				Type string `json:"type"`
+				Code int    `json:"code"`
+				Fee  int    `json:"fee"`
+				// FreeTrialInfo 只在账号对该歌无权益、上游给约 30 秒试听片段时非空
+				// (完整版 / 匿名免费歌为 null 或缺省),start/end 单位毫秒。
+				FreeTrialInfo *struct {
+					Start int64 `json:"start"`
+					End   int64 `json:"end"`
+				} `json:"freeTrialInfo"`
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.GetSongURLResponse{}, fmt.Errorf("解析播放 URL 失败: %w", err)
+		}](raw, "播放 URL")
+		if err != nil {
+			return nil, err
 		}
 		if len(resp.Data) == 0 {
 			return &mmpb.GetSongURLResponse{}, fmt.Errorf("未找到播放 URL（可能是 VIP 歌曲）: %w", merrors.ErrNotFound)
 		}
 		d := resp.Data[0]
-		return &mmpb.GetSongURLResponse{
-			Url: &mmpb.SongURL{Id: d.ID, Url: d.URL, Bitrate: d.Br, Size: d.Size, Format: d.Type},
-		}, nil
+		out := &mmpb.SongURL{
+			Id: d.ID, Url: d.URL, Bitrate: d.Br, Size: d.Size, Format: d.Type,
+			Code: int32(d.Code), Fee: int32(d.Fee),
+		}
+		if t := d.FreeTrialInfo; t != nil {
+			out.Trial = true
+			out.TrialStartMs = t.Start
+			out.TrialEndMs = t.End
+		}
+		return &mmpb.GetSongURLResponse{Url: out}, nil
 	},
 }
 

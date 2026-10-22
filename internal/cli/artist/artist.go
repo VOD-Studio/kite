@@ -49,178 +49,71 @@ func annotateArtistRpcs(c *cobra.Command) {
 	}
 }
 
-// withID 注册 --id 歌手 ID 必填 flag。
-func withID(c *cobra.Command, id *int64) {
-	c.Flags().Int64Var(id, "id", 0, "歌手 ID")
-}
-
 func newDetail(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "detail",
-		Short: "歌手详情",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, artistendpoint.GetArtist, &mmpb.GetArtistRequest{ArtistId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.ReadCmd(k, "detail", "歌手详情", "歌手 ID", artistendpoint.GetArtist,
+		func(id int64) *mmpb.GetArtistRequest { return &mmpb.GetArtistRequest{ArtistId: id} })
 }
 
 func newSongs(k *kit.Kit) *cobra.Command {
-	var id int64
 	var limit, offset int
-	c := &cobra.Command{
-		Use:   "songs",
-		Short: "歌手全部歌曲",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, artistendpoint.AllSongs, &mmpb.AllSongsRequest{ArtistId: rid, Limit: int32(limit), Offset: int32(offset)})
+	return kit.ReadCmd(k, "songs", "歌手全部歌曲", "歌手 ID", artistendpoint.AllSongs,
+		func(id int64) *mmpb.AllSongsRequest {
+			return &mmpb.AllSongsRequest{ArtistId: id, Limit: int32(limit), Offset: int32(offset)}
 		},
-	}
-	withID(c, &id)
-	c.Flags().IntVar(&limit, "limit", 20, "返回数量")
-	c.Flags().IntVar(&offset, "offset", 0, "偏移量")
-	return c
+		func(c *cobra.Command) {
+			c.Flags().IntVar(&limit, "limit", 20, "返回数量")
+			c.Flags().IntVar(&offset, "offset", 0, "偏移量")
+		})
 }
 
 func newTopSongs(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "top-songs",
-		Short: "歌手热门歌曲",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, artistendpoint.TopSongs, &mmpb.TopSongsRequest{ArtistId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.ReadCmd(k, "top-songs", "歌手热门歌曲", "歌手 ID", artistendpoint.TopSongs,
+		func(id int64) *mmpb.TopSongsRequest { return &mmpb.TopSongsRequest{ArtistId: id} })
 }
 
 func newAlbums(k *kit.Kit) *cobra.Command {
-	var id int64
 	var limit, offset int
-	c := &cobra.Command{
-		Use:   "albums",
-		Short: "歌手专辑列表",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, artistendpoint.Albums, &mmpb.AlbumsRequest{ArtistId: rid, Limit: int32(limit), Offset: int32(offset)})
+	return kit.ReadCmd(k, "albums", "歌手专辑列表", "歌手 ID", artistendpoint.Albums,
+		func(id int64) *mmpb.AlbumsRequest {
+			return &mmpb.AlbumsRequest{ArtistId: id, Limit: int32(limit), Offset: int32(offset)}
 		},
-	}
-	withID(c, &id)
-	c.Flags().IntVar(&limit, "limit", 10, "返回数量")
-	c.Flags().IntVar(&offset, "offset", 0, "偏移量")
-	return c
+		func(c *cobra.Command) {
+			c.Flags().IntVar(&limit, "limit", 10, "返回数量")
+			c.Flags().IntVar(&offset, "offset", 0, "偏移量")
+		})
 }
 
 func newDesc(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "desc",
-		Short: "歌手简介",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, artistendpoint.Desc, &mmpb.DescRequest{ArtistId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.ReadCmd(k, "desc", "歌手简介", "歌手 ID", artistendpoint.Desc,
+		func(id int64) *mmpb.DescRequest { return &mmpb.DescRequest{ArtistId: id} })
 }
 
 func newSimilar(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "similar",
-		Short: "相似歌手",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, artistendpoint.Similar, &mmpb.SimilarRequest{ArtistId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.ReadCmd(k, "similar", "相似歌手", "歌手 ID", artistendpoint.Similar,
+		func(id int64) *mmpb.SimilarRequest { return &mmpb.SimilarRequest{ArtistId: id} })
 }
 
 func newFans(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "fans",
-		Short: "歌手粉丝",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, artistendpoint.Fans, &mmpb.FansRequest{ArtistId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.ReadCmd(k, "fans", "歌手粉丝", "歌手 ID", artistendpoint.Fans,
+		func(id int64) *mmpb.FansRequest { return &mmpb.FansRequest{ArtistId: id} })
 }
 
 func newToplist(k *kit.Kit) *cobra.Command {
 	var limit, offset int
-	c := &cobra.Command{
-		Use:   "toplist",
-		Short: "歌手榜",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, artistendpoint.TopArtists, &mmpb.TopArtistsRequest{Limit: int32(limit), Offset: int32(offset)})
+	return kit.ReadCmd(k, "toplist", "歌手榜", "", artistendpoint.TopArtists,
+		func(int64) *mmpb.TopArtistsRequest {
+			return &mmpb.TopArtistsRequest{Limit: int32(limit), Offset: int32(offset)}
 		},
-	}
-	c.Flags().IntVar(&limit, "limit", 10, "返回数量")
-	c.Flags().IntVar(&offset, "offset", 0, "偏移量")
-	return c
+		func(c *cobra.Command) {
+			c.Flags().IntVar(&limit, "limit", 10, "返回数量")
+			c.Flags().IntVar(&offset, "offset", 0, "偏移量")
+		})
 }
 
 func newSubscribe(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "subscribe",
-		Short: "收藏/取消收藏歌手(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("收藏/取消收藏歌手 %d", rid)); err != nil {
-				return err
-			}
-			return kit.RenderExec(k, artistendpoint.Subscribe, &mmpb.ArtistSubscribeRequest{ArtistId: rid})
+	return kit.WriteCmd(k, "subscribe", "收藏/取消收藏歌手(写操作,登录态)", "歌手 ID", "", artistendpoint.Subscribe,
+		func(req *mmpb.ArtistSubscribeRequest) string {
+			return fmt.Sprintf("收藏/取消收藏歌手 %d", req.GetArtistId())
 		},
-	}
-	withID(c, &id)
-	return c
+		func(id int64) *mmpb.ArtistSubscribeRequest { return &mmpb.ArtistSubscribeRequest{ArtistId: id} })
 }

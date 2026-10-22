@@ -16,14 +16,17 @@ import (
 	"github.com/VOD-Studio/kite/internal/cli/auth"
 	"github.com/VOD-Studio/kite/internal/cli/comment"
 	"github.com/VOD-Studio/kite/internal/cli/config"
+	"github.com/VOD-Studio/kite/internal/cli/dj"
 	"github.com/VOD-Studio/kite/internal/cli/fm"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
 	"github.com/VOD-Studio/kite/internal/cli/mcp"
+	mv "github.com/VOD-Studio/kite/internal/cli/mv"
 	"github.com/VOD-Studio/kite/internal/cli/playlist"
 	"github.com/VOD-Studio/kite/internal/cli/recent"
 	"github.com/VOD-Studio/kite/internal/cli/recommend"
 	"github.com/VOD-Studio/kite/internal/cli/search"
 	"github.com/VOD-Studio/kite/internal/cli/song"
+	"github.com/VOD-Studio/kite/internal/cli/toplist"
 	"github.com/VOD-Studio/kite/internal/cli/user"
 	"github.com/VOD-Studio/kite/internal/cli/version"
 	"github.com/VOD-Studio/kite/internal/localstate"
@@ -158,6 +161,7 @@ func NewRootCommand() *cobra.Command {
 		artist.NewCommand(k),
 		playlist.NewCommand(k),
 		comment.NewCommand(k), // 评论域 Phase A(#28):评论列表/热评 + 写操作
+		mv.NewCommand(k),
 	} {
 		c.GroupID = "music"
 		root.AddCommand(c)
@@ -166,7 +170,9 @@ func NewRootCommand() *cobra.Command {
 	for _, c := range []*cobra.Command{
 		recommend.NewCommand(k),
 		fm.NewCommand(k),
-		recent.NewCommand(k), // #47 recent 归发现(读召回池,复听场景)
+		recent.NewCommand(k),  // #47 recent 归发现(读召回池,复听场景)
+		toplist.NewCommand(k), // #29 排行榜归发现(榜单浏览场景)
+		dj.NewCommand(k),      // #33 电台归发现(音频内容源)
 	} {
 		c.GroupID = "discover"
 		root.AddCommand(c)

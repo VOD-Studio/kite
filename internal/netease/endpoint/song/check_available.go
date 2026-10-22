@@ -34,14 +34,14 @@ var CheckAvailable = &engine.Endpoint[*mmpb.CheckAvailableRequest, *mmpb.CheckAv
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.CheckAvailableRequest, raw json.RawMessage) (*mmpb.CheckAvailableResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Code int `json:"code"`
 			Data []struct {
 				Code int `json:"code"` // 单曲业务码，200 表示有版权
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.CheckAvailableResponse{}, fmt.Errorf("解析可用性响应失败: %w", err)
+		}](raw, "可用性响应")
+		if err != nil {
+			return nil, err
 		}
 		available := resp.Code == 200 && len(resp.Data) > 0 && resp.Data[0].Code == 200
 		msg := "ok"

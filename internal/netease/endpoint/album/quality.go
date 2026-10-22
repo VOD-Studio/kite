@@ -30,7 +30,7 @@ var AlbumSongQuality = &engine.Endpoint[*mmpb.AlbumSongQualityRequest, *mmpb.Alb
 		return map[string]any{"id": req.GetAlbumId()}, nil
 	},
 	MapResponse: func(_ *mmpb.AlbumSongQualityRequest, raw json.RawMessage) (*mmpb.AlbumSongQualityResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Songs []struct {
 				ID         int64 `json:"id"`
 				Privileges []struct {
@@ -38,9 +38,9 @@ var AlbumSongQuality = &engine.Endpoint[*mmpb.AlbumSongQualityRequest, *mmpb.Alb
 					Bitrate int64  `json:"maxbr"`
 				} `json:"privileges"`
 			} `json:"songs"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.AlbumSongQualityResponse{}, fmt.Errorf("解析专辑音质失败: %w", err)
+		}](raw, "专辑音质")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.AlbumSongQualityResponse{}
 		for _, s := range resp.Songs {
