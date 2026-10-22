@@ -60,14 +60,11 @@ var Add = &engine.Endpoint[*mmpb.AddCommentRequest, *mmpb.AddCommentResponse]{
 	MapResponse: func(_ *mmpb.AddCommentRequest, raw json.RawMessage) (*mmpb.AddCommentResponse, error) {
 		// 上游成功响应可能带回新评论对象(comment.id);拿不到时不报错,
 		// 成功与否以 code 校验(engine)为准。登录态形状未实测,见文件头说明。
-		var resp struct {
+		resp := engine.DecodeLoose[struct {
 			Comment struct {
 				ID int64 `json:"id"`
 			} `json:"comment"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.AddCommentResponse{}, nil //nolint:nilerr // 响应形状未核对过,解码失败不当作业务失败
-		}
+		}](raw)
 		return &mmpb.AddCommentResponse{CommentId: resp.Comment.ID}, nil
 	},
 }
@@ -84,14 +81,11 @@ var Reply = &engine.Endpoint[*mmpb.ReplyCommentRequest, *mmpb.ReplyCommentRespon
 		return map[string]any{"threadId": tid, "commentId": req.GetCommentId(), "content": req.GetContent()}, nil
 	},
 	MapResponse: func(_ *mmpb.ReplyCommentRequest, raw json.RawMessage) (*mmpb.ReplyCommentResponse, error) {
-		var resp struct {
+		resp := engine.DecodeLoose[struct {
 			Comment struct {
 				ID int64 `json:"id"`
 			} `json:"comment"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.ReplyCommentResponse{}, nil //nolint:nilerr // 同 Add:解码失败不当作业务失败
-		}
+		}](raw)
 		return &mmpb.ReplyCommentResponse{CommentId: resp.Comment.ID}, nil
 	},
 }

@@ -61,220 +61,181 @@ func strToSort(s string) (mmpb.CommentSortType, error) {
 	}
 }
 
-// withResource 注册 --type 资源类型与 --id 资源 ID flag(读/写命令共用)。
-// --id 非必填,由位置参数补(同 album 的 withID 约定);--type 必填。
-func withResource(c *cobra.Command, typ *string, id *int64) {
-	c.Flags().StringVar(typ, "type", "", "资源类型: song/mv/playlist/album")
-	_ = c.MarkFlagRequired("type")
-	c.Flags().Int64Var(id, "id", 0, "资源 ID")
+// resourceTypeName enum → 展示名(确认文案与 --help 默认值用)。
+var resourceTypeName = map[mmpb.CommentResourceType]string{
+	mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_SONG:     "song",
+	mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_MV:       "mv",
+	mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_PLAYLIST: "playlist",
+	mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_ALBUM:    "album",
+}
+
+// sortTypeName enum → 展示名。
+var sortTypeName = map[mmpb.CommentSortType]string{
+	mmpb.CommentSortType_COMMENT_SORT_TYPE_RECOMMEND: "recommend",
+	mmpb.CommentSortType_COMMENT_SORT_TYPE_HOT:       "hot",
+	mmpb.CommentSortType_COMMENT_SORT_TYPE_TIME:      "time",
+}
+
+// resourceTypeValue --type 的 pflag.Value:枚举合法性校验前移到 flag 解析期,
+// 坏值由 Set 报错(root 的 SetFlagErrorFunc 统一包 ErrUsage,退出码 2),
+// 构造器的 req 闭包拿到的即已验证枚举,不必在 RunE 里手写校验样板。
+type resourceTypeValue struct{ v mmpb.CommentResourceType }
+
+func (f *resourceTypeValue) String() string { return resourceTypeName[f.v] }
+func (f *resourceTypeValue) Type() string   { return "string" } // help 显示 --type string,与迁移前一致
+func (f *resourceTypeValue) Set(s string) error {
+	rt, err := strToResourceType(s)
+	if err != nil {
+		return err
+	}
+	f.v = rt
+	return nil
+}
+
+// sortTypeValue --sort 的 pflag.Value,机制同 resourceTypeValue。
+type sortTypeValue struct{ v mmpb.CommentSortType }
+
+func (f *sortTypeValue) String() string { return sortTypeName[f.v] }
+func (f *sortTypeValue) Type() string   { return "string" } // 同上,help 显示 --sort string
+func (f *sortTypeValue) Set(s string) error {
+	st, err := strToSort(s)
+	if err != nil {
+		return err
+	}
+	f.v = st
+	return nil
+}
+
+// withTypeFlags 注册必填 --type(其余命令私有 flag 由调用方续接)。
+func withTypeFlags(rt *resourceTypeValue) kit.CmdFlags {
+	return func(c *cobra.Command) {
+		c.Flags().Var(rt, "type", "资源类型: song/mv/playlist/album")
+		_ = c.MarkFlagRequired("type")
+	}
 }
 
 func newList(k *kit.Kit) *cobra.Command {
-	var typ string
-	var id int64
-	var sort string
+	var rt resourceTypeValue
+	var st sortTypeValue
 	var page, size int
 	var cursor string
-	c := &cobra.Command{
-		Use:   "list",
-		Short: "评论列表(推荐/热度/时间排序,分页)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			rt, err := strToResourceType(typ)
-			if err != nil {
-				return err
-			}
-			st, err := strToSort(sort)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, commentendpoint.List, &mmpb.CommentListRequest{
-				ResourceType: rt, ResourceId: rid, Sort: st,
+	st.v = mmpb.CommentSortType_COMMENT_SORT_TYPE_RECOMMEND
+	return kit.ReadCmd(k, "list", "评论列表(推荐/热度/时间排序,分页)", "资源 ID", commentendpoint.List,
+		func(id int64) *mmpb.CommentListRequest {
+			return &mmpb.CommentListRequest{
+				ResourceType: rt.v, ResourceId: id, Sort: st.v,
 				PageNo: int32(page), PageSize: int32(size), Cursor: cursor,
-			})
+			}
 		},
-	}
-	withResource(c, &typ, &id)
-	c.Flags().StringVar(&sort, "sort", "recommend", "排序: recommend/hot/time(时间排序翻页用 --cursor)")
-	c.Flags().IntVar(&page, "page", 1, "页码,1 起")
-	c.Flags().IntVar(&size, "size", 20, "每页数量")
-	c.Flags().StringVar(&cursor, "cursor", "", "时间排序的翻页游标(上一页输出的 cursor)")
-	return c
+		withTypeFlags(&rt),
+		func(c *cobra.Command) {
+			c.Flags().Var(&st, "sort", "排序: recommend/hot/time(时间排序翻页用 --cursor)")
+			c.Flags().IntVar(&page, "page", 1, "页码,1 起")
+			c.Flags().IntVar(&size, "size", 20, "每页数量")
+			c.Flags().StringVar(&cursor, "cursor", "", "时间排序的翻页游标(上一页输出的 cursor)")
+		})
 }
 
 func newHot(k *kit.Kit) *cobra.Command {
-	var typ string
-	var id int64
+	var rt resourceTypeValue
 	var limit, offset int
 	var before int64
-	c := &cobra.Command{
-		Use:   "hot",
-		Short: "热门评论",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			rt, err := strToResourceType(typ)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, commentendpoint.Hot, &mmpb.HotCommentsRequest{
-				ResourceType: rt, ResourceId: rid,
+	return kit.ReadCmd(k, "hot", "热门评论", "资源 ID", commentendpoint.Hot,
+		func(id int64) *mmpb.HotCommentsRequest {
+			return &mmpb.HotCommentsRequest{
+				ResourceType: rt.v, ResourceId: id,
 				Limit: int32(limit), Offset: int32(offset), BeforeTime: before,
-			})
+			}
 		},
-	}
-	withResource(c, &typ, &id)
-	c.Flags().IntVar(&limit, "limit", 20, "返回数量")
-	c.Flags().IntVar(&offset, "offset", 0, "偏移量")
-	c.Flags().Int64Var(&before, "before", 0, "取该毫秒时间之前的热评(翻页续传)")
-	return c
+		withTypeFlags(&rt),
+		func(c *cobra.Command) {
+			c.Flags().IntVar(&limit, "limit", 20, "返回数量")
+			c.Flags().IntVar(&offset, "offset", 0, "偏移量")
+			c.Flags().Int64Var(&before, "before", 0, "取该毫秒时间之前的热评(翻页续传)")
+		})
 }
 
 func newLike(k *kit.Kit) *cobra.Command {
-	var typ string
-	var id, commentID int64
+	var rt resourceTypeValue
+	var commentID int64
 	var unlike bool
-	c := &cobra.Command{
-		Use:   "like",
-		Short: "点赞/取消点赞评论(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			rt, err := strToResourceType(typ)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
+	return kit.WriteCmd(k, "like", "点赞/取消点赞评论(写操作,登录态)", "资源 ID", "", commentendpoint.Like,
+		func(req *mmpb.LikeCommentRequest) string {
 			action := "点赞"
 			if unlike {
 				action = "取消点赞"
 			}
-			if err := k.ConfirmFatal(fmt.Sprintf("%s %s %d 的评论 %d", action, typ, rid, commentID)); err != nil {
-				return err
-			}
-			return kit.RenderExec(k, commentendpoint.Like, &mmpb.LikeCommentRequest{
-				ResourceType: rt, ResourceId: rid, CommentId: commentID, Like: !unlike,
-			})
+			return fmt.Sprintf("%s %s %d 的评论 %d",
+				action, resourceTypeName[req.GetResourceType()], req.GetResourceId(), req.GetCommentId())
 		},
-	}
-	withResource(c, &typ, &id)
-	c.Flags().Int64Var(&commentID, "comment-id", 0, "评论 ID")
-	_ = c.MarkFlagRequired("comment-id")
-	c.Flags().BoolVar(&unlike, "unlike", false, "取消点赞(默认点赞)")
-	return c
+		func(id int64) *mmpb.LikeCommentRequest {
+			return &mmpb.LikeCommentRequest{
+				ResourceType: rt.v, ResourceId: id, CommentId: commentID, Like: !unlike,
+			}
+		},
+		withTypeFlags(&rt),
+		func(c *cobra.Command) {
+			c.Flags().Int64Var(&commentID, "comment-id", 0, "评论 ID")
+			_ = c.MarkFlagRequired("comment-id")
+			c.Flags().BoolVar(&unlike, "unlike", false, "取消点赞(默认点赞)")
+		})
 }
 
 func newAdd(k *kit.Kit) *cobra.Command {
-	var typ string
-	var id int64
+	var rt resourceTypeValue
 	var content string
-	c := &cobra.Command{
-		Use:   "add",
-		Short: "发表评论(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			rt, err := strToResourceType(typ)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("在 %s %d 发表评论:%s", typ, rid, content)); err != nil {
-				return err
-			}
-			return kit.RenderExec(k, commentendpoint.Add, &mmpb.AddCommentRequest{
-				ResourceType: rt, ResourceId: rid, Content: content,
-			})
+	return kit.WriteCmd(k, "add", "发表评论(写操作,登录态)", "资源 ID", "", commentendpoint.Add,
+		func(req *mmpb.AddCommentRequest) string {
+			return fmt.Sprintf("在 %s %d 发表评论:%s",
+				resourceTypeName[req.GetResourceType()], req.GetResourceId(), req.GetContent())
 		},
-	}
-	withResource(c, &typ, &id)
-	c.Flags().StringVar(&content, "content", "", "评论内容")
-	_ = c.MarkFlagRequired("content")
-	return c
+		func(id int64) *mmpb.AddCommentRequest {
+			return &mmpb.AddCommentRequest{ResourceType: rt.v, ResourceId: id, Content: content}
+		},
+		withTypeFlags(&rt),
+		func(c *cobra.Command) {
+			c.Flags().StringVar(&content, "content", "", "评论内容")
+			_ = c.MarkFlagRequired("content")
+		})
 }
 
 func newReply(k *kit.Kit) *cobra.Command {
-	var typ string
-	var id, commentID int64
+	var rt resourceTypeValue
+	var commentID int64
 	var content string
-	c := &cobra.Command{
-		Use:   "reply",
-		Short: "回复评论(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			rt, err := strToResourceType(typ)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("回复 %s %d 的评论 %d:%s", typ, rid, commentID, content)); err != nil {
-				return err
-			}
-			return kit.RenderExec(k, commentendpoint.Reply, &mmpb.ReplyCommentRequest{
-				ResourceType: rt, ResourceId: rid, CommentId: commentID, Content: content,
-			})
+	return kit.WriteCmd(k, "reply", "回复评论(写操作,登录态)", "资源 ID", "", commentendpoint.Reply,
+		func(req *mmpb.ReplyCommentRequest) string {
+			return fmt.Sprintf("回复 %s %d 的评论 %d:%s",
+				resourceTypeName[req.GetResourceType()], req.GetResourceId(), req.GetCommentId(), req.GetContent())
 		},
-	}
-	withResource(c, &typ, &id)
-	c.Flags().Int64Var(&commentID, "comment-id", 0, "被回复的评论 ID")
-	_ = c.MarkFlagRequired("comment-id")
-	c.Flags().StringVar(&content, "content", "", "回复内容")
-	_ = c.MarkFlagRequired("content")
-	return c
+		func(id int64) *mmpb.ReplyCommentRequest {
+			return &mmpb.ReplyCommentRequest{
+				ResourceType: rt.v, ResourceId: id, CommentId: commentID, Content: content,
+			}
+		},
+		withTypeFlags(&rt),
+		func(c *cobra.Command) {
+			c.Flags().Int64Var(&commentID, "comment-id", 0, "被回复的评论 ID")
+			_ = c.MarkFlagRequired("comment-id")
+			c.Flags().StringVar(&content, "content", "", "回复内容")
+			_ = c.MarkFlagRequired("content")
+		})
 }
 
 func newDelete(k *kit.Kit) *cobra.Command {
-	var typ string
-	var id, commentID int64
-	c := &cobra.Command{
-		Use:   "delete",
-		Short: "删除自己的评论(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			rt, err := strToResourceType(typ)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("删除 %s %d 的评论 %d(只能删自己发的)", typ, rid, commentID)); err != nil {
-				return err
-			}
-			return kit.RenderExec(k, commentendpoint.Delete, &mmpb.DeleteCommentRequest{
-				ResourceType: rt, ResourceId: rid, CommentId: commentID,
-			})
+	var rt resourceTypeValue
+	var commentID int64
+	return kit.WriteCmd(k, "delete", "删除自己的评论(写操作,登录态)", "资源 ID", "", commentendpoint.Delete,
+		func(req *mmpb.DeleteCommentRequest) string {
+			return fmt.Sprintf("删除 %s %d 的评论 %d(只能删自己发的)",
+				resourceTypeName[req.GetResourceType()], req.GetResourceId(), req.GetCommentId())
 		},
-	}
-	withResource(c, &typ, &id)
-	c.Flags().Int64Var(&commentID, "comment-id", 0, "评论 ID")
-	_ = c.MarkFlagRequired("comment-id")
-	return c
+		func(id int64) *mmpb.DeleteCommentRequest {
+			return &mmpb.DeleteCommentRequest{ResourceType: rt.v, ResourceId: id, CommentId: commentID}
+		},
+		withTypeFlags(&rt),
+		func(c *cobra.Command) {
+			c.Flags().Int64Var(&commentID, "comment-id", 0, "评论 ID")
+			_ = c.MarkFlagRequired("comment-id")
+		})
 }

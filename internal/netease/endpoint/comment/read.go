@@ -130,16 +130,16 @@ var List = &engine.Endpoint[*mmpb.CommentListRequest, *mmpb.CommentListResponse]
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.CommentListRequest, raw json.RawMessage) (*mmpb.CommentListResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Data struct {
 				Comments   []rawComment `json:"comments"`
 				TotalCount int64        `json:"totalCount"`
 				HasMore    bool         `json:"hasMore"`
 				Cursor     string       `json:"cursor"`
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.CommentListResponse{}, fmt.Errorf("解析评论列表失败: %w", err)
+		}](raw, "评论列表")
+		if err != nil {
+			return &mmpb.CommentListResponse{}, err
 		}
 		out := &mmpb.CommentListResponse{
 			TotalCount: resp.Data.TotalCount,
@@ -181,14 +181,14 @@ var Hot = &engine.Endpoint[*mmpb.HotCommentsRequest, *mmpb.HotCommentsResponse]{
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.HotCommentsRequest, raw json.RawMessage) (*mmpb.HotCommentsResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			HotComments []rawComment `json:"hotComments"`
 			TopComments []rawComment `json:"topComments"`
 			Total       int64        `json:"total"`
 			HasMore     bool         `json:"hasMore"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.HotCommentsResponse{}, fmt.Errorf("解析热门评论失败: %w", err)
+		}](raw, "热门评论")
+		if err != nil {
+			return &mmpb.HotCommentsResponse{}, err
 		}
 		out := &mmpb.HotCommentsResponse{Total: resp.Total, HasMore: resp.HasMore}
 		for _, c := range resp.HotComments {
