@@ -2,7 +2,7 @@
   "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "files": {
     "ignoreUnknown": true,
-    "includes": ["src/**", "test/**"]
+    "includes": ["src/**", "test/**", "scripts/package-check.mjs", "scripts/package-browser.mjs", "scripts/consumer/**"]
   },
   "formatter": {
     "enabled": true,

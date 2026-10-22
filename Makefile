@@ -1,5 +1,5 @@
 .PHONY: all help install-tools install-cli fmt fmt-check tidy-check vet test lint vuln build build-server \
-        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust interop-go upstream-smoke player-check player-demo check ci-env clean
+        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust interop-go upstream-smoke player-check player-package-check player-demo check ci-env clean
 
 # 工具探测:优先 PATH,回退 $GOPATH/bin(GOBIN 也在 PATH 时无所谓)
 BUF           ?= $(shell command -v buf 2>/dev/null           || echo $$(go env GOPATH)/bin/buf)
@@ -161,6 +161,12 @@ interop-go:
 ## player-check: packages/kite-player 的类型检查 + 测试 + 构建(需要 Node,大版本见文件顶部;不在 make check 里)
 player-check:
 	cd packages/kite-player && npm ci --no-audit --no-fund && npm run check
+
+## player-package-check: 构建并验收实际 npm tarball(独立消费者 + Chromium);支持 CHROME 指定现有浏览器
+player-package-check: player-check
+	cd packages/kite-player && \
+		if [ -z "$${CHROME:-}$${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-}" ]; then npm exec -- playwright install chromium; fi && \
+		npm run package:check
 
 ## player-demo: 构建 kite-player 并起 demo 调试页(默认 http://127.0.0.1:3847/demo/,换端口 make player-demo PLAYER_DEMO_PORT=xxxx;Ctrl-C 停止;需要 Node 与 python3)
 player-demo:

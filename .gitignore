@@ -38,6 +38,7 @@ dist/
 # 前端依赖(packages/kite-player)
 node_modules/
 interop/rust/target/
+packages/kite-player/artifacts/
 interop/rust/kite.binpb
 
 # Python 字节码缓存(scripts-check 跑 scripts/*_test.sh 时生成)

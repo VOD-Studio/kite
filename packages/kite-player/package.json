@@ -59,10 +59,11 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check src test",
-    "format": "biome check --write src test",
+    "lint": "biome check src test scripts/package-check.mjs scripts/package-browser.mjs scripts/consumer",
+    "format": "biome check --write src test scripts/package-check.mjs scripts/package-browser.mjs scripts/consumer",
     "test": "vitest run",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "package:check": "node scripts/package-check.mjs",
     "screenshots": "npm run build && node scripts/screenshots.mjs"
   },
   "dependencies": {
@@ -81,11 +82,12 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.3.0",
     "happy-dom": "^20.0.0",
+    "playwright": "1.64.1",
     "react": "^19.2.0",
     "react-dom": "^19.3.1",
-    "tsup": "^8.5.0",
+    "tsup": "^9.0.0",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.0"
+    "vitest": "^4.1.12"
   },
   "engines": {
     "node": ">=20"
@@ -95,6 +97,6 @@
     "provenance": true
   },
   "allowScripts": {
-    "esbuild@0.27.7": true
+    "esbuild@0.28.2": true
   }
 }
