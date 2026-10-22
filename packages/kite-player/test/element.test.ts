@@ -3,7 +3,7 @@ import "../src/element";
 import { Player } from "../src/core/player";
 import { KitePlayerElement } from "../src/element";
 import { withDark } from "../src/element/styles";
-import type { Playlist } from "../src/core/types";
+import type { Playlist, Track } from "../src/core/types";
 import { FakeAudio, fakeSource, flush, track } from "./helpers";
 
 const playlist: Playlist = {
@@ -180,14 +180,39 @@ describe("<kite-player>", () => {
     const root = shadow(el);
     root.querySelector<HTMLButtonElement>(".bar-text")?.click();
     await settle(el);
-    const badge = () => root.querySelector<HTMLElement>(".cover > .badge");
-    expect(badge()?.hidden).toBe(false);
-    expect(badge()?.textContent).toBe("无损FLAC");
+    const badge = () => root.querySelector<HTMLButtonElement>(".badge");
+    expect(badge()?.hasAttribute("data-show")).toBe(true);
+    expect(badge()?.textContent?.replace(/\s+/g, "")).toBe("无损音质16bitFLAC");
+    expect(badge()?.disabled).toBe(true); // 数据来源不支持 streamUrl:只展示,不能切换
     for (const i of [1, 2, 3]) {
       player.setQueue(tracks, i, null, false);
       await settle(el);
-      expect(badge()?.hidden).toBe(true);
+      expect(badge()?.hasAttribute("data-show")).toBe(false);
     }
+  });
+
+  it("点音质标签开关高音质:改用标准音质的地址并提示", async () => {
+    const source = { ...fakeSource({ ...playlist, tracks: [track("1", { quality: "hires" })] }), streamUrl: (t: Track, q: string) => `${t.stream}&quality=${q}` };
+    player.setSource(source);
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar-text")?.click();
+    await settle(el);
+    const badge = () => root.querySelector<HTMLButtonElement>(".badge");
+    expect(badge()?.disabled).toBe(false);
+    expect(badge()?.hasAttribute("data-on")).toBe(true);
+    await player.play();
+    badge()?.click();
+    await settle(el);
+    expect(player.state.highQuality).toBe(false);
+    expect(badge()?.hasAttribute("data-on")).toBe(false);
+    expect(badge()?.getAttribute("aria-pressed")).toBe("false");
+    expect(audio.src).toContain("quality=standard");
+    expect(root.querySelector(".toast")?.textContent).toContain("已关闭Hi-Res");
+    badge()?.click();
+    await settle(el);
+    expect(player.state.highQuality).toBe(true);
+    expect(audio.src).not.toContain("quality=");
   });
 
   it("没有封面时显示占位,不留空白图片", async () => {

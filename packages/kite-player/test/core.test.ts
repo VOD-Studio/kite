@@ -3,7 +3,7 @@ import { createKiteSource, KiteError } from "../src/core/source";
 import { firstSungIndex, formatTime, lineIndexAt, wordProgress } from "../src/core/lyrics";
 import { Player } from "../src/core/player";
 import { Store } from "../src/core/store";
-import type { Playlist } from "../src/core/types";
+import type { Playlist, Track } from "../src/core/types";
 import { FakeAudio, fakeSource, flush, lyrics, track } from "./helpers";
 
 const playlist: Playlist = {
@@ -226,6 +226,36 @@ describe("Player", () => {
     audio.emit("error");
     await flush();
     expect(player.state.error?.reason).toBe("PLAYBACK_FAILED");
+  });
+
+  it("关掉高音质:播放中从原位置改用标准音质的地址,偏好跨页面记住", async () => {
+    const audio = new FakeAudio();
+    const source = { ...fakeSource(playlist), streamUrl: (t: Track, q: string) => `${t.stream}&quality=${q}` };
+    const player = new Player({ audio, source, storageKey: "kite-hq", mediaSession: false });
+    expect(player.canSwitchQuality()).toBe(true);
+    await player.playPlaylist("100", 0);
+    audio.currentTime = 42;
+    player.setHighQuality(false);
+    expect(audio.src).toContain("quality=standard");
+    expect(player.state.playing).toBe(true);
+    audio.emit("loadedmetadata");
+    expect(audio.currentTime).toBe(42);
+    player.next();
+    expect(audio.src).toContain("/tracks/2/");
+    expect(audio.src).toContain("quality=standard");
+
+    const restored = new Player({ audio: new FakeAudio(), source, storageKey: "kite-hq", mediaSession: false });
+    expect(restored.state.highQuality).toBe(false);
+    restored.setHighQuality(true);
+    expect(new Player({ audio: new FakeAudio(), source, storageKey: "kite-hq", mediaSession: false }).state.highQuality).toBe(true);
+  });
+
+  it("数据来源不支持 streamUrl 时,关掉高音质不影响播放地址", async () => {
+    const { player, audio } = newPlayer();
+    expect(player.canSwitchQuality()).toBe(false);
+    await player.playPlaylist("100", 0);
+    player.setHighQuality(false);
+    expect(audio.src).toBe(playlist.tracks[0]?.stream);
   });
 
   it("插播单曲:放到当前歌后面", async () => {

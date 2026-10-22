@@ -62,7 +62,7 @@ import "@violetjs/kite-player/element"; // 注册 <kite-player>、<kite-track>�
 
 ### 面板
 
-点封面或歌名展开。左右滑动或点上方的圆点在封面页和歌词页之间切换;播放时歌词页的控制条会自动隐藏。
+点封面或歌名展开。点封面左下角的音质标签可以开关高音质(关掉后用标准音质,省流量,偏好会记住)。左右滑动或点上方的圆点在封面页和歌词页之间切换;播放时歌词页的控制条会自动隐藏。
 
 <p>
   <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/panel-cover.webp" width="380" alt="面板的封面页">
@@ -223,7 +223,7 @@ const source: DataSource = {
 getPlayer({ source });
 ```
 
-返回的数据结构与 `/player/v1` 相同(`Playlist`、`Track`、`Lyrics` 类型)。`quality` 是这首歌能播放的最高音质(`standard` / `exhigh` / `lossless` / `hires`),可以不填;填了 `exhigh` 及以上,封面左下角会显示音质标签。stream 只是试听片段时,给这首歌标 `trial: true`:试听照常播放,播放条、播放列表行和卡片都标「仅试听」。kite-server 公开模式如何透传试听信息待 #103 定案,目前该字段由能判断试听的自建后端填充。演示页的 `demo/demo.js` 是一个完整的离线例子,包括模拟的音频元素。
+返回的数据结构与 `/player/v1` 相同(`Playlist`、`Track`、`Lyrics` 类型)。`quality` 是这首歌能播放的最高音质(`standard` / `exhigh` / `lossless` / `hires`),可以不填;填了 `exhigh` 及以上,封面左下角会显示音质标签。再实现可选的 `streamUrl(track, quality)`(返回不超过该音质的播放地址),听众就能点音质标签关掉高音质、改用标准音质省流量;kite-server 公开模式已经支持。stream 只是试听片段时,给这首歌标 `trial: true`:试听照常播放,播放条、播放列表行和卡片都标「仅试听」。kite-server 公开模式如何透传试听信息待 #103 定案,目前该字段由能判断试听的自建后端填充。演示页的 `demo/demo.js` 是一个完整的离线例子,包括模拟的音频元素。
 
 ## 其它框架
 

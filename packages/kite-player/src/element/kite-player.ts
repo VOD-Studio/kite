@@ -60,11 +60,14 @@ const rubberMax = 80;
 const flingTau = 325;
 const flingMax = 1200;
 
-/** 封面左下角的音质标签:只有极高及以上才标,标准音质、试听片段、没有信息时不显示。 */
+/**
+ * 封面左下角的音质标签(参考网易云):[音质名, 规格]。只有极高及以上才标,标准音质、试听片段、没有信息时不显示。
+ * 开启高音质时是金色音质名 + 斜切的深色规格;关掉时只剩描边的音质名。
+ */
 const qualityBadges: Partial<Record<Quality, [string, string]>> = {
-  exhigh: ["极高", "320k"],
-  lossless: ["无损", "FLAC"],
-  hires: ["Hi-Res", "24bit"],
+  exhigh: ["极高音质", "320kbps"],
+  lossless: ["无损音质", "16bit FLAC"],
+  hires: ["Hi-Res", "24bit FLAC"],
 };
 
 function qualityBadge(t: Track | null | undefined): [string, string] | null {
@@ -124,6 +127,8 @@ interface Ui {
   sheetMessage: string;
   sheetTracks: Track[];
   sheetName: string;
+  /** 上一次显示过的音质标签:标签淡出时文字不能先变空。 */
+  lastBadge: [string, string];
 }
 
 /**
@@ -175,6 +180,7 @@ export class KitePlayerElement extends LitElement {
     sheetMessage: "",
     sheetTracks: [],
     sheetName: "",
+    lastBadge: ["", ""],
   };
   private cleanup: (() => void)[] = [];
   private lineEls: HTMLElement[] = [];
@@ -598,10 +604,9 @@ export class KitePlayerElement extends LitElement {
           </section>
         </div>
         <button class="cover" aria-label=${ui.view === "cover" ? "查看歌词" : "返回封面"} @click=${this.onCoverClick}>
-          ${coverPh}<img alt="" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} /><span class="badge" ?hidden=${!badge}
-            ><b>${badge?.[0] ?? ""}</b><span>${badge?.[1] ?? ""}</span></span
-          >
+          ${coverPh}<img alt="" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} />
         </button>
+        ${this.renderBadge(s, badge)}
         <div class="top">
           <button class="ib close" aria-label="收起" @click=${this.close}>${icons.chevron}</button>
           <div class="dots"><button data-go="cover" aria-label="封面" @click=${this.toCover}></button><button data-go="lyrics" aria-label="歌词" @click=${this.toLyrics}></button></div>
@@ -680,6 +685,65 @@ export class KitePlayerElement extends LitElement {
     );
   }
 
+  /**
+   * renderBadge 封面左下角的音质标签。数据来源能按较低音质给地址时可以点按切换高音质(参考网易云),
+   * 否则只做展示。开关的动画由 CSS 按 data-on 过渡:金色底淡入,规格从音质名后面滑出。
+   */
+  private renderBadge(s: PlayerState, badge: [string, string] | null): TemplateResult {
+    if (badge) this.ui.lastBadge = badge;
+    const [label, detail] = badge ?? this.ui.lastBadge;
+    const can = this.player.canSwitchQuality();
+    const on = s.highQuality || !can;
+    return html`<button
+      class="badge"
+      ?data-on=${on}
+      ?data-show=${!!badge}
+      ?disabled=${!can || !badge}
+      aria-hidden=${badge ? "false" : "true"}
+      aria-pressed=${can ? String(on) : nothing}
+      aria-label=${can ? `${label}:${on ? "已开启" : "已关闭"},点按切换` : `${label} ${detail}`}
+      @click=${this.onBadgeClick}
+    >
+      <span class="bq-label"><span class="bq-gold"></span><span class="bq-text">${label}</span><span class="bq-sheen"></span></span
+      ><span class="bq-detail">${detail}</span>
+    </button>`;
+  }
+
+  /** 点音质标签:开关高音质,提示切换结果(参考网易云「已为您关闭超高清音频」)。 */
+  private onBadgeClick = (): void => {
+    const badge = qualityBadge(this.player.state.current);
+    if (!badge || !this.player.canSwitchQuality()) return;
+    const on = !this.player.state.highQuality;
+    this.player.setHighQuality(on);
+    this.toast(on ? `已开启${badge[0]}` : `已关闭${badge[0]},改用标准音质`);
+    if (on) void this.updateComplete.then(() => this.sheen());
+  };
+
+  /** sheen 音质标签开启时金色上扫过一道高光。 */
+  private sheen(): void {
+    const el = this.renderRoot.querySelector<HTMLElement>(".bq-sheen");
+    if (!el || !canAnimate(el)) return;
+    el.animate([{ transform: "translateX(-120%) skewX(-20deg)" }, { transform: "translateX(260%) skewX(-20deg)" }], {
+      duration: 700,
+      delay: 140,
+      easing: "cubic-bezier(.4,0,.2,1)",
+    });
+  }
+
+  /** revealBadge 换歌后标签出现或换了规格:规格从音质名后面重新滑出,再扫一道高光。 */
+  private revealBadge(): void {
+    const detail = this.renderRoot.querySelector<HTMLElement>(".badge[data-on] .bq-detail");
+    if (!detail || !canAnimate(detail)) return;
+    detail.animate(
+      [
+        { clipPath: "inset(0 100% 0 0 round 0 6px 6px 0)", transform: "translateX(-8px)", opacity: 0 },
+        { clipPath: "inset(0 0 0 0 round 0 6px 6px 0)", transform: "none", opacity: 1 },
+      ],
+      { duration: 280, delay: 120, easing: easeOut, fill: "backwards" },
+    );
+    this.sheen();
+  }
+
   private tickerText(s: PlayerState): string {
     // 署名行(作词 / 作曲)期间播放条仍显示歌手,唱到第一句才换成歌词。
     const lines = s.lyrics?.lines ?? [];
@@ -704,14 +768,16 @@ export class KitePlayerElement extends LitElement {
     if (!prev || s.current !== prev.current) {
       this.lastLine = -1;
       this.endManual(false);
-      // 换歌时封面与音质标签交叉淡化(参考网易云:标题立即换,封面约 300ms 淡入)。
+      // 换歌时封面交叉淡化(参考网易云:标题立即换,封面约 300ms 淡入);音质标签换了就重新展开。
       const old = prev?.current;
       if (old) {
         const oldCover = old.album.cover || "";
-        const oldBadge = qualityBadge(old);
-        const coverChanged = oldCover !== (s.current?.album.cover || "");
-        if (coverChanged) this.crossfade(".disc-img", oldCover, null);
-        if (this.ui.stageShown && (coverChanged || String(oldBadge) !== String(qualityBadge(s.current)))) this.crossfade(".cover", oldCover, oldBadge);
+        const newBadge = qualityBadge(s.current);
+        if (oldCover !== (s.current?.album.cover || "")) {
+          this.crossfade(".disc-img", oldCover);
+          if (this.ui.stageShown) this.crossfade(".cover", oldCover);
+        }
+        if (this.ui.stageShown && newBadge && String(newBadge) !== String(qualityBadge(old))) this.revealBadge();
       }
       if (this.ui.stageShown) this.paintAmbient(true);
     }
@@ -1438,10 +1504,10 @@ export class KitePlayerElement extends LitElement {
   }
 
   /**
-   * crossfade 换歌时把上一首的封面(没有封面时是占位)和音质标签盖在新的上面淡出。
+   * crossfade 换歌时把上一首的封面(没有封面时是占位)盖在新的上面淡出。
    * 等新图加载好再淡,否则网络慢时中间会露出占位又跳回。临时元素不进模板。
    */
-  private crossfade(sel: string, oldSrc: string, oldBadge: [string, string] | null): void {
+  private crossfade(sel: string, oldSrc: string): void {
     const box = this.renderRoot.querySelector<HTMLElement>(sel);
     const img = box?.querySelector<HTMLImageElement>(":scope > img");
     if (!box || !img || !canAnimate(box)) return;
@@ -1456,16 +1522,6 @@ export class KitePlayerElement extends LitElement {
     } else {
       const ph = box.querySelector(":scope > .ph");
       if (ph) ghost.append(ph.cloneNode(true));
-    }
-    if (oldBadge) {
-      const badge = document.createElement("span");
-      badge.className = "badge";
-      const b = document.createElement("b");
-      b.textContent = oldBadge[0];
-      const t = document.createElement("span");
-      t.textContent = oldBadge[1];
-      badge.append(b, t);
-      ghost.append(badge);
     }
     box.append(ghost);
     let started = false;

@@ -64,7 +64,7 @@ The bar sits in the bottom-right corner by default (`position` moves it to the b
 
 ### Panel
 
-Click the cover or the title to expand. Swipe or use the dots to switch between the cover and the lyrics; controls fade out on the lyrics page while music plays.
+Click the cover or the title to expand. Tap the quality badge on the cover to turn high quality on or off (off plays standard quality to save data, and the choice is remembered). Swipe or use the dots to switch between the cover and the lyrics; controls fade out on the lyrics page while music plays.
 
 <p>
   <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/panel-cover.webp" width="380" alt="Panel, cover page">
@@ -225,7 +225,7 @@ const source: DataSource = {
 getPlayer({ source });
 ```
 
-Responses use the same shapes as `/player/v1` (the `Playlist`, `Track` and `Lyrics` types). `quality` is the best quality the track can play at (`standard`, `exhigh`, `lossless` or `hires`) and may be left out; at `exhigh` and above the cover shows a quality badge. A track may set `trial: true` when its stream is only a trial clip: it still plays, and the bar, the queue rows and the cards label it 「仅试听」. How kite-server surfaces this on `/player/v1` is pending #103, so today the field is filled by custom backends that can tell. The demo's `demo/demo.js` is a complete offline example, including a simulated audio element.
+Responses use the same shapes as `/player/v1` (the `Playlist`, `Track` and `Lyrics` types). `quality` is the best quality the track can play at (`standard`, `exhigh`, `lossless` or `hires`) and may be left out; at `exhigh` and above the cover shows a quality badge. Also implement the optional `streamUrl(track, quality)` (a stream address at no more than that quality) and listeners can tap the badge to turn high quality off and save data; the kite-server public mode already supports it. A track may set `trial: true` when its stream is only a trial clip: it still plays, and the bar, the queue rows and the cards label it 「仅试听」. How kite-server surfaces this on `/player/v1` is pending #103, so today the field is filled by custom backends that can tell. The demo's `demo/demo.js` is a complete offline example, including a simulated audio element.
 
 ## Other frameworks
 

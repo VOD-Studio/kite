@@ -605,30 +605,100 @@ img[data-err], img:not([src]) {
 .kp[data-view="lyrics"]:not([data-immersive]) .cover {
   box-shadow: 0 8px 18px -8px rgba(8,10,30,.55);
 }
+/*
+ * 音质标签(参考网易云):封面左下角,跟着封面的位置插值,翻到歌词页时淡出。
+ * 开启:金色渐变的音质名,右边斜切,露出后面深色半透明的规格,整体金色细边;
+ * 关闭:只剩描边的音质名,规格缩回音质名后面。开关时金色底 120ms 淡入,规格延迟 60ms 用 260ms 滑出;关闭更快。
+ */
 .badge {
   position: absolute;
-  left: 12px;
-  bottom: 12px;
+  z-index: 2;
+  left: calc(var(--cx) + (var(--sx) - var(--cx)) * var(--pg) + 12px);
+  top: calc(var(--cy) + (var(--sy) - var(--cy)) * var(--pg) + var(--cs) + (var(--ss) - var(--cs)) * var(--pg) - 34px);
   display: flex;
+  align-items: stretch;
   height: 22px;
-  border-radius: 6px;
-  overflow: hidden;
-  font-size: 11px;
-  line-height: 22px;
-  font-weight: 600;
+  font-size: 11.5px;
+  line-height: 20px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: left .38s var(--ease), top .38s var(--ease), opacity .2s;
+}
+.badge[data-show] {
   opacity: calc(1 - var(--pg) * 3);
-  transition: opacity .38s var(--ease);
 }
-.badge b {
+.kp[data-view="cover"] .badge[data-show]:not([disabled]) .bq-label, .kp[data-immersive] .badge[data-show]:not([disabled]) .bq-label {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.badge[disabled] {
+  cursor: default;
+}
+.bq-label {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
   padding: 0 7px;
-  background: #F4D59C;
-  color: #4A320C;
+  border: 1px solid rgba(255,255,255,.45);
+  border-radius: 6px;
+  background: rgba(16,16,22,.24);
+  color: rgba(255,255,255,.8);
   font-weight: 600;
+  transition: border-color .12s, border-radius .12s, color .12s, background-color .12s;
 }
-.badge span {
-  padding: 0 7px;
-  background: rgba(14,16,30,.48);
-  color: #FFFFFF;
+.bq-gold {
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(100deg, #FCEBC8 0%, #F1CD8E 45%, #DDA968 100%);
+  /* 右边斜切:顶边比底边长 6px,露出后面的规格。 */
+  clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  opacity: 0;
+  transition: opacity .12s ease-out;
+}
+.bq-text {
+  position: relative;
+}
+.bq-sheen {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.75), rgba(255,255,255,0));
+  transform: translateX(-120%) skewX(-20deg);
+  pointer-events: none;
+}
+.bq-detail {
+  position: relative;
+  margin-left: -7px;
+  padding: 0 8px 0 13px;
+  border: 1px solid rgba(240,201,138,.8);
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+  background: rgba(40,30,22,.66);
+  color: rgba(255,240,218,.95);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  clip-path: inset(0 100% 0 0 round 0 6px 6px 0);
+  transform: translateX(-8px);
+  opacity: 0;
+  transition: clip-path .16s cubic-bezier(.4,0,1,1), transform .16s cubic-bezier(.4,0,1,1), opacity .12s;
+}
+.badge[data-on] .bq-label {
+  border-color: rgba(240,201,138,.9) transparent rgba(240,201,138,.9) rgba(240,201,138,.9);
+  border-radius: 6px 0 0 6px;
+  background-color: transparent;
+  color: #4A3216;
+}
+.badge[data-on] .bq-gold {
+  opacity: 1;
+}
+.badge[data-on] .bq-detail {
+  clip-path: inset(0 0 0 0 round 0 6px 6px 0);
+  transform: none;
+  opacity: 1;
+  transition: clip-path .26s var(--ease) .06s, transform .26s var(--ease) .06s, opacity .1s .06s;
 }
 
 .pages {
@@ -1312,6 +1382,8 @@ img[data-err], img:not([src]) {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* left: 50% 时自动宽度只按半屏算,短句也会折行:按内容取宽,超过视口再折。 */
+  width: max-content;
   max-width: calc(100vw - 32px);
   padding: 10px 16px;
   border-radius: 999px;

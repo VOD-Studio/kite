@@ -92,6 +92,11 @@ export interface DataSource {
   track(id: string): Promise<Track>;
   lyrics(track: Track): Promise<Lyrics>;
   info?(): Promise<SourceInfo>;
+  /**
+   * 按不超过 quality 的音质播放这首歌的地址(听众关掉高音质、省流量时用)。可选:
+   * 不实现时播放器不提供音质切换,封面上的音质标签只做展示。
+   */
+  streamUrl?(track: Track, quality: Quality): string;
 }
 
 /** 播放模式:顺序(播完停)、列表循环、单曲循环、随机。 */
@@ -122,4 +127,6 @@ export interface PlayerState {
   /** 当前歌词行下标,-1 表示还没到第一行。 */
   lyricIndex: number;
   error: PlayerError | null;
+  /** 是否按这首歌能播放的最高音质播放;关掉时改用标准音质(省流量),需要数据来源支持 streamUrl。 */
+  highQuality: boolean;
 }

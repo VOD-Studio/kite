@@ -55,6 +55,7 @@ const initialState: PlayerState = {
   lyricsStatus: "idle",
   lyricIndex: -1,
   error: null,
+  highQuality: true,
 };
 
 /**
@@ -73,6 +74,7 @@ export class Player {
   private frame = 0;
   private retried = false;
   private pendingSeek: number | null = null;
+  /** 音频当前加载的是哪首歌、哪种音质(歌曲 ID + 音质),换歌或切换音质时才重新设置 src。 */
   private srcFor = "";
   private lastSave = 0;
   private readonly unbind: (() => void)[] = [];
@@ -258,7 +260,7 @@ export class Player {
 
   seek(sec: number): void {
     const t = Math.max(0, sec);
-    if (this.audio && this.srcFor === this.state.current?.id) {
+    if (this.audio && this.state.current && this.srcFor.startsWith(this.state.current.id + ":")) {
       this.audio.currentTime = t;
     } else {
       this.pendingSeek = t;
@@ -283,6 +285,27 @@ export class Player {
     const next = modes[(modes.indexOf(this.state.mode) + 1) % modes.length] ?? "loop";
     this.setMode(next);
     return next;
+  }
+
+  /** canSwitchQuality:数据来源能按较低音质给出播放地址时,才能切换高音质。 */
+  canSwitchQuality(): boolean {
+    return typeof this.source?.streamUrl === "function";
+  }
+
+  /**
+   * setHighQuality 开关高音质。播放中切换时从当前位置用新音质接着播,暂停时下次播放才生效。
+   * 数据来源不支持 streamUrl 时只记住偏好,不影响播放。
+   */
+  setHighQuality(on: boolean): void {
+    if (this.state.highQuality === on) return;
+    this.store.set({ highQuality: on });
+    this.save();
+    const track = this.state.current;
+    if (!track || !this.audio || !this.srcFor.startsWith(track.id + ":") || !this.canSwitchQuality()) return;
+    const wasPlaying = this.state.playing;
+    this.pendingSeek = this.audio.currentTime || this.state.time;
+    this.ensureSrc(track, true);
+    if (wasPlaying) void this.play();
   }
 
   setVolume(volume: number): void {
@@ -333,7 +356,7 @@ export class Player {
     if (this.audio && autoplay) {
       this.ensureSrc(track, true);
       void this.play();
-    } else if (this.audio && this.srcFor && this.srcFor !== track.id) {
+    } else if (this.audio && this.srcFor && !this.srcFor.startsWith(track.id + ":")) {
       this.audio.pause();
       this.srcFor = "";
     }
@@ -358,11 +381,18 @@ export class Player {
     return null;
   }
 
+  /** streamOf 这首歌按当前音质偏好的播放地址。 */
+  private streamOf(track: Track): string {
+    const fn = this.source?.streamUrl;
+    return !this.state.highQuality && fn ? fn.call(this.source, track, "standard") : track.stream;
+  }
+
   private ensureSrc(track: Track, force = false): void {
     if (!this.audio) return;
-    if (!force && this.srcFor === track.id) return;
-    this.srcFor = track.id;
-    this.audio.src = track.stream;
+    const key = `${track.id}:${this.state.highQuality ? "hq" : "sd"}`;
+    if (!force && this.srcFor === key) return;
+    this.srcFor = key;
+    this.audio.src = this.streamOf(track);
     if (this.pendingSeek !== null && this.pendingSeek > 0) {
       // 元数据加载完才能设置进度。
       const t = this.pendingSeek;
@@ -433,7 +463,7 @@ export class Player {
    */
   private async onError(): Promise<void> {
     const track = this.state.current;
-    if (!track || !this.audio || this.srcFor !== track.id) return;
+    if (!track || !this.audio || !this.srcFor.startsWith(track.id + ":")) return;
     if (this.retried) {
       this.store.set({
         playing: false,
@@ -499,13 +529,14 @@ export class Player {
 
   private save(): void {
     if (!this.storageKey) return;
-    const { queue, index, time, mode, volume, playlist } = this.state;
-    saveSnapshot(this.storageKey, { queue, index, time, mode, volume, playlist, savedAt: Date.now() });
+    const { queue, index, time, mode, volume, playlist, highQuality } = this.state;
+    saveSnapshot(this.storageKey, { queue, index, time, mode, volume, playlist, highQuality, savedAt: Date.now() });
   }
 
   private restore(): void {
     if (!this.storageKey) return;
     const snap = loadSnapshot(this.storageKey);
+    if (snap?.highQuality === false) this.store.set({ highQuality: false });
     if (!snap || snap.queue.length === 0) return;
     const current = snap.queue[snap.index] ?? null;
     this.store.set({
