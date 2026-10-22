@@ -41,6 +41,9 @@ type trackDTO struct {
 	Stream string `json:"stream"`
 	// Lyrics 是歌词接口地址(相对本服务)。
 	Lyrics string `json:"lyrics"`
+	// Quality 是这首歌按服务音质上限能播放的最高音质:取歌曲本身的最高音质与 KITE_PUBLIC_QUALITY 中较低的一个,
+	// standard / exhigh / lossless / hires;上游没给音质信息时省略。不含服务账号的权益,实际播放可能更低。
+	Quality string `json:"quality,omitempty"`
 }
 
 type playlistDTO struct {
@@ -128,6 +131,9 @@ func (s *Server) track(song *mmpb.Song, ownerActive bool) trackDTO {
 		t.Playable = true
 	case "vip":
 		t.Playable = ownerActive
+	}
+	if lv := song.GetMaxLevel(); lv != mmpb.SongLevel_SONG_LEVEL_UNSPECIFIED {
+		t.Quality = levelName(min(lv, s.opts.Level))
 	}
 	return t
 }

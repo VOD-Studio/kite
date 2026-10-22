@@ -14,6 +14,9 @@ export interface Album {
 /** 付费类型:免费、VIP、数字专辑。 */
 export type Access = "free" | "vip" | "paid";
 
+/** 音质档位:标准、极高(320k)、无损、Hi-Res。 */
+export type Quality = "standard" | "exhigh" | "lossless" | "hires";
+
 /** 一首歌。stream / lyrics 是可直接请求的绝对地址。 */
 export interface Track {
   id: string;
@@ -33,6 +36,11 @@ export interface Track {
   stream: string;
   /** 歌词接口地址。 */
   lyrics: string;
+  /**
+   * 这首歌能播放的最高音质(歌曲本身的最高音质与服务端上限中较低的一个)。可选:
+   * 自建后端可以不填;播放器只在极高及以上时在封面上显示音质标签。
+   */
+  quality?: Quality;
 }
 
 export interface Playlist {

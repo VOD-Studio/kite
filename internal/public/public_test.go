@@ -260,6 +260,20 @@ func TestPlaylist(t *testing.T) {
 	require.Equal(t, "NOT_ALLOWED", reason(t, rec), "不在白名单的歌单不能读")
 }
 
+func TestTrackQuality(t *testing.T) {
+	s, cat, _, h := newTestServer(t, testOptions())
+	cat.songs[1].MaxLevel = mmpb.SongLevel_SONG_LEVEL_HRES
+	cat.songs[3].MaxLevel = mmpb.SongLevel_SONG_LEVEL_STANDARD
+
+	require.Equal(t, "exhigh", decode[trackDTO](t, get(t, h, "/player/v1/tracks/1")).Quality, "歌曲高于上限时按上限")
+	require.Equal(t, "standard", decode[trackDTO](t, get(t, h, "/player/v1/tracks/3")).Quality, "歌曲低于上限时按歌曲")
+	rec := get(t, h, "/player/v1/tracks/2")
+	require.NotContains(t, rec.Body.String(), `"quality"`, "上游没给音质信息时省略")
+
+	s.opts.Level = mmpb.SongLevel_SONG_LEVEL_HRES
+	require.Equal(t, "hires", decode[trackDTO](t, get(t, h, "/player/v1/tracks/1")).Quality)
+}
+
 func TestTrackAllowlist(t *testing.T) {
 	_, _, _, h := newTestServer(t, testOptions())
 

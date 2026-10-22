@@ -150,11 +150,13 @@ secrets:
   "access": "free",
   "playable": true,
   "stream": "/player/v1/tracks/1973665667/stream?exp=1792536000&sig=…",
-  "lyrics": "/player/v1/tracks/1973665667/lyrics"
+  "lyrics": "/player/v1/tracks/1973665667/lyrics",
+  "quality": "exhigh"
 }
 ```
 
 - `access`:`free` / `vip` / `paid`(数字专辑)。`playable` 是按站点当前登录态推断的结果,最终以播放链接为准。
+- `quality`:这首歌在本服务上能播放的最高音质,`standard` / `exhigh` / `lossless` / `hires`,取歌曲本身的最高音质与 `KITE_PUBLIC_QUALITY` 中较低的一个;上游没给音质信息时省略。不含服务账号的权益,实际播放可能更低。播放器只在 `exhigh` 及以上时在封面上显示音质标签。
 - `stream` 是相对本服务的地址,直接作为 `<audio src>`;上游直链几十分钟后过期,播放中断时重新请求 `stream` 即可。
 - `stream` 的 302 响应在**试听片段**时带 `X-Kite-Trial` 头(`start=0; end=30000`,毫秒):站点账号对该歌无权益时上游只给约 30 秒的片段,自建后端可据此区分完整版;完整版没有这个头。`<audio>` 不读响应头,组件本身不消费它。
 

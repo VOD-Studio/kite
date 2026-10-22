@@ -140,14 +140,8 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) handleInfo(w http.ResponseWriter, _ *http.Request) {
-	quality := "exhigh"
-	for name, lv := range levels {
-		if lv == s.opts.Level {
-			quality = name
-		}
-	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, http.StatusOK, infoDTO{Version: protocolVersion, Login: s.owners.state(), Quality: quality})
+	writeJSON(w, http.StatusOK, infoDTO{Version: protocolVersion, Login: s.owners.state(), Quality: levelName(s.opts.Level)})
 }
 
 func (s *Server) handlePlaylist(w http.ResponseWriter, r *http.Request) {

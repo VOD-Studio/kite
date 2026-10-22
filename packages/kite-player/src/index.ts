@@ -15,6 +15,7 @@ export type {
   PlayerError,
   PlayerState,
   Playlist,
+  Quality,
   SourceInfo,
   Track,
 } from "./core/types";
