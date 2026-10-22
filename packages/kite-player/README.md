@@ -12,7 +12,7 @@ A music player for any web page, backed by your own [kite-server](https://github
 - **Word-by-word lyrics** with translations, a staggered scroll when the line changes, drag to seek, and a jump to the chorus.
 - **Four play modes** (sequence, repeat all, repeat one, shuffle), media keys and lock-screen controls, and the queue and position are remembered across pages without autoplaying.
 - **A shape for every place.** A glass bar that shrinks to a disc while you scroll, a panel on desktop, a full screen on phones, an immersive mode, and cards in three sizes that switch to a compact layout in narrow containers.
-- **Honest about what cannot play.** VIP and paid tracks say why instead of failing silently.
+- **Honest about what cannot play.** VIP and paid tracks say why instead of failing silently, and trial-only clips are labeled 「仅试听」 but still play.
 - **Framework-agnostic.** Standard custom elements built with [Lit](https://lit.dev): plain HTML, Vue, Svelte, Rust (Dioxus, Leptos) and more, plus React components and hooks.
 - **One script for static pages**, about 34 KB gzipped, Lit included.
 
@@ -221,7 +221,7 @@ const source: DataSource = {
 getPlayer({ source });
 ```
 
-Responses use the same shapes as `/player/v1` (the `Playlist`, `Track` and `Lyrics` types). The demo's `demo/demo.js` is a complete offline example, including a simulated audio element.
+Responses use the same shapes as `/player/v1` (the `Playlist`, `Track` and `Lyrics` types). A track may set `trial: true` when its stream is only a trial clip: it still plays, and the bar, the queue rows and the cards label it 「仅试听」. How kite-server surfaces this on `/player/v1` is pending #103, so today the field is filled by custom backends that can tell. The demo's `demo/demo.js` is a complete offline example, including a simulated audio element.
 
 ## Other frameworks
 

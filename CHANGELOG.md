@@ -7,6 +7,15 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## 0.5.3 (2026-10-21)
+
+## What's Changed
+* chore(gitignore): 忽略 scripts-check 产生的 Python 字节码缓存 by @xunrua in https://github.com/VOD-Studio/kite/pull/105
+* fix(auth): 补全扫码确认后的登录会话 by @xunrua in https://github.com/VOD-Studio/kite/pull/109
+
+
+**Full Changelog**: https://github.com/VOD-Studio/kite/compare/v0.5.2...v0.5.3
+
 ## 0.5.2 (2026-10-21)
 
 ## What's Changed

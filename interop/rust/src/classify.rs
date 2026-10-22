@@ -14,7 +14,7 @@ pub fn classify(status: &Status) -> Action {
     match details.error_info() {
         Some(info) if info.domain == "kite.music" => match info.reason.as_str() {
             "LOGIN_REQUIRED" => Action::Relogin,
-            "RATE_LIMITED" | "UPSTREAM_UNAVAILABLE" | "CIRCUIT_OPEN" => Action::RetryLater,
+            "RATE_LIMITED" | "SERVER_RATE_LIMITED" | "UPSTREAM_UNAVAILABLE" | "CIRCUIT_OPEN" => Action::RetryLater,
             _ => Action::GiveUp,
         },
         // 没有 ErrorInfo(例如网络层错误)时退回 gRPC code。

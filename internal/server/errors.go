@@ -39,6 +39,7 @@ const (
 	ReasonCanceled                = "CANCELED"                  // 调用方取消了请求
 	ReasonDeadlineExceeded        = "DEADLINE_EXCEEDED"         // 请求超时
 	ReasonServerAuthFailed        = "SERVER_AUTH_FAILED"        // 缺少或错误的服务访问令牌(与上游登录无关)
+	ReasonServerRateLimited       = "SERVER_RATE_LIMITED"       // 被本服务限流(与上游限流 RATE_LIMITED 无关)
 )
 
 // 当前只有网易云一个 provider。多源改造(P2)后由 provider 注册信息提供。

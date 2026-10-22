@@ -151,6 +151,30 @@ describe("<kite-player>", () => {
     const tabs = [...root.querySelectorAll<HTMLButtonElement>(".tabs button")].map((b) => b.textContent);
     expect(tabs).toEqual(["写作时听", "写作时听"]);
   });
+
+  it("试听歌:播放条与抽屉行标「仅试听」,不锁定,点击照常播放", async () => {
+    const trial = track("9", { title: "远方的信", access: "vip", playable: false, trial: true });
+    player.setSource(fakeSource({ ...playlist, tracks: [trial, track("2", { title: "慢车" })] }));
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    expect(player.state.current?.id).toBe("9"); // 初始队列把试听歌当能播的起点
+    expect(root.querySelector(".bar-line .rtag.trial")?.textContent).toBe("仅试听");
+
+    root.querySelector<HTMLButtonElement>(".bar .open-queue")?.click();
+    await settle(el);
+    const rows = root.querySelectorAll<HTMLButtonElement>(".list .row");
+    expect(rows[0]?.classList.contains("locked")).toBe(false);
+    expect(rows[0]?.querySelector(".rtag.trial")?.textContent).toBe("仅试听");
+    expect(rows[0]?.querySelector(".lock")).toBeNull(); // 显示时长而不是锁
+    rows[0]?.click();
+    await settle(el);
+    expect(player.state.playing).toBe(true);
+    expect(root.querySelector(".toast")?.textContent ?? "").not.toContain("VIP");
+
+    root.querySelector<HTMLButtonElement>(".bar-text")?.click(); // 展开面板,封面页的标签也带「仅试听」
+    await settle(el);
+    expect(root.querySelector(".access-tag")?.textContent).toBe("仅试听 · VIP");
+  });
 });
 
 describe("<kite-track>", () => {
@@ -201,6 +225,23 @@ describe("<kite-track>", () => {
     expect(player.state.current?.id).not.toBe("3");
   });
 
+  it("试听歌卡片:不锁定,带「仅试听」标签,点击照常播放", async () => {
+    const trial = track("9", { title: "远方的信", access: "vip", playable: false, trial: true });
+    player.setSource(fakeSource({ ...playlist, tracks: [...playlist.tracks, trial] }));
+    for (const size of ["s", "m", "l"]) {
+      const el = await mount(`<kite-track song="9" size="${size}"></kite-track>`);
+      const root = shadow(el);
+      expect(root.querySelector(".card")?.classList.contains("locked"), size).toBe(false);
+      expect(root.querySelector(".tg.trial")?.textContent, size).toBe("仅试听");
+    }
+    const el = await mount(`<kite-track song="9" size="m"></kite-track>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".play")?.click();
+    await settle(el);
+    expect(player.state.current?.id).toBe("9");
+    expect(player.state.playing).toBe(true);
+  });
+
   it("加载失败时显示原因", async () => {
     const el = await mount(`<kite-track song="404"></kite-track>`);
     expect(shadow(el).textContent).toContain("暂时无法显示");
@@ -219,6 +260,20 @@ describe("<kite-playlist>", () => {
     expect(player.state.playlist?.id).toBe("100");
     expect(player.state.current?.id).toBe("2");
     expect(rows[1]?.classList.contains("cur")).toBe(true);
+  });
+
+  it("试听行带「仅试听」徽标,点击照常播放", async () => {
+    const trial = track("9", { title: "远方的信", access: "vip", playable: false, trial: true });
+    player.setSource(fakeSource({ ...playlist, tracks: [trial, track("2", { title: "慢车" })] }));
+    const el = await mount(`<kite-playlist playlist="100"></kite-playlist>`);
+    const root = shadow(el);
+    const rows = root.querySelectorAll<HTMLButtonElement>(".row");
+    expect(rows[0]?.classList.contains("locked")).toBe(false);
+    expect(rows[0]?.querySelector(".tg.trial")?.textContent).toBe("仅试听");
+    rows[0]?.click();
+    await settle(el);
+    expect(player.state.current?.id).toBe("9");
+    expect(player.state.playing).toBe(true);
   });
 });
 

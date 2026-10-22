@@ -1,6 +1,6 @@
 import { createKiteSource } from "../core/source";
 import { getPlayer, type Player } from "../core/player";
-export { unplayableMessage } from "../core/player";
+export { canPlay, unplayableMessage } from "../core/player";
 import type { Track } from "../core/types";
 
 /** $ 取 root 下必定存在的元素,找不到时抛错(说明模板与代码不一致)。 */
