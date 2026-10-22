@@ -26,6 +26,7 @@ import (
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cache"
+	toplistendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/toplist"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
@@ -198,6 +199,31 @@ func TestUpstreamSmoke(t *testing.T) {
 		{"User.DetailByName", func(c context.Context) (proto.Message, error) {
 			return user.DetailByName(c, &mmpb.DetailByNameRequest{Nickname: "网易云音乐"})
 		}, nil},
+
+		// --- 排行榜(#29 第一阶段)---
+		// 只有 endpoint 声明、无 service 方法,直接经 engine.Execute 冒烟
+		// (第二阶段 ToplistService 落地后换回 server 方法,与本文件其余用例一致)。
+		{"Toplist.List", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, toplistendpoint.List, &mmpb.ToplistsRequest{})
+		}, func(t *testing.T, r proto.Message) {
+			tl := r.(*mmpb.ToplistsResponse).GetToplists()
+			require.NotEmpty(t, tl, "榜单列表为空——解码器可能与上游现行响应形状不符")
+			require.NotEmpty(t, tl[0].GetName())
+			require.Positive(t, tl[0].GetTrackCount())
+		}},
+		{"Toplist.Detail", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, toplistendpoint.Detail, &mmpb.ToplistDetailRequest{})
+		}, func(t *testing.T, r proto.Message) {
+			tl := r.(*mmpb.ToplistDetailResponse).GetToplists()
+			require.NotEmpty(t, tl, "榜单详情为空——解码器可能与上游现行响应形状不符")
+			withPreview := 0
+			for _, item := range tl {
+				if len(item.GetPreviewTracks()) > 0 {
+					withPreview++
+				}
+			}
+			require.NotZero(t, withPreview, "没有任何榜单带前三歌曲概要——概要字段名可能与上游不符")
+		}},
 	}
 
 	for _, tc := range cases {
