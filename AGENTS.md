@@ -80,6 +80,7 @@ cmd/*
 - **`make interop-rust`** —— Rust 客户端互操作冒烟(需要 `cargo`,较慢,CI 的 `Rust Interop` job 跑它)。改 proto、鉴权或错误契约后建议本地跑一次。
 - **`make interop-go`** —— Go 互操作冒烟(需要访问 buf.build,CI 的 `Go Interop` job 跑它):用 BSR 上生成的 SDK 对真实 kite-server 运行 `docs/integration.md` 的示例。示例与 `interop/go/kite.go` 逐字一致(测试守护),改示例先改文档再同步。
 - **`make player-check`** —— `packages/kite-player` 的 `npm ci` + 类型检查 + 测试 + 构建(CI 的 `Player` job 跑它)。不在 `make check` 里,改了 `packages/kite-player` 或 `/player/v1` 协议后跑。
+- **`make player-demo`** —— 构建 `packages/kite-player` 并起离线演示页看效果;`DEMO_HOST=0.0.0.0` 时同一局域网的手机可以打开。改了播放器界面或动画后用它在真机上确认。
 - **`make clean`** —— 清本地构建产物(`tmp/`、`bin/`)。不清 `gen/`。
 
 ```bash

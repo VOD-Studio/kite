@@ -2,31 +2,16 @@
 // 用法:npm run screenshots(先构建,再运行本脚本)。需要本机装有 Chrome / Chromium,
 // 路径可用环境变量 CHROME 指定。截图依赖本机字体,不同机器的结果不会逐字节相同。
 import { spawn } from "node:child_process";
-import { createReadStream, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { createServer } from "node:http";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { extname, join, normalize } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { root, serveStatic } from "./static.mjs";
 
-const root = fileURLToPath(new URL("..", import.meta.url));
 const out = join(root, "docs/images");
 mkdirSync(out, { recursive: true });
 
-// ---- 静态服务 ----
-
-const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".svg": "image/svg+xml", ".map": "application/json" };
-const server = createServer((req, res) => {
-  const path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname)).replace(/^(\.\.[/\\])+/, "");
-  const file = join(root, path);
-  if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) {
-    res.writeHead(404).end();
-    return;
-  }
-  res.writeHead(200, { "Content-Type": types[extname(file)] ?? "application/octet-stream" });
-  createReadStream(file).pipe(res);
-});
-await new Promise((r) => server.listen(0, "127.0.0.1", r));
-const base = `http://127.0.0.1:${server.address().port}/demo/index.html`;
+const { server, port: serverPort } = await serveStatic();
+const base = `http://127.0.0.1:${serverPort}/demo/index.html`;
 
 // ---- Chrome(CDP) ----
 

@@ -12,17 +12,20 @@ npm run check         # 类型检查 + 测试 + 构建,与 CI 的 Player job 相
 npm run build         # 输出 dist:ESM + 类型声明 + 单文件 IIFE
 npm test              # vitest + happy-dom
 npm run screenshots   # 构建后从演示页生成 docs/images/*.webp(README 的配图)
+npm run demo          # 构建后起离线演示页看效果(见下文)
 ```
 
 ## 演示页
 
-`demo/index.html` 默认离线运行:`demo/demo.js` 提供示例歌单、歌词和一个按真实时钟推进的模拟音频,封面是 `demo/covers/` 里的插画,不访问任何服务。构建后在本目录起一个静态服务器打开:
+`demo/index.html` 默认离线运行:`demo/demo.js` 提供示例歌单、歌词和一个按真实时钟推进的模拟音频,封面是 `demo/covers/` 里的插画,不访问任何服务。构建并起静态服务:
 
 ```sh
-npm run build
-python3 -m http.server 5174   # 或任意静态服务器
+npm run demo                  # 或仓库根的 make player-demo
 # http://127.0.0.1:5174/demo/index.html
+HOST=0.0.0.0 npm run demo     # 同一局域网的手机打开打印出的地址(make player-demo DEMO_HOST=0.0.0.0)
 ```
+
+宽度不超过 767px 时是手机布局:桌面浏览器用开发者工具的设备模式,手势(拖动翻页、拖动歌词、点按)要开触摸模拟。动画以真机为准:无头 Chrome 默认软件光栅,面板第一次显示时会丢帧。
 
 连接真实的 kite-server 时在地址后加参数:`?api=http://127.0.0.1:3793&playlists=歌单ID,歌单ID&songs=歌曲ID,…&playlist=歌单ID,…`。kite-server 需要开公开模式(`KITE_PUBLIC_ADDR`、`KITE_PUBLIC_PLAYLISTS`,`KITE_PUBLIC_ORIGINS` 包含演示页的地址)。
 
@@ -40,7 +43,7 @@ python3 -m http.server 5174   # 或任意静态服务器
 | `src/react/` | React 组件(`components.ts`)与 hooks(`hooks.ts`) |
 | `test/` | 核心、元素、React 的测试 |
 | `demo/` | 离线演示页 |
-| `scripts/` | 截图脚本 |
+| `scripts/` | 演示页的静态服务、截图脚本 |
 | `docs/images/` | README 配图(不进 npm 包) |
 
 ## 约定
