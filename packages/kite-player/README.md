@@ -73,6 +73,8 @@ Click the cover or the title to expand. Tap the quality badge on the cover to tu
 
 ### Immersive mode
 
+Enter it from the panel's top-right button; the collapse button at the top left (or Esc) goes straight back to the bar.
+
 <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/immersive.webp" width="820" alt="Immersive mode">
 
 ### Queue

@@ -71,6 +71,8 @@ import "@violetjs/kite-player/element"; // 注册 <kite-player>、<kite-track>�
 
 ### 沉浸模式
 
+面板右上角进入;左上角的收起(或 Esc)直接收回播放条。
+
 <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/immersive.webp" width="820" alt="沉浸模式">
 
 ### 播放列表
