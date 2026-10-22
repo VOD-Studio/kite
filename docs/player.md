@@ -135,7 +135,7 @@ secrets:
 | `/player/v1/playlists/{id}` | 歌单 `{id, name, cover, trackCount, tracks: [Track]}`;`tracks` 按歌单顺序,最多 1000 首 |
 | `/player/v1/tracks/{id}` | 单曲 `Track` |
 | `/player/v1/tracks/{id}/lyrics` | 歌词 `{lines, chorus, instrumental}` |
-| `/player/v1/tracks/{id}/stream?exp=&sig=` | 302 跳转到上游直链(https);服务账号对该歌无权益、上游只给试听片段时,响应带 `X-Kite-Trial: start=0; end=30000`(毫秒) |
+| `/player/v1/tracks/{id}/stream?exp=&sig=[&quality=]` | 302 跳转到上游直链(https);可选的 `quality`(`standard` / `exhigh` / `lossless` / `hires`)要求更低的音质(省流量),不会超过 `KITE_PUBLIC_QUALITY`,不参与签名;服务账号对该歌无权益、上游只给试听片段时,响应带 `X-Kite-Trial: start=0; end=30000`(毫秒) |
 | `/healthz` | 健康检查,不限流 |
 
 `Track`:
@@ -187,6 +187,7 @@ secrets:
 | `LINK_INVALID` | 403 | 播放链接签名无效 |
 | `ORIGIN_NOT_ALLOWED` | 403 | 调用页面不在 `KITE_PUBLIC_ORIGINS` 里 |
 | `INVALID_ID` | 400 | ID 不是正整数 |
+| `BAD_REQUEST` | 400 | 参数不合法(如 `quality` 不在可选值里) |
 | `RATE_LIMITED` | 429 | 请求太频繁,带 `Retry-After` |
 | `UPSTREAM_ERROR` | 502 | 上游暂时不可用 |
 
