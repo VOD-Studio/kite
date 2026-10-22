@@ -9,6 +9,7 @@ import { firstSungIndex, formatTime, lineUnits, wordProgress } from "../core/lyr
 import { modeLabels, type Player } from "../core/player";
 import type { Lyrics, PlayerState, Playlist, Quality, Track } from "../core/types";
 import { blob, coverPh, eq, icons } from "./icons";
+import { apply as applyMorph, clear as clearMorph, cubicBezier, frame as morphFrame, measure, play as playMorph, type MorphGeo, type MorphParts } from "./morph";
 import { playerSheet } from "./styles";
 import {
   $,
@@ -47,10 +48,18 @@ const collapseScroll = 24;
 const dragSlop = 8;
 /** 松手时横向速度超过它(px/ms)就翻到下一页,不看拖了多远。 */
 const flingSpeed = 0.35;
-/** 展开 / 收起的时长与缓动(容器形变:迷你条 ↔ 全屏)。 */
+/** 展开 / 收起的时长与缓动(见 morph.ts)。 */
 const easeOut = "cubic-bezier(.2,.85,.25,1)";
-const morphOpen = { duration: 460, easing: easeOut };
-const morphClose = { duration: 380, easing: "cubic-bezier(.4,0,.2,1)" };
+const morphOpen = { duration: 460, ease: cubicBezier(0.2, 0.85, 0.25, 1) };
+const morphClose = { duration: 380, ease: cubicBezier(0.4, 0, 0.2, 1) };
+
+// 封面页 ↔ 歌词页的进度。注册成不继承的属性:只写在用到它的几个元素上,改动时不会让整棵歌词树重新计算样式。
+// 浏览器不支持时退回普通变量,照样能用。同一页面加载两份本包时第二次注册会抛错,忽略即可。
+try {
+  globalThis.CSS?.registerProperty?.({ name: "--kite-pg", syntax: "<number>", inherits: false, initialValue: "0" });
+} catch {
+  // 已经注册过。
+}
 /** 上拉展开 / 下拉收起:松手时甩动速度超过它(px/ms)就按方向完成,不看拖了多远。 */
 const pullSpeed = 0.5;
 /** 歌词拖过首句 / 末句之后的跟手比例与最多能拖出去多远。 */
@@ -73,32 +82,6 @@ const qualityBadges: Partial<Record<Quality, [string, string]>> = {
 function qualityBadge(t: Track | null | undefined): [string, string] | null {
   if (!t || t.trial || !t.quality) return null;
   return qualityBadges[t.quality] ?? null;
-}
-
-/** 容器形变的几何:播放条与面板的矩形,以及面板到位后的圆角。 */
-interface MorphGeo {
-  bar: DOMRect;
-  box: DOMRect;
-  radius: number;
-}
-
-/**
- * morphFrame 是容器形变在进度 p(0 = 播放条,1 = 面板)时的样式:可见区域在两个矩形之间插值,
- * 前景按可见高度等比缩放并贴左上角;最开始 10% 从透明淡入,与播放条交叉。
- */
-function morphFrame(g: MorphGeo, p: number): { clipPath: string; transform: string; opacity: number } {
-  const q = 1 - p;
-  const top = (g.bar.top - g.box.top) * q;
-  const right = (g.box.right - g.bar.right) * q;
-  const bottom = (g.box.bottom - g.bar.bottom) * q;
-  const left = (g.bar.left - g.box.left) * q;
-  const scale = (g.box.height - top - bottom) / g.box.height;
-  const radius = (g.bar.height / 2) * q + g.radius * p;
-  return {
-    clipPath: `inset(${top}px ${right}px ${bottom}px ${left}px round ${radius}px)`,
-    transform: `translate(${left}px, ${top}px) scale(${scale})`,
-    opacity: Math.min(1, Math.max(0, p / 0.1)),
-  };
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -213,6 +196,9 @@ export class KitePlayerElement extends LitElement {
    * geo 在面板显示出来之后才有,在那之前的移动只记下位置。
    */
   private pull: { pointer: number; opening: boolean; startY: number; lastY: number; lastT: number; vy: number; p: number; geo: MorphGeo | null } | null = null;
+  /** 正在播放的形变:用来在中途打断时算出当前进度,从那里接着走。 */
+  private morphRun: { from: number; to: number; duration: number; ease: (t: number) => number } | null = null;
+  private morphParts: MorphParts | null = null;
   /** 播放条上一次按下的位置,用来判断是不是在往上拉。 */
   private barPress = { pointer: -1, x: 0, y: 0 };
   /** 每次显示 / 收起面板加一,过期的收起回调据此放弃。 */
@@ -260,27 +246,24 @@ export class KitePlayerElement extends LitElement {
     this.unlockScroll();
   }
 
-  /** open 展开播放器;view 可指定打开封面还是歌词。 */
+  /** open 展开播放器;view 可指定打开封面还是歌词。收起到一半时再点,从当前位置展开回来。 */
   async open(view?: View): Promise<void> {
     if (view) this.setView(view);
     if (this.ui.mode === "open" || !this.player.state.current) return;
-    const bar = this.q(".bar").getBoundingClientRect();
+    const from = this.ui.stageShown ? this.currentP() : 0;
     await this.showStage();
-    const geo = this.morphGeo(bar);
-    if (geo && this.morph(geo, 0, 1, morphOpen)) this.holdFirstFrame();
+    const geo = this.measureMorph();
+    if (geo && this.runMorph(geo, from, 1, morphOpen.duration * (1 - from), morphOpen.ease) && from === 0) this.holdFirstFrame();
     this.resetIdle();
     this.q(".stage .close").focus({ preventScroll: true });
   }
 
-  /** close 收起回播放条。沉浸模式下改为整屏缩小淡出(比例差太大,不做容器形变)。 */
+  /** close 收起回播放条(沉浸模式也一样)。展开到一半时再点,从当前位置收回去。 */
   close(): void {
     if (this.ui.mode !== "open") return;
     this.closeSheet();
-    if (this.ui.immersive) {
-      this.closeImmersive();
-      return;
-    }
-    this.collapseFrom(this.morphGeo(this.q(".bar").getBoundingClientRect()), 1, morphClose);
+    const p = this.morphing.length ? this.currentP() : 1;
+    this.collapseFrom(this.measureMorph(), p, morphClose.duration * p, morphClose.ease);
   }
 
   /** showStage 把面板放进页面(还没有动画),每次展开或开始上拉时调用。 */
@@ -290,6 +273,7 @@ export class KitePlayerElement extends LitElement {
     this.patch({ mode: "open", stageShown: true });
     this.lockScroll();
     await this.updateComplete;
+    this.measureCover();
     this.paintAmbient();
     requestAnimationFrame(() => this.layoutLines());
   }
@@ -297,87 +281,64 @@ export class KitePlayerElement extends LitElement {
   /** hideStage 收起动画结束后把面板移出页面。 */
   private hideStage(): void {
     this.cancelMorph();
-    this.clearMorphStyles();
+    clearMorph(this.morphParts);
     this.patch({ immersive: false, stageShown: false });
     this.unlockScroll();
   }
 
-  /** collapseFrom 从形变进度 p 收起到播放条:播放条先在面板下面出现,面板缩回它的位置后淡出。 */
-  private collapseFrom(geo: MorphGeo | null, p: number, timing: { duration: number; easing: string }): void {
+  /** collapseFrom 从进度 p 收起到播放条:播放条先在面板下面出现,面板的各部分飞回播放条后淡出。 */
+  private collapseFrom(geo: MorphGeo | null, p: number, duration: number, ease: (t: number) => number): void {
     const token = ++this.stageToken;
     this.patch({ mode: "bar", idle: false });
     const finish = () => {
       if (token === this.stageToken) this.hideStage();
     };
-    const anim = geo ? this.morph(geo, p, 0, timing) : null;
+    const anim = geo ? this.runMorph(geo, p, 0, Math.max(120, duration), ease) : null;
     if (!anim) {
       finish();
       return;
     }
     anim.finished.then(finish, finish);
     // 环境不派发 finished 时也要收起。
-    setTimeout(finish, timing.duration + 60);
+    setTimeout(finish, Math.max(120, duration) + 80);
   }
 
-  /** closeImmersive 沉浸模式收起:整屏缩到 0.96 并淡出,播放条稍后在原位淡入上浮。 */
-  private closeImmersive(): void {
-    const token = ++this.stageToken;
-    const stage = this.q(".stage");
-    const finish = () => {
-      if (token === this.stageToken) this.hideStage();
+  /** measureMorph 去掉形变留下的样式后,量出面板到位时各部分的位置。 */
+  private measureMorph(): MorphGeo | null {
+    this.cancelMorph();
+    clearMorph(this.morphParts);
+    const lyricsView = this.ui.view === "lyrics" && !this.ui.immersive;
+    const badge = this.q(".badge");
+    const parts: MorphParts = {
+      stage: this.q(".stage"),
+      cover: this.q(".cover"),
+      badge: badge.hasAttribute("data-show") && !lyricsView ? badge : null,
+      text: this.q<HTMLElement>(lyricsView ? ".head" : ".meta"),
+      top: this.q(".top"),
+      ctl: this.q(".ctl"),
+      rest: [this.q(".lyrics"), this.q(".lyr-trans")],
     };
-    this.cancelMorph();
-    if (!canAnimate(stage)) {
-      this.patch({ mode: "bar", idle: false });
-      finish();
-      return;
-    }
-    const anim = stage.animate([{ transform: "none", opacity: 1 }, { transform: "scale(.96)", opacity: 0 }], {
-      duration: 220,
-      easing: "cubic-bezier(.4,0,1,1)",
-      fill: "forwards",
-    });
-    this.morphing = [anim];
-    setTimeout(() => {
-      if (token !== this.stageToken) return;
-      this.patch({ mode: "bar", idle: false });
-      this.q(".bar").animate([{ transform: "translateY(8px)" }, { transform: "none" }], { duration: 200, easing: easeOut });
-    }, 80);
-    anim.finished.then(finish, finish);
-    setTimeout(finish, 300);
+    this.morphParts = parts;
+    return measure(parts, this.q(".bar"), this.q(".disc"), this.q(".bar-title"), this.q(".fg"));
   }
 
-  private morphGeo(bar: DOMRect): MorphGeo | null {
-    const stage = this.q(".stage");
-    const box = stage.getBoundingClientRect();
-    if (!box.height || !bar.height) return null;
-    return { bar, box, radius: parseFloat(getComputedStyle(stage).borderTopLeftRadius) || 0 };
+  /** runMorph 从进度 from 动到 to。返回卡片的动画,不能做动画时返回 null。 */
+  private runMorph(geo: MorphGeo, from: number, to: number, duration: number, ease: (t: number) => number): Animation | null {
+    this.cancelMorph();
+    clearMorph(geo.parts);
+    if (!canAnimate(geo.parts.stage)) return null;
+    this.morphing = playMorph(geo, from, to, Math.max(1, duration), ease);
+    this.morphRun = { from, to, duration: Math.max(1, duration), ease };
+    return this.morphing[0] ?? null;
   }
 
-  /**
-   * morph 在迷你条与面板之间做容器形变(参考网易云),从进度 from 动到 to:可见区域在两个矩形之间插值,
-   * 内容按可见高度等比缩放、贴左上角,所以大封面正好落在播放条唱片的位置。宽度相同时只沿竖直方向长缩。
-   * 只动 clip-path、transform 与 opacity。返回主动画,不能做动画时返回 null。
-   */
-  private morph(geo: MorphGeo, from: number, to: number, timing: { duration: number; easing: string }): Animation | null {
-    this.cancelMorph();
-    this.clearMorphStyles();
-    const stage = this.q(".stage");
-    if (!canAnimate(stage)) return null;
-    const a = morphFrame(geo, from);
-    const b = morphFrame(geo, to);
-    // 交叉淡入淡出:展开时只在开头一小段淡入;收起时最后 28% 淡出,露出下面的播放条。
-    const fade =
-      to > from
-        ? [{ opacity: a.opacity }, { opacity: 1, offset: clamp((0.1 - from) / (to - from), 0, 1) }, { opacity: 1 }]
-        : [{ opacity: a.opacity }, { opacity: a.opacity, offset: 0.72 }, { opacity: b.opacity }];
-    const main = stage.animate([{ clipPath: a.clipPath }, { clipPath: b.clipPath }], timing);
-    this.morphing = [
-      main,
-      this.q(".fg").animate([{ transform: a.transform }, { transform: b.transform }], timing),
-      stage.animate(fade, { duration: timing.duration, fill: to === 0 ? "forwards" : "none" }),
-    ];
-    return main;
+  /** currentP 正在播放的形变走到哪了(0 播放条,1 面板)。 */
+  private currentP(): number {
+    const run = this.morphRun;
+    const anim = this.morphing[0];
+    if (!run || !anim) return this.ui.mode === "open" ? 1 : 0;
+    const t = clamp(Number(anim.currentTime ?? 0) / run.duration, 0, 1);
+    return run.from + (run.to - run.from) * run.ease(t);
   }
 
   /**
@@ -397,22 +358,20 @@ export class KitePlayerElement extends LitElement {
   private cancelMorph(): void {
     for (const a of this.morphing) a.cancel();
     this.morphing = [];
+    this.morphRun = null;
   }
 
-  /** applyMorph 把跟手中的形变进度直接写到样式上(不经过动画)。 */
-  private applyMorph(geo: MorphGeo, p: number): void {
-    const f = morphFrame(geo, p);
-    const stage = this.q(".stage");
-    stage.style.clipPath = f.clipPath;
-    stage.style.opacity = String(f.opacity);
-    this.q(".fg").style.transform = f.transform;
-  }
-
-  private clearMorphStyles(): void {
+  /** measureCover 算出歌词页小封面与大封面的比例,封面在两页之间只用 transform 缩放。 */
+  private measureCover(): void {
+    const cover = this.renderRoot.querySelector<HTMLElement>(".cover");
     const stage = this.renderRoot.querySelector<HTMLElement>(".stage");
-    stage?.style.removeProperty("clip-path");
-    stage?.style.removeProperty("opacity");
-    this.renderRoot.querySelector<HTMLElement>(".fg")?.style.removeProperty("transform");
+    if (!cover || !stage || !cover.offsetWidth) return;
+    const small = parseFloat(getComputedStyle(stage).getPropertyValue("--ss")) || 48;
+    const k = String(Math.round((small / cover.offsetWidth) * 10000) / 10000);
+    if (cover.style.getPropertyValue("--kite-ck") !== k) {
+      cover.style.setProperty("--kite-ck", k);
+      this.renderRoot.querySelector<HTMLElement>(".badge")?.style.setProperty("--kite-ck", k);
+    }
   }
 
   // ---- 上拉展开 / 下拉收起(手机,跟手) ----
@@ -453,12 +412,10 @@ export class KitePlayerElement extends LitElement {
 
   /** startPull 开始跟手:展开时先把面板放进页面(从播放条大小开始),收起时面板已经在。 */
   private async startPull(e: PointerEvent, opening: boolean): Promise<void> {
-    const bar = this.q(".bar").getBoundingClientRect();
     this.pull = { pointer: e.pointerId, opening, startY: e.clientY, lastY: e.clientY, lastT: e.timeStamp, vy: 0, p: opening ? 0 : 1, geo: null };
     if (opening) await this.showStage();
-    else this.cancelMorph();
     if (!this.pull) return;
-    this.pull.geo = this.morphGeo(bar);
+    this.pull.geo = this.measureMorph();
     this.updatePull();
   }
 
@@ -479,7 +436,7 @@ export class KitePlayerElement extends LitElement {
     const travel = pl.geo.bar.top - pl.geo.box.top || 1;
     const moved = (pl.lastY - pl.startY) / travel;
     pl.p = clamp(pl.opening ? -moved : 1 - moved, 0, 1);
-    this.applyMorph(pl.geo, pl.p);
+    applyMorph(morphFrame(pl.geo, pl.p));
   }
 
   /** endPull 松手:拖过判定距离或甩得够快就完成,否则回到原来的样子;剩下的路程按比例缩短时长。 */
@@ -495,13 +452,10 @@ export class KitePlayerElement extends LitElement {
     }
     if (toOpen) {
       this.patch({ mode: "open" });
-      const done = () => this.clearMorphStyles();
-      const anim = this.morph(pl.geo, pl.p, 1, { duration: Math.max(160, (pl.opening ? 460 : 300) * (1 - pl.p)), easing: easeOut });
-      if (anim) anim.finished.then(done, done);
-      else done();
+      if (!this.runMorph(pl.geo, pl.p, 1, Math.max(160, (pl.opening ? 460 : 300) * (1 - pl.p)), morphOpen.ease)) clearMorph(pl.geo.parts);
       this.resetIdle();
     } else {
-      this.collapseFrom(pl.geo, pl.p, { duration: Math.max(160, (pl.opening ? 300 : 380) * pl.p), easing: pl.opening ? easeOut : morphClose.easing });
+      this.collapseFrom(pl.geo, pl.p, Math.max(160, (pl.opening ? 300 : 380) * pl.p), pl.opening ? morphOpen.ease : morphClose.ease);
     }
   }
 
@@ -614,7 +568,7 @@ export class KitePlayerElement extends LitElement {
         </div>
         <div class="ctl" part="controls">
           <div class="progress">
-            <span class="ptrack"></span><span class="pchorus" ?hidden=${!chorusStyle} style=${styleMap(chorusStyle ?? {})}></span><span class="pfill"></span><span class="pthumb"></span
+            <span class="ptrack"></span><span class="pchorus" ?hidden=${!chorusStyle} style=${styleMap(chorusStyle ?? {})}></span><span class="pfill"></span><span class="pknob"><span class="pthumb"></span></span
             ><input type="range" min="0" max="1000" step="1" value="0" aria-label="播放进度" @input=${this.onRangeInput} @change=${this.onRangeChange} />
           </div>
           <div class="times"><span class="t-cur">${formatTime(ui.dragging ? ui.dragPct * s.duration : s.time)}</span><span class="t-dur">${formatTime(s.duration)}</span></div>
@@ -736,10 +690,11 @@ export class KitePlayerElement extends LitElement {
     if (!detail || !canAnimate(detail)) return;
     detail.animate(
       [
-        { clipPath: "inset(0 100% 0 0 round 0 6px 6px 0)", transform: "translateX(-8px)", opacity: 0 },
-        { clipPath: "inset(0 0 0 0 round 0 6px 6px 0)", transform: "none", opacity: 1 },
+        { transform: "translateX(-100%)", opacity: 0 },
+        { transform: "translateX(-100%)", opacity: 1, offset: 0.15 },
+        { transform: "none", opacity: 1 },
       ],
-      { duration: 280, delay: 120, easing: easeOut, fill: "backwards" },
+      { duration: 340, delay: 120, easing: easeOut, fill: "backwards" },
     );
     this.sheen();
   }
@@ -838,7 +793,6 @@ export class KitePlayerElement extends LitElement {
     if (e.key !== "Escape") return;
     e.stopPropagation();
     if (this.ui.sheet) this.closeSheet();
-    else if (this.ui.immersive) void this.setImmersive(false, true);
     else this.close();
   };
 
@@ -924,9 +878,9 @@ export class KitePlayerElement extends LitElement {
     g.lastY = e.clientY;
     g.lastT = e.timeStamp;
     if (g.axis === "x") {
-      // 封面与歌词之间的进度跟着手指走(0 封面,1 歌词),CSS 用 --pg 插值页面、封面与控制区。
+      // 封面与歌词之间的进度跟着手指走(0 封面,1 歌词),CSS 用 --kite-pg 插值页面、封面与控制区。
       g.pg = clamp(g.from - dx / g.width, 0, 1);
-      this.q(".stage").style.setProperty("--pg", String(g.pg));
+      for (const el of this.pagingParts()) el.style.setProperty("--kite-pg", String(g.pg));
     } else {
       // 首句到末句都能停在锚点;再往外拖有阻力,最多拖出去 80px。
       this.manual.offset = this.rubber(this.manual.startOffset + dy);
@@ -997,11 +951,15 @@ export class KitePlayerElement extends LitElement {
     e.preventDefault();
   }
 
-  /** endPaging 松手:去掉跟手的 --pg,交给 CSS 过渡滑到目标页。 */
+  /** pagingParts 随封面页 ↔ 歌词页进度变化的元素(--kite-pg 只写在它们上面)。 */
+  private pagingParts(): HTMLElement[] {
+    return [...this.renderRoot.querySelectorAll<HTMLElement>(".page, .cover, .badge, .ctl, .extra")];
+  }
+
+  /** endPaging 松手:去掉跟手的 --kite-pg,交给 CSS 过渡滑到目标页。 */
   private endPaging(view: View): void {
-    const stage = this.q(".stage");
-    stage.classList.remove("paging");
-    stage.style.removeProperty("--pg");
+    this.q(".stage").classList.remove("paging");
+    for (const el of this.pagingParts()) el.style.removeProperty("--kite-pg");
     this.setView(view);
   }
 
