@@ -63,8 +63,10 @@
   width: 22px;
   height: 22px;
 }
-.ib:hover {
-  background: var(--kite-chip);
+@media (hover: hover) {
+  .ib:hover {
+    background: var(--kite-chip);
+  }
 }
 .ib:active {
   transform: scale(.9);
@@ -83,8 +85,10 @@
   flex: none;
   transition: background-color .16s, color .16s;
 }
-.chip:hover {
-  color: var(--kite-fg);
+@media (hover: hover) {
+  .chip:hover {
+    color: var(--kite-fg);
+  }
 }
 .chip svg {
   width: 14px;
@@ -563,8 +567,10 @@
   gap: 8px;
   margin-top: 18px;
 }
-.l .controls .ib:hover {
-  background: rgba(255,255,255,.14);
+@media (hover: hover) {
+  .l .controls .ib:hover {
+    background: rgba(255,255,255,.14);
+  }
 }
 .l .blob {
   width: 52px;
@@ -705,8 +711,10 @@
   flex: none;
   transition: filter .16s, transform .16s var(--ease);
 }
-.playall:hover {
-  filter: brightness(1.08);
+@media (hover: hover) {
+  .playall:hover {
+    filter: brightness(1.08);
+  }
 }
 .playall:active {
   transform: scale(.95);
@@ -733,8 +741,10 @@
   font-size: 14px;
   transition: background-color .16s;
 }
-.row:hover {
-  background: var(--kite-chip);
+@media (hover: hover) {
+  .row:hover {
+    background: var(--kite-chip);
+  }
 }
 .row .idx {
   color: var(--kite-muted);

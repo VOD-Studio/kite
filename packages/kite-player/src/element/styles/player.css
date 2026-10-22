@@ -12,7 +12,7 @@
   --kite-chip-strong: rgba(21,23,28,.12);
   --kite-sheet: #FFFFFF;
   --kite-ring-track: rgba(255,255,255,.96);
-  --ease-in: cubic-bezier(.5,0,.25,1);
+  --ease-in: cubic-bezier(.4,0,1,1);
   --lyric: cubic-bezier(.22,1,.36,1);
 }
 
@@ -29,8 +29,10 @@
   width: 22px;
   height: 22px;
 }
-.ib:hover {
-  background: var(--kite-chip);
+@media (hover: hover) {
+  .ib:hover {
+    background: var(--kite-chip);
+  }
 }
 .ib:active {
   transform: scale(.9);
@@ -165,12 +167,17 @@
   overflow: hidden;
   background: #D9DCE2;
 }
-.disc-img img {
+.disc-img {
   animation: spin 9s linear infinite;
   animation-play-state: paused;
 }
-.playing .disc-img img {
+.playing .disc-img {
   animation-play-state: running;
+}
+.xfade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 @keyframes spin {
   to {
@@ -264,39 +271,48 @@
 }
 .kp[data-mode="open"] .bar {
   opacity: 0;
-  transform: scale(.98);
   pointer-events: none;
   visibility: hidden;
-  transition: opacity .1s, transform .1s, visibility 0s .1s;
+  transition: opacity .1s, visibility 0s .1s;
 }
 .kp:not([data-has-track]) .bar {
   display: none;
 }
 .kp[data-device="mobile"] .bar {
-  right: 12px;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  width: calc(100vw - 24px);
-  height: 64px;
-  border-radius: 32px;
+  right: 10px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  width: calc(100vw - 20px);
+  height: 58px;
+  border-radius: 29px;
 }
 .kp[data-device="mobile"] .disc {
   left: 5px;
   top: 5px;
-  width: 54px;
-  height: 54px;
+  width: 48px;
+  height: 48px;
 }
 .kp[data-device="mobile"] .bar-text {
-  left: 66px;
-  right: 132px;
+  left: 60px;
+  right: 128px;
   top: 9px;
+  height: 40px;
+}
+.kp[data-device="mobile"] .bar-title {
+  font-size: 14px;
+  line-height: 21px;
+}
+.kp[data-device="mobile"] .bar-sub {
+  height: 19px;
+  font-size: 12px;
+  line-height: 19px;
 }
 .kp[data-device="mobile"] .bar-ctl {
-  right: 10px;
-  top: 12px;
+  right: 8px;
+  top: 9px;
 }
 .kp[data-device="mobile"] .bar-ctl .blob {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
 }
 .kp[data-device="mobile"] .bar-ctl .ib {
   width: 40px;
@@ -306,13 +322,13 @@
   display: none;
 }
 .kp[data-device="mobile"][data-mode="orb"] .bar {
-  width: 56px;
-  height: 56px;
-  border-radius: 28px;
+  width: 58px;
+  height: 58px;
+  border-radius: 29px;
 }
 .kp[data-device="mobile"][data-mode="orb"] .disc {
-  left: 1px;
-  top: 1px;
+  left: 5px;
+  top: 5px;
 }
 
 /* ---------- 展开:桌面面板 / 手机全屏 / 沉浸 ---------- */
@@ -338,8 +354,29 @@
   --sy: 62px;
   --ly-top: 126px;
   --ctl-h: 176px;
+  /* 封面页最下面一排按钮(副歌、翻译)的高度;歌词页没有这一排,控制区整体下移这么多。 */
+  --xh: 52px;
   --safe-b: 0px;
   --safe-t: 0px;
+  /* 封面页 → 歌词页的进度:0 封面,1 歌词。横向拖动时由脚本逐帧写在 .stage 上,页面、封面、控制区都按它插值。 */
+  --pg: 0;
+  touch-action: none;
+}
+.kp[data-view="lyrics"] .stage {
+  --pg: 1;
+}
+.kp[data-immersive] .stage {
+  --pg: 0;
+}
+/* 前景:展开 / 收起时整体等比缩放(容器形变),背景只裁切不缩放。 */
+.fg {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+/* 跟手拖动期间去掉过渡,松手后再交给过渡滑到目标页。 */
+.stage.paging .page, .stage.paging .cover, .stage.paging .badge, .stage.paging .ctl, .stage.paging .extra {
+  transition: none;
 }
 .kp[data-device="mobile"] .stage {
   inset: 0;
@@ -374,22 +411,12 @@
   overflow: hidden;
   background: #2B3350;
 }
-.amb img {
+/* 背景是一张 32×48 的小画布(见 paintAmbient),拉满后由双线性插值变成柔和的色块,不用实时模糊滤镜。 */
+.amb canvas {
   position: absolute;
-  left: -60%;
-  top: -30%;
-  width: 220%;
-  height: 160%;
-  filter: blur(64px) saturate(1.35) brightness(.72);
-  transform: translateZ(0);
-  transition: opacity .6s;
-}
-.kp[data-immersive] .amb img {
-  left: -20%;
-  top: -40%;
-  width: 140%;
-  height: 180%;
-  filter: blur(110px) saturate(1.35) brightness(.7);
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 /* 白色、浅色封面会把底色洗白:整体压一层暗色,保证白字歌词的对比度。 */
 .scrim {
@@ -408,8 +435,10 @@
   align-items: center;
   justify-content: space-between;
 }
-.top .ib:hover, .ctl .ib:hover, .stage .ib:hover {
-  background: rgba(255,255,255,.12);
+@media (hover: hover) {
+  .stage .ib:hover {
+    background: rgba(255,255,255,.12);
+  }
 }
 .dots {
   display: flex;
@@ -424,7 +453,7 @@
   transition: width .35s var(--ease), background-color .35s;
 }
 .kp[data-view="cover"] .dots button[data-go="cover"], .kp[data-view="lyrics"] .dots button[data-go="lyrics"] {
-  width: 16px;
+  width: 12px;
   background: rgba(255,255,255,.95);
 }
 .kp[data-immersive] .dots {
@@ -433,25 +462,21 @@
 .kp[data-device="mobile"] .immersive {
   visibility: hidden;
 }
+/* 封面是两页共用的元素:封面页的大图与歌词页左上角的小图之间按 --pg 插值,翻页时跟着手指缩放移动。 */
 .cover {
   position: absolute;
   z-index: 2;
-  left: var(--cx);
-  top: var(--cy);
-  width: var(--cs);
-  height: var(--cs);
-  border-radius: 18px;
+  left: calc(var(--cx) + (var(--sx) - var(--cx)) * var(--pg));
+  top: calc(var(--cy) + (var(--sy) - var(--cy)) * var(--pg));
+  width: calc(var(--cs) + (var(--ss) - var(--cs)) * var(--pg));
+  height: calc(var(--cs) + (var(--ss) - var(--cs)) * var(--pg));
+  border-radius: calc(16px - 8px * var(--pg));
   overflow: hidden;
   background: rgba(255,255,255,.08);
   box-shadow: 0 30px 60px -24px rgba(8,10,30,.6);
-  transition: left .48s var(--ease), top .48s var(--ease), width .48s var(--ease), height .48s var(--ease), border-radius .48s var(--ease), box-shadow .48s var(--ease);
+  transition: left .38s var(--ease), top .38s var(--ease), width .38s var(--ease), height .38s var(--ease), border-radius .38s var(--ease), box-shadow .38s var(--ease);
 }
 .kp[data-view="lyrics"]:not([data-immersive]) .cover {
-  left: var(--sx);
-  top: var(--sy);
-  width: var(--ss);
-  height: var(--ss);
-  border-radius: 10px;
   box-shadow: 0 8px 18px -8px rgba(8,10,30,.55);
 }
 .badge {
@@ -465,7 +490,8 @@
   font-size: 11px;
   line-height: 22px;
   font-weight: 600;
-  transition: opacity .2s;
+  opacity: calc(1 - var(--pg) * 3);
+  transition: opacity .38s var(--ease);
 }
 .badge b {
   padding: 0 7px;
@@ -478,9 +504,6 @@
   background: rgba(14,16,30,.48);
   color: #FFFFFF;
 }
-.kp[data-view="lyrics"]:not([data-immersive]) .badge {
-  opacity: 0;
-}
 
 .pages {
   position: absolute;
@@ -491,29 +514,19 @@
 .page {
   position: absolute;
   inset: 0;
-  transition: transform .35s var(--ease), opacity .35s var(--ease);
+  transition: transform .38s var(--ease);
 }
 .page > * {
   pointer-events: auto;
 }
 .page-cover {
-  transform: none;
+  transform: translateX(calc(var(--pg) * -100%));
 }
 .page-lyrics {
-  transform: translateX(100%);
-  opacity: .4;
-}
-.kp[data-view="lyrics"] .page-cover {
-  transform: translateX(-100%);
-  opacity: .4;
-}
-.kp[data-view="lyrics"] .page-lyrics {
-  transform: none;
-  opacity: 1;
+  transform: translateX(calc((1 - var(--pg)) * 100%));
 }
 .kp[data-immersive] .page-cover, .kp[data-immersive] .page-lyrics {
   transform: none;
-  opacity: 1;
 }
 .meta {
   position: absolute;
@@ -586,14 +599,14 @@
   left: 0;
   right: 0;
   top: var(--ly-top);
-  bottom: calc(var(--ctl-h) + var(--safe-b) + 24px);
+  bottom: calc(var(--ctl-h) - var(--xh) + var(--safe-b) + 24px);
   overflow: hidden;
-  touch-action: pan-x;
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 11%, #000 80%, transparent 100%);
   mask-image: linear-gradient(180deg, transparent 0, #000 11%, #000 80%, transparent 100%);
   transition: bottom .4s var(--ease);
-  --lsize: 22px;
-  --tsize: 15px;
+  /* 翻译与原文同样大小(参考网易云),当前行两行都是白色。 */
+  --lsize: 20px;
+  --tsize: 20px;
 }
 .kp[data-idle] .lyrics {
   bottom: calc(var(--safe-b) + 24px);
@@ -604,11 +617,11 @@
   top: 10vh;
   bottom: 10vh;
   --lsize: 34px;
-  --tsize: 20px;
+  --tsize: 22px;
 }
 .line {
   position: absolute;
-  left: 18px;
+  left: calc(var(--sx) - 10px);
   right: 40px;
   top: 0;
   padding: 6px 10px;
@@ -617,8 +630,10 @@
   transition: transform .6s var(--lyric), opacity .4s, filter .4s, background-color .16s;
   will-change: transform;
 }
-.line:hover {
-  background: rgba(255,255,255,.08);
+@media (hover: hover) {
+  .line:hover {
+    background: rgba(255,255,255,.08);
+  }
 }
 .lt {
   display: block;
@@ -627,19 +642,19 @@
   font-weight: 700;
   color: rgba(255,255,255,.42);
   transform-origin: 0 50%;
-  transform: scale(.82);
-  transition: transform .36s var(--ease), color .36s;
+  transform: scale(.84);
+  transition: transform .5s var(--lyric), color .5s;
 }
 .tr {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   font-size: var(--tsize);
-  line-height: 1.45;
-  font-weight: 600;
+  line-height: 1.36;
+  font-weight: 700;
   color: rgba(255,255,255,.42);
   transform-origin: 0 50%;
-  transform: scale(.87);
-  transition: transform .36s var(--ease), color .36s;
+  transform: scale(.84);
+  transition: transform .5s var(--lyric), color .5s;
 }
 .line.cur .lt {
   transform: none;
@@ -647,7 +662,7 @@
 }
 .line.cur .tr {
   transform: none;
-  color: rgba(255,255,255,.9);
+  color: #FFFFFF;
 }
 .line.cur .u {
   color: transparent;
@@ -658,8 +673,7 @@
   background-clip: text;
 }
 .line.far {
-  opacity: .5;
-  filter: blur(1.2px);
+  opacity: .75;
 }
 .kp:not([data-trans]) .tr {
   display: none;
@@ -707,6 +721,24 @@
 .lyrics.manual .seek {
   opacity: 1;
 }
+/* 歌词页右下角的「词」:控制区上方,控制区隐藏时落到底部(参考网易云)。 */
+.lyr-trans {
+  position: absolute;
+  right: calc(var(--pad) - 10px);
+  bottom: calc(var(--ctl-h) - var(--xh) + var(--safe-b) + 26px);
+  color: rgba(255,255,255,.72);
+  transition: transform .4s var(--ease), color .2s;
+}
+.lyr-trans svg {
+  width: 20px;
+  height: 20px;
+}
+.kp[data-idle] .lyr-trans {
+  transform: translateY(calc(var(--ctl-h) - var(--xh)));
+}
+.kp[data-immersive] .lyr-trans {
+  display: none;
+}
 
 .ctl {
   position: absolute;
@@ -714,11 +746,13 @@
   left: var(--pad);
   right: var(--pad);
   bottom: calc(var(--safe-b) + 24px);
-  transition: opacity .3s var(--ease), transform .4s var(--ease);
+  transform: translateY(calc(var(--pg) * var(--xh)));
+  transition: opacity .3s var(--ease), transform .38s var(--ease);
 }
+/* 歌词页隐藏控制区:向下滑出并淡出(参考网易云),歌词区随之变高。 */
 .kp[data-idle] .ctl {
   opacity: 0;
-  transform: translateY(24px);
+  transform: translateY(calc(var(--xh) + 40px));
   pointer-events: none;
 }
 .kp[data-immersive] .ctl {
@@ -765,12 +799,17 @@
   transform: scale(0);
   transition: transform .18s var(--ease);
 }
-.progress:hover .pthumb, .progress:focus-within .pthumb {
+.progress:focus-within .pthumb, .progress:active .pthumb {
   transform: scale(1);
 }
-.progress:hover .ptrack, .progress:hover .pfill, .progress:hover .pchorus {
-  height: 5px;
-  top: 9px;
+@media (hover: hover) {
+  .progress:hover .pthumb {
+    transform: scale(1);
+  }
+  .progress:hover .ptrack, .progress:hover .pfill, .progress:hover .pchorus {
+    height: 5px;
+    top: 9px;
+  }
 }
 .progress input {
   position: absolute;
@@ -822,6 +861,11 @@
   justify-content: space-between;
   margin-top: 12px;
   color: rgba(255,255,255,.72);
+  opacity: calc(1 - var(--pg) * 2.5);
+  transition: opacity .3s var(--ease);
+}
+.kp[data-view="lyrics"]:not([data-immersive]) .extra {
+  pointer-events: none;
 }
 .extra .ib svg {
   width: 20px;
@@ -879,10 +923,10 @@
   position: fixed;
   z-index: 2147482800;
   inset: 0;
-  background: rgba(10,12,18,.42);
+  background: rgba(10,12,18,.28);
   opacity: 0;
   pointer-events: none;
-  transition: opacity .3s;
+  transition: opacity .28s;
 }
 .kp[data-sheet] .backdrop {
   opacity: 1;
@@ -904,7 +948,7 @@
   flex-direction: column;
   transform: translateY(calc(100% + 120px));
   visibility: hidden;
-  transition: transform .4s cubic-bezier(.2,1.04,.3,1), visibility 0s .4s;
+  transition: transform .26s var(--ease-in), visibility 0s .26s;
 }
 .kp[data-mode="open"] .sheet {
   bottom: var(--kite-offset);
@@ -913,31 +957,21 @@
 .kp[data-sheet] .sheet {
   transform: none;
   visibility: visible;
-  transition: transform .4s cubic-bezier(.2,1.04,.3,1), visibility 0s;
+  transition: transform .36s var(--ease), visibility 0s;
 }
 .kp[data-device="mobile"] .sheet {
   left: 0;
   right: 0;
   bottom: 0;
   width: auto;
-  height: min(72vh, 620px);
-  border-radius: 24px 24px 0 0;
+  height: min(74vh, 640px);
+  border-radius: 20px 20px 0 0;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .sheet-head {
   flex: none;
   position: relative;
-  padding: 22px 20px 0;
-}
-.handle {
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  width: 36px;
-  height: 5px;
-  margin-left: -18px;
-  border-radius: 3px;
-  background: var(--kite-chip-strong);
+  padding: 18px 20px 0;
 }
 .sheet-title {
   display: flex;
@@ -1033,20 +1067,10 @@
   border-radius: 12px;
   text-align: left;
   transition: background-color .16s;
-  animation: rowin .46s var(--ease) both;
-  animation-delay: calc(var(--i, 0) * 30ms);
 }
-.row:hover {
-  background: var(--kite-chip);
-}
-@keyframes rowin {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
+@media (hover: hover) {
+  .row:hover {
+    background: var(--kite-chip);
   }
 }
 .row-main {
@@ -1167,10 +1191,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .disc-img img {
+  .disc-img {
     animation: none !important;
-  }
-  .line.far {
-    filter: none;
   }
 }

@@ -32,12 +32,19 @@ type View = "cover" | "lyrics";
 
 /** 换句时每往下一行多晚 35ms 开始移动,形成逐行错开的波浪。 */
 const lyricStagger = 35;
-/** 歌词页没有操作多久后隐藏播放控制。 */
-const idleDelay = 3000;
+/** 歌词页没有操作多久后隐藏播放控制:桌面鼠标一动就回来,所以短一些;手机要点歌词才回来。 */
+const idleDelay = { desktop: 3000, mobile: 5000 };
 /** 手动拖动歌词后多久回到当前行。 */
 const resumeDelay = 2500;
 /** 向下滚动多少像素后收起为圆形。 */
 const collapseScroll = 24;
+/** 手指移动多少像素后判定为拖动(之前算点按)。 */
+const dragSlop = 8;
+/** 松手时横向速度超过它(px/ms)就翻到下一页,不看拖了多远。 */
+const flingSpeed = 0.35;
+/** 展开 / 收起的时长与缓动(容器形变:迷你条 ↔ 全屏)。 */
+const morphOpen = { duration: 460, easing: "cubic-bezier(.2,.85,.25,1)" };
+const morphClose = { duration: 380, easing: "cubic-bezier(.4,0,.2,1)" };
 
 /** 封面左下角的音质标签,来自数据来源的 info()。 */
 const qualityLabels: Record<string, [string, string]> = {
@@ -72,8 +79,6 @@ interface Ui {
   sheetMessage: string;
   sheetTracks: Track[];
   sheetName: string;
-  /** 每次重新取列表时加一,让行重新创建(入场动画重新播放)。 */
-  sheetKey: number;
 }
 
 /**
@@ -123,7 +128,6 @@ export class KitePlayerElement extends LitElement {
     sheetMessage: "",
     sheetTracks: [],
     sheetName: "",
-    sheetKey: 0,
   };
   private cleanup: (() => void)[] = [];
   private lineEls: HTMLElement[] = [];
@@ -131,10 +135,18 @@ export class KitePlayerElement extends LitElement {
   private unitValues: number[] = [];
   private tops: number[] = [];
   private lastLine = -1;
-  private manual = { active: false, offset: 0, startY: 0, startOffset: 0, moved: false, pointer: -1 };
-  private swipe = { x: 0, y: 0, pointer: -1 };
+  private manual = { active: false, offset: 0, startOffset: 0 };
+  /**
+   * 面板上的一次触摸手势:先按移动方向定轴,横向拖动翻页(封面 ↔ 歌词,跟手),
+   * 在歌词上纵向拖动是手动滚歌词,没移动就是点按。
+   */
+  private gesture = { pointer: -1, x: 0, y: 0, axis: "" as "" | "x" | "y", onLyrics: false, from: 0, width: 1, pg: 0, vx: 0, lastX: 0, lastT: 0 };
+  /** 拖动或点按已经处理过时,吞掉随后的 click,避免松手处的按钮再触发一次。 */
+  private swallowClick = false;
+  private morphing: Animation[] = [];
+  private ambSrc = "";
   private hintLine = -1;
-  private timers = { idle: 0, resume: 0, toast: 0, tip: 0 };
+  private timers = { idle: 0, resume: 0, toast: 0, tip: 0, swallow: 0 };
   private scrollState = { last: 0, acc: 0 };
   private scrollLocked = false;
   private tabPlaylists = new Map<string, Playlist>();
@@ -176,66 +188,79 @@ export class KitePlayerElement extends LitElement {
     if (view) this.setView(view);
     if (this.ui.mode === "open" || !this.player.state.current) return;
     const bar = this.q(".bar").getBoundingClientRect();
-    const disc = this.q(".disc").getBoundingClientRect();
     this.patch({ mode: "open", stageShown: true });
     this.lockScroll();
     await this.updateComplete;
-    const stage = this.q(".stage");
+    this.paintAmbient();
     requestAnimationFrame(() => this.layoutLines());
-    if (canAnimate(stage)) {
-      const to = stage.getBoundingClientRect();
-      const radius = parseFloat(getComputedStyle(stage).borderTopLeftRadius) || 0;
-      stage.animate([{ clipPath: insetFrom(bar, to, bar.height / 2) }, { clipPath: `inset(0px 0px 0px 0px round ${radius}px)` }], {
-        duration: 450,
-        easing: "cubic-bezier(.2,.85,.25,1)",
-      });
-      this.flipCover(disc, 430);
-      this.renderRoot.querySelectorAll<HTMLElement>(".stage .enter, .page-lyrics .head").forEach((el, i) => {
-        el.animate([{ opacity: 0, transform: "translateY(24px)" }, { opacity: 1, transform: "none" }], {
-          duration: 380,
-          delay: 100 + i * 60,
-          easing: "cubic-bezier(.2,.85,.25,1)",
-          fill: "backwards",
-        });
-      });
-    }
+    this.morph(bar, true);
     this.resetIdle();
     this.q(".stage .close").focus({ preventScroll: true });
   }
 
-  /** close 收起回迷你条。 */
+  /** close 收起回迷你条:迷你条先在面板下面出现,面板缩回它的位置后淡出。 */
   close(): void {
     if (this.ui.mode !== "open") return;
     this.closeSheet();
-    const stage = this.q(".stage");
+    const bar = this.q(".bar").getBoundingClientRect();
+    this.patch({ mode: "bar", idle: false });
     let done = false;
     const finish = () => {
-      if (done) return;
+      if (done || this.ui.mode === "open") return;
       done = true;
-      this.patch({ immersive: false, stageShown: false, mode: "bar" });
+      this.patch({ immersive: false, stageShown: false });
       this.unlockScroll();
     };
-    if (!canAnimate(stage)) {
+    const anim = this.morph(bar, false);
+    if (!anim) {
       finish();
       return;
     }
-    const from = stage.getBoundingClientRect();
-    const bar = this.q(".bar").getBoundingClientRect();
+    anim.finished.then(finish, finish);
+    // 环境不派发 finished 时也要收起。
+    setTimeout(finish, morphClose.duration + 60);
+  }
+
+  /**
+   * morph 在迷你条与面板之间做容器形变(参考网易云):面板的可见区域从迷你条的矩形长到整块,
+   * 里面的内容按可见区域的高度等比缩放、贴着左上角,所以收起时大封面正好缩到迷你条唱片的位置。
+   * 只动 clip-path、transform 与 opacity,不触发重新布局。返回主动画,不能做动画时返回 null。
+   */
+  private morph(bar: DOMRect, opening: boolean): Animation | null {
+    for (const a of this.morphing) a.cancel();
+    this.morphing = [];
+    const stage = this.q(".stage");
+    const fg = this.q(".fg");
+    if (!canAnimate(stage)) return null;
+    const box = stage.getBoundingClientRect();
+    if (!box.height || !bar.height) return null;
     const radius = parseFloat(getComputedStyle(stage).borderTopLeftRadius) || 0;
-    stage
-      .animate([{ clipPath: `inset(0px 0px 0px 0px round ${radius}px)` }, { clipPath: insetFrom(bar, from, bar.height / 2) }], {
-        duration: 400,
-        easing: "cubic-bezier(.5,0,.25,1)",
-      })
-      .finished.then(finish, finish);
-    // 动画被打断或环境不派发 finished 时也要收起。
-    setTimeout(finish, 450);
-    stage.querySelectorAll<HTMLElement>(".pages, .cover, .ctl, .top").forEach((el) =>
-      el.animate([{ transform: "none", filter: "blur(0px)" }, { transform: "translateY(40px) scale(.72)", filter: "blur(10px)" }], {
-        duration: 400,
-        easing: "cubic-bezier(.5,0,.25,1)",
-      }),
-    );
+    const k = bar.height / box.height;
+    const small = [
+      { clipPath: insetFrom(bar, box, bar.height / 2) },
+      { transform: `translate(${bar.left - box.left}px, ${bar.top - box.top}px) scale(${k})` },
+    ] as const;
+    const big = [{ clipPath: `inset(0px 0px 0px 0px round ${radius}px)` }, { transform: "translate(0px, 0px) scale(1)" }] as const;
+    const [from, to] = opening ? [small, big] : [big, small];
+    const timing = opening ? morphOpen : morphClose;
+    // 与迷你条交叉淡入淡出:展开时开头一小段淡入,收起时最后一小段淡出,露出下面的迷你条。
+    const fade = opening
+      ? [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1 }]
+      : [{ opacity: 1 }, { opacity: 1, offset: 0.72 }, { opacity: 0 }];
+    const main = stage.animate([from[0], to[0]], timing);
+    this.morphing = [main, fg.animate([from[1], to[1]], timing), stage.animate(fade, { duration: timing.duration, fill: opening ? "none" : "forwards" })];
+    if (opening) {
+      // 面板第一次显示的那一帧要排版、绘制整块内容,可能很慢;先停在起点,等这一帧画完再开始,
+      // 否则动画时间在这一帧里就过去了大半,看起来是直接跳到展开。
+      const anims = this.morphing;
+      for (const a of anims) a.pause();
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          for (const a of anims) if (a.playState === "paused") a.play();
+        }),
+      );
+    }
+    return main;
   }
 
   // ---- 渲染 ----
@@ -304,65 +329,63 @@ export class KitePlayerElement extends LitElement {
       aria-label="正在播放"
       ?hidden=${!ui.stageShown}
       @keydown=${this.onStageKey}
-      @pointermove=${this.resetIdle}
-      @pointerdown=${this.resetIdle}
+      @pointerdown=${this.onStageDown}
+      @pointermove=${this.onStageMove}
+      @pointerup=${this.onStageUp}
+      @pointercancel=${this.onStageCancel}
+      @click=${{ handleEvent: (e: Event) => this.onStageClickCapture(e), capture: true }}
       @wheel=${{ handleEvent: () => this.resetIdle(), passive: true }}
     >
-      <div class="amb"><img alt="" src=${ifDefined(cover)} /></div>
+      <div class="amb"><canvas width="32" height="48"></canvas></div>
       <div class="scrim"></div>
-      <div class="pages" @pointerdown=${this.onSwipeStart} @pointerup=${this.onSwipeEnd}>
-        <section class="page page-cover">
-          <div class="meta enter">
-            <span class="meta-title ell">${t?.title ?? ""}</span><span class="meta-sub"
-              ><span class="ell meta-artist">${t ? [who, t.album.name].filter(Boolean).join(" · ") : ""}</span><span class="tag access-tag" ?hidden=${!tag}>${tag}</span></span
-            >
+      <div class="fg">
+        <div class="pages">
+          <section class="page page-cover">
+            <div class="meta">
+              <span class="meta-title ell">${t?.title ?? ""}</span><span class="meta-sub"
+                ><span class="ell meta-artist">${t ? [who, t.album.name].filter(Boolean).join(" · ") : ""}</span><span class="tag access-tag" ?hidden=${!tag}>${tag}</span></span
+              >
+            </div>
+          </section>
+          <section class="page page-lyrics">
+            <button class="head to-cover" aria-label="返回封面" @click=${this.toCover}><span class="head-title ell">${t?.title ?? ""}</span><span class="head-sub ell">${who}</span></button>
+            <div class="lyrics" part="lyrics" @wheel=${{ handleEvent: (e: WheelEvent) => this.onLyricsWheel(e), passive: false }}>
+              <div class="lines" role="list" @click=${this.onLineClick}>${guard([lyr], () => renderLines(lyr))}</div>
+              <div class="lyr-empty" ?hidden=${!empty}>${eq}<span class="lyr-empty-text">${empty ? this.emptyText(s) : ""}</span></div>
+              <button class="seek" aria-label="跳到这一句" @click=${this.seekToHint}>${icons.play}<span></span></button>
+            </div>
+            <button class="ib trans-btn lyr-trans" aria-label="显示翻译" aria-pressed=${String(ui.trans)} @click=${this.toggleTrans}>${icons.lyric}</button>
+          </section>
+        </div>
+        <button class="cover" aria-label=${ui.view === "cover" ? "查看歌词" : "返回封面"} @click=${this.onCoverClick}>
+          <img alt="" src=${ifDefined(cover)} /><span class="badge" ?hidden=${!ui.badge}><b>${ui.badge?.[0] ?? ""}</b><span>${ui.badge?.[1] ?? ""}</span></span>
+        </button>
+        <div class="top">
+          <button class="ib close" aria-label="收起" @click=${this.close}>${icons.chevron}</button>
+          <div class="dots"><button data-go="cover" aria-label="封面" @click=${this.toCover}></button><button data-go="lyrics" aria-label="歌词" @click=${this.toLyrics}></button></div>
+          <button class="ib immersive" aria-label=${ui.immersive ? "退出沉浸模式" : "沉浸模式"} @click=${this.onImmersiveClick}>${ui.immersive ? icons.shrink : icons.expand}</button>
+        </div>
+        <div class="ctl" part="controls">
+          <div class="progress">
+            <span class="ptrack"></span><span class="pchorus" ?hidden=${!chorusStyle} style=${styleMap(chorusStyle ?? {})}></span><span class="pfill"></span><span class="pthumb"></span
+            ><input type="range" min="0" max="1000" step="1" value="0" aria-label="播放进度" @input=${this.onRangeInput} @change=${this.onRangeChange} />
           </div>
-        </section>
-        <section class="page page-lyrics">
-          <button class="head to-cover" aria-label="返回封面" @click=${this.toCover}><span class="head-title ell">${t?.title ?? ""}</span><span class="head-sub ell">${who}</span></button>
-          <div
-            class="lyrics"
-            part="lyrics"
-            @wheel=${{ handleEvent: (e: WheelEvent) => this.onLyricsWheel(e), passive: false }}
-            @pointerdown=${this.onLyricsDown}
-            @pointermove=${this.onLyricsMove}
-            @pointerup=${this.onLyricsUp}
-            @pointercancel=${this.onLyricsUp}
-          >
-            <div class="lines" role="list" @click=${this.onLineClick}>${guard([lyr], () => renderLines(lyr))}</div>
-            <div class="lyr-empty" ?hidden=${!empty}>${eq}<span class="lyr-empty-text">${empty ? this.emptyText(s) : ""}</span></div>
-            <button class="seek" aria-label="跳到这一句" @click=${this.seekToHint}>${icons.play}<span></span></button>
+          <div class="times"><span class="t-cur">${formatTime(ui.dragging ? ui.dragPct * s.duration : s.time)}</span><span class="t-dur">${formatTime(s.duration)}</span></div>
+          <div class="buttons">
+            <button class="ib mode" aria-label=${"播放模式:" + modeLabels[s.mode]} @click=${this.onModeClick}>
+              <span class="m m-sequence">${icons.sequence}</span><span class="m m-loop">${icons.loop}</span><span class="m m-one">${icons.one}</span><span class="m m-shuffle">${icons.shuffle}</span>
+            </button>
+            <button class="ib big prev" aria-label="上一首" @click=${this.prev}>${icons.prev}</button>
+            <button class="blob toggle" aria-label=${s.playing ? "暂停" : "播放"} @click=${this.toggle}>${blob}</button>
+            <button class="ib big next" aria-label="下一首" @click=${this.next}>${icons.next}</button>
+            <button class="ib open-queue" aria-label="播放列表" @click=${this.onOpenQueue}>${icons.queue}</button>
           </div>
-        </section>
-      </div>
-      <button class="cover" aria-label=${ui.view === "cover" ? "查看歌词" : "返回封面"} @click=${this.onCoverClick}>
-        <img alt="" src=${ifDefined(cover)} /><span class="badge" ?hidden=${!ui.badge}><b>${ui.badge?.[0] ?? ""}</b><span>${ui.badge?.[1] ?? ""}</span></span>
-      </button>
-      <div class="top enter">
-        <button class="ib close" aria-label="收起" @click=${this.close}>${icons.chevron}</button>
-        <div class="dots"><button data-go="cover" aria-label="封面" @click=${this.toCover}></button><button data-go="lyrics" aria-label="歌词" @click=${this.toLyrics}></button></div>
-        <button class="ib immersive" aria-label=${ui.immersive ? "退出沉浸模式" : "沉浸模式"} @click=${this.onImmersiveClick}>${ui.immersive ? icons.shrink : icons.expand}</button>
-      </div>
-      <div class="ctl enter" part="controls">
-        <div class="progress">
-          <span class="ptrack"></span><span class="pchorus" ?hidden=${!chorusStyle} style=${styleMap(chorusStyle ?? {})}></span><span class="pfill"></span><span class="pthumb"></span
-          ><input type="range" min="0" max="1000" step="1" value="0" aria-label="播放进度" @input=${this.onRangeInput} @change=${this.onRangeChange} />
+          <div class="extra">
+            <button class="ib chorus-btn" aria-label="从副歌开始" ?disabled=${!chorus} @click=${this.playChorus}>${icons.wave}</button>
+            <button class="ib trans-btn" aria-label="显示翻译" aria-pressed=${String(ui.trans)} @click=${this.toggleTrans}>${icons.lyric}</button>
+          </div>
+          <div class=${classMap({ tip: true, on: ui.tipOn })}>${ui.tipText}</div>
         </div>
-        <div class="times"><span class="t-cur">${formatTime(ui.dragging ? ui.dragPct * s.duration : s.time)}</span><span class="t-dur">${formatTime(s.duration)}</span></div>
-        <div class="buttons">
-          <button class="ib mode" aria-label=${"播放模式:" + modeLabels[s.mode]} @click=${this.onModeClick}>
-            <span class="m m-sequence">${icons.sequence}</span><span class="m m-loop">${icons.loop}</span><span class="m m-one">${icons.one}</span><span class="m m-shuffle">${icons.shuffle}</span>
-          </button>
-          <button class="ib big prev" aria-label="上一首" @click=${this.prev}>${icons.prev}</button>
-          <button class="blob toggle" aria-label=${s.playing ? "暂停" : "播放"} @click=${this.toggle}>${blob}</button>
-          <button class="ib big next" aria-label="下一首" @click=${this.next}>${icons.next}</button>
-          <button class="ib open-queue" aria-label="播放列表" @click=${this.onOpenQueue}>${icons.queue}</button>
-        </div>
-        <div class="extra">
-          <button class="ib chorus-btn" aria-label="从副歌开始" ?disabled=${!chorus} @click=${this.playChorus}>${icons.wave}</button>
-          <button class="ib trans-btn" aria-label="显示翻译" aria-pressed=${String(ui.trans)} @click=${this.toggleTrans}>${icons.lyric}</button>
-        </div>
-        <div class=${classMap({ tip: true, on: ui.tipOn })}>${ui.tipText}</div>
       </div>
     </div>`;
   }
@@ -373,7 +396,6 @@ export class KitePlayerElement extends LitElement {
     const at = Math.max(ids.indexOf(ui.tab), 0);
     return html`<div class="sheet" part="queue" role="dialog" aria-label="播放列表" @keydown=${this.onSheetKey}>
       <div class="sheet-head">
-        <span class="handle"></span>
         <div class="sheet-title"><span>播放列表</span><button class="ib close-queue" aria-label="关闭" @click=${this.closeSheet}>${icons.close}</button></div>
         <div class="tabs" role="tablist" ?hidden=${ui.sheetReady && ids.length < 2}>
           <span
@@ -397,25 +419,22 @@ export class KitePlayerElement extends LitElement {
     if (ui.sheetStatus === "error") return html`<div class="empty">${ui.sheetMessage}</div>`;
     if (!ui.sheetTracks.length) return html`<div class="empty">这里还没有歌</div>`;
     const cur = s.current?.id;
-    return keyed(
-      ui.sheetKey,
-      repeat(
-        ui.sheetTracks,
-        (t, i) => `${i}:${t.id}`,
-        (t, i) => {
-          const isCur = t.id === cur;
-          const tag = [
-            t.trial ? html`<span class="rtag trial">仅试听</span>` : nothing,
-            t.access === "vip" ? html`<span class="rtag vip">VIP</span>` : t.access === "paid" ? html`<span class="rtag paid">数字专辑</span>` : nothing,
-          ];
-          const sub = [artists(t), t.album.name].filter(Boolean).join(" · ");
-          return html`<button class=${classMap({ row: true, locked: !canPlay(t), cur: isCur })} role="listitem" data-i=${i} style="--i:${Math.min(i, 12)}" @click=${() => this.pickRow(i)}>
-            <span class="row-main"
-              ><span class="row-title"><span class="ell">${t.title}</span>${isCur ? eq : nothing}</span><span class="row-sub">${tag}<span class="ell">${sub}</span></span></span
-            >${canPlay(t) ? html`<span class="row-dur">${formatTime(t.durationMs / 1000)}</span>` : html`<span class="lock">${icons.lock}</span>`}
-          </button>`;
-        },
-      ),
+    return repeat(
+      ui.sheetTracks,
+      (t, i) => `${i}:${t.id}`,
+      (t, i) => {
+        const isCur = t.id === cur;
+        const tag = [
+          t.trial ? html`<span class="rtag trial">仅试听</span>` : nothing,
+          t.access === "vip" ? html`<span class="rtag vip">VIP</span>` : t.access === "paid" ? html`<span class="rtag paid">数字专辑</span>` : nothing,
+        ];
+        const sub = [artists(t), t.album.name].filter(Boolean).join(" · ");
+        return html`<button class=${classMap({ row: true, locked: !canPlay(t), cur: isCur })} role="listitem" data-i=${i} @click=${() => this.pickRow(i)}>
+          <span class="row-main"
+            ><span class="row-title"><span class="ell">${t.title}</span>${isCur ? eq : nothing}</span><span class="row-sub">${tag}<span class="ell">${sub}</span></span></span
+          >${canPlay(t) ? html`<span class="row-dur">${formatTime(t.durationMs / 1000)}</span>` : html`<span class="lock">${icons.lock}</span>`}
+        </button>`;
+      },
     );
   }
 
@@ -443,6 +462,13 @@ export class KitePlayerElement extends LitElement {
     if (!prev || s.current !== prev.current) {
       this.lastLine = -1;
       this.endManual(false);
+      // 换歌时封面交叉淡入(参考网易云:标题立即换,封面约 300ms 淡入)。
+      const old = prev?.current?.album.cover;
+      if (old && old !== s.current?.album.cover) {
+        this.crossfade(".disc-img", old);
+        if (this.ui.stageShown) this.crossfade(".cover", old);
+      }
+      if (this.ui.stageShown) this.paintAmbient(true);
     }
     if (!prev || s.time !== prev.time || s.duration !== prev.duration) {
       if (!this.ui.dragging) {
@@ -509,18 +535,125 @@ export class KitePlayerElement extends LitElement {
     if (e.key === "Escape") this.closeSheet();
   };
 
-  private onSwipeStart = (e: PointerEvent): void => {
-    if (this.ui.immersive || (e.target as HTMLElement).closest(".lyrics")) return;
-    this.swipe = { x: e.clientX, y: e.clientY, pointer: e.pointerId };
+  /**
+   * 面板上的手势只处理触摸与触控笔。鼠标(桌面)用圆点、点封面切页,用滚轮滚歌词,
+   * 鼠标一动播放控制就回来。
+   */
+  private onStageDown = (e: PointerEvent): void => {
+    this.swallowClick = false;
+    const target = e.target as HTMLElement;
+    if (e.pointerType === "mouse" || target.closest(".ctl")) this.resetIdle();
+    if (e.pointerType === "mouse" || this.gesture.pointer !== -1 || target.closest(".ctl, .top, .seek, .lyr-trans")) return;
+    const onLyrics = !!target.closest(".lyrics") && (this.ui.view === "lyrics" || this.ui.immersive);
+    this.gesture = {
+      pointer: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      axis: "",
+      onLyrics,
+      from: this.ui.view === "lyrics" ? 1 : 0,
+      width: this.q(".stage").clientWidth || 1,
+      pg: 0,
+      vx: 0,
+      lastX: e.clientX,
+      lastT: e.timeStamp,
+    };
   };
 
-  private onSwipeEnd = (e: PointerEvent): void => {
-    if (e.pointerId !== this.swipe.pointer) return;
-    this.swipe.pointer = -1;
-    const dx = e.clientX - this.swipe.x;
-    if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(e.clientY - this.swipe.y) * 1.5) return;
-    this.setView(dx < 0 ? "lyrics" : "cover");
+  private onStageMove = (e: PointerEvent): void => {
+    if (e.pointerType === "mouse") {
+      this.resetIdle();
+      return;
+    }
+    const g = this.gesture;
+    if (e.pointerId !== g.pointer) return;
+    const dx = e.clientX - g.x;
+    const dy = e.clientY - g.y;
+    if (!g.axis) {
+      if (Math.hypot(dx, dy) < dragSlop) return;
+      g.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      // 沉浸模式没有分页;纵向只在歌词上有意义。
+      if ((g.axis === "x" && this.ui.immersive) || (g.axis === "y" && !(g.onLyrics && this.lineEls.length))) {
+        g.pointer = -1;
+        return;
+      }
+      const stage = this.q(".stage");
+      try {
+        stage.setPointerCapture(e.pointerId);
+      } catch {
+        // 指针已经结束时拿不到捕获,照常处理。
+      }
+      if (g.axis === "x") {
+        stage.classList.add("paging");
+      } else {
+        this.beginManual();
+        this.manual.startOffset = this.manual.offset;
+        this.hideControls();
+      }
+    }
+    if (g.axis === "x") {
+      // 封面与歌词之间的进度跟着手指走(0 封面,1 歌词),CSS 用 --pg 插值页面、封面与控制区。
+      g.pg = Math.min(1, Math.max(0, g.from - dx / g.width));
+      this.q(".stage").style.setProperty("--pg", String(g.pg));
+      const dt = e.timeStamp - g.lastT;
+      if (dt > 0) g.vx = 0.7 * ((e.clientX - g.lastX) / dt) + 0.3 * g.vx;
+      g.lastX = e.clientX;
+      g.lastT = e.timeStamp;
+    } else {
+      this.manual.offset = this.manual.startOffset + dy;
+      this.positionLines(true);
+    }
   };
+
+  private onStageUp = (e: PointerEvent): void => {
+    const g = this.gesture;
+    if (e.pointerType === "mouse" || e.pointerId !== g.pointer) return;
+    g.pointer = -1;
+    if (g.axis === "x") {
+      // 甩得够快就按方向翻页,否则看过没过一半。
+      const fling = e.timeStamp - g.lastT < 100 ? g.vx : 0;
+      this.endPaging(fling < -flingSpeed ? "lyrics" : fling > flingSpeed ? "cover" : g.pg > 0.5 ? "lyrics" : "cover");
+      this.swallow();
+    } else if (g.axis === "y") {
+      this.scheduleResume();
+      this.swallow();
+    } else if (g.onLyrics && this.ui.view === "lyrics" && !this.ui.immersive) {
+      // 手机上点歌词切换播放控制的显示(参考网易云);跳到某一句用拖动歌词时出现的 ▶ 时间。
+      if (this.ui.idle) this.resetIdle();
+      else this.hideControls();
+      this.swallow();
+    }
+  };
+
+  private onStageCancel = (e: PointerEvent): void => {
+    const g = this.gesture;
+    if (e.pointerId !== g.pointer) return;
+    g.pointer = -1;
+    if (g.axis === "x") this.endPaging(this.ui.view);
+    else if (g.axis === "y") this.scheduleResume();
+  };
+
+  /** 手势已经处理过这次按下:吞掉随后的 click(触摸的 click 可能晚于 pointerup 一个任务才到)。 */
+  private swallow(): void {
+    this.swallowClick = true;
+    clearTimeout(this.timers.swallow);
+    this.timers.swallow = window.setTimeout(() => (this.swallowClick = false), 400);
+  }
+
+  private onStageClickCapture(e: Event): void {
+    if (!this.swallowClick) return;
+    this.swallowClick = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  /** endPaging 松手:去掉跟手的 --pg,交给 CSS 过渡滑到目标页。 */
+  private endPaging(view: View): void {
+    const stage = this.q(".stage");
+    stage.classList.remove("paging");
+    stage.style.removeProperty("--pg");
+    this.setView(view);
+  }
 
   private onLyricsWheel(e: WheelEvent): void {
     if (!this.lineEls.length) return;
@@ -531,34 +664,10 @@ export class KitePlayerElement extends LitElement {
     this.scheduleResume();
   }
 
-  private onLyricsDown = (e: PointerEvent): void => {
-    if (!this.lineEls.length || e.pointerType === "mouse") return;
-    this.manual.pointer = e.pointerId;
-    this.manual.startY = e.clientY;
-    this.manual.startOffset = this.manual.offset;
-    this.manual.moved = false;
-  };
-
-  private onLyricsMove = (e: PointerEvent): void => {
-    if (e.pointerId !== this.manual.pointer) return;
-    const dy = e.clientY - this.manual.startY;
-    if (!this.manual.moved && Math.abs(dy) < 8) return;
-    this.manual.moved = true;
-    this.beginManual();
-    this.manual.offset = this.manual.startOffset + dy;
-    this.positionLines(true);
-  };
-
-  private onLyricsUp = (e: PointerEvent): void => {
-    if (e.pointerId !== this.manual.pointer) return;
-    this.manual.pointer = -1;
-    if (this.manual.moved) this.scheduleResume();
-    setTimeout(() => (this.manual.moved = false), 0);
-  };
-
+  /** 点歌词跳到那一句:鼠标点击与键盘。触摸的点按在 onStageUp 里切换播放控制,不会走到这里。 */
   private onLineClick = (e: Event): void => {
     const line = (e.target as HTMLElement).closest<HTMLElement>(".line");
-    if (!line || this.manual.moved) return;
+    if (!line) return;
     const l = this.player.state.lyrics?.lines[Number(line.dataset.i)];
     if (!l) return;
     this.endManual(true);
@@ -649,7 +758,10 @@ export class KitePlayerElement extends LitElement {
     this.layoutLines();
   };
 
-  /** resetIdle:歌词页停止操作 3 秒后隐藏播放控制,任何操作让它回来。 */
+  /**
+   * resetIdle 显示歌词页的播放控制,一段时间没操作后再隐藏。桌面上鼠标一动就调用;
+   * 手机上只有点歌词、碰控制区才调用,拖动歌词时立即隐藏(hideControls)。
+   */
   private resetIdle = (): void => {
     if (this.ui.idle) this.patch({ idle: false });
     clearTimeout(this.timers.idle);
@@ -657,8 +769,13 @@ export class KitePlayerElement extends LitElement {
     this.timers.idle = window.setTimeout(() => {
       if (!this.player.state.playing || this.ui.view !== "lyrics" || this.ui.immersive || this.ui.sheet) return;
       this.patch({ idle: true });
-    }, idleDelay);
+    }, this.ui.mobile ? idleDelay.mobile : idleDelay.desktop);
   };
+
+  private hideControls(): void {
+    clearTimeout(this.timers.idle);
+    if (this.ui.mode === "open" && this.ui.view === "lyrics" && !this.ui.immersive && !this.ui.idle) this.patch({ idle: true });
+  }
 
   private onScroll(): void {
     const y = scrollY;
@@ -724,8 +841,8 @@ export class KitePlayerElement extends LitElement {
     if (!this.isConnected || !this.lineEls.length || !this.tops.length) return;
     const { lyricIndex } = this.player.state;
     const cur = Math.max(lyricIndex, 0);
-    const box = this.q(".lyrics");
-    const anchor = box.clientHeight * (this.ui.immersive ? 0.36 : 0.28);
+    // 锚点按面板高度算,不按歌词区:播放控制隐藏时歌词区变高,当前行不能跟着跳。
+    const anchor = this.ui.immersive ? this.q(".lyrics").clientHeight * 0.36 : this.q(".stage").clientHeight * 0.16;
     const base = anchor - (this.tops[cur] ?? 0) + this.manual.offset;
     const forward = cur >= this.lastLine;
     this.lineEls.forEach((el, i) => {
@@ -843,7 +960,7 @@ export class KitePlayerElement extends LitElement {
     const s = this.player.state;
     this.prefetchTabNames(ids);
     if (tab === "queue" || tab === s.playlist?.id) {
-      this.patch({ tab, sheetReady: true, sheetStatus: "ready", sheetTracks: s.queue, sheetName: s.playlist?.name ?? "", sheetKey: this.ui.sheetKey + 1 });
+      this.patch({ tab, sheetReady: true, sheetStatus: "ready", sheetTracks: s.queue, sheetName: s.playlist?.name ?? "" });
       return;
     }
     this.patch({ tab, sheetReady: true, sheetStatus: "loading", sheetName: "" });
@@ -851,7 +968,7 @@ export class KitePlayerElement extends LitElement {
       const pl = await this.player.loadPlaylist(tab);
       this.tabPlaylists.set(tab, pl);
       if (this.ui.tab !== tab) return;
-      this.patch({ sheetStatus: "ready", sheetTracks: pl.tracks, sheetName: pl.name, sheetKey: this.ui.sheetKey + 1 });
+      this.patch({ sheetStatus: "ready", sheetTracks: pl.tracks, sheetName: pl.name });
     } catch (err) {
       if (this.ui.tab !== tab) return;
       this.patch({ sheetStatus: "error", sheetMessage: (err as Error).message || "歌单加载失败" });
@@ -908,20 +1025,95 @@ export class KitePlayerElement extends LitElement {
     this.timers.toast = window.setTimeout(() => this.patch({ toastOn: false }), 2600);
   }
 
-  /** flipCover 让大封面从迷你条的唱片位置放大到位(共享元素)。 */
-  private flipCover(from: DOMRect, duration: number): void {
-    const cover = this.q(".cover");
-    const to = cover.getBoundingClientRect();
-    if (!to.width || !canAnimate(cover)) return;
-    const s = from.width / to.width;
-    const radius = getComputedStyle(cover).borderTopLeftRadius;
-    cover.animate(
-      [
-        { transformOrigin: "0 0", transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${s})`, borderRadius: `${from.width / 2 / s}px` },
-        { transformOrigin: "0 0", transform: "none", borderRadius: radius },
-      ],
-      { duration, easing: "cubic-bezier(.2,.85,.25,1)" },
-    );
+  /**
+   * crossfade 换歌时把上一首的封面盖在新封面上淡出。等新图加载好再淡,
+   * 否则网络慢时中间会露出空白。临时元素不进模板。
+   */
+  private crossfade(sel: string, oldSrc: string): void {
+    const box = this.renderRoot.querySelector<HTMLElement>(sel);
+    const img = box?.querySelector<HTMLImageElement>("img:not(.xfade)");
+    if (!box || !img || !canAnimate(box)) return;
+    box.querySelectorAll(".xfade").forEach((el) => el.remove());
+    const ghost = document.createElement("img");
+    ghost.className = "xfade";
+    ghost.alt = "";
+    ghost.src = oldSrc;
+    img.after(ghost);
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 320, easing: "ease-out", fill: "forwards" }).finished.then(
+        () => ghost.remove(),
+        () => ghost.remove(),
+      );
+    };
+    if (img.complete) start();
+    else {
+      img.addEventListener("load", start, { once: true });
+      img.addEventListener("error", start, { once: true });
+      setTimeout(start, 1500);
+    }
+  }
+
+  /**
+   * paintAmbient 用当前封面画面板背景:先缩到 8×12 再放大到 32×48 的画布,画布再由 CSS 拉满面板。
+   * 两次双线性缩放就是一层很重的模糊,效果接近原来的 blur(64px),但不需要每帧做滤镜,展开动画不掉帧。
+   * 跨域封面画进画布只是不能读像素,显示不受影响。fade 时旧背景淡出(面板开着时换歌)。
+   */
+  private paintAmbient(fade = false): void {
+    const src = this.player.state.current?.album.cover ?? "";
+    if (src === this.ambSrc) return;
+    this.ambSrc = src;
+    const canvas = this.renderRoot.querySelector<HTMLCanvasElement>(".amb canvas:not(.xfade)");
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    const draw = (img: HTMLImageElement | null) => {
+      if (this.ambSrc !== src) return;
+      if (fade && canAnimate(canvas)) {
+        const old = canvas.cloneNode() as HTMLCanvasElement;
+        old.classList.add("xfade");
+        old.getContext("2d")?.drawImage(canvas, 0, 0);
+        canvas.after(old);
+        old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 480, easing: "ease-out", fill: "forwards" }).finished.then(
+          () => old.remove(),
+          () => old.remove(),
+        );
+      }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!img) return;
+      // 先整张画到 40×40(没有固有尺寸的 SVG 封面也能画),再取中间一块缩到 8×12:
+      // 与原来放大裁切的效果一致,四周的颜色不会把背景冲淡。分两步缩小,颜色是平均过的而不是取样。
+      const mid = document.createElement("canvas");
+      mid.width = mid.height = 40;
+      const tiny = document.createElement("canvas");
+      tiny.width = 8;
+      tiny.height = 12;
+      const mctx = mid.getContext("2d");
+      const tctx = tiny.getContext("2d");
+      if (!mctx || !tctx) return;
+      mctx.imageSmoothingQuality = tctx.imageSmoothingQuality = "high";
+      mctx.drawImage(img, 0, 0, 40, 40);
+      tctx.drawImage(mid, 8, 4, 24, 32, 0, 0, tiny.width, tiny.height);
+      ctx.imageSmoothingQuality = "high";
+      if ("filter" in ctx) ctx.filter = "saturate(1.35)";
+      ctx.drawImage(tiny, 0, 0, canvas.width, canvas.height);
+      ctx.filter = "none";
+      // 压暗(等于原来的 brightness(.72)),白色、浅色封面上也能看清白字。
+      ctx.fillStyle = "rgba(0,0,0,.28)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    };
+    if (!src) {
+      draw(null);
+      return;
+    }
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => draw(img);
+    img.onerror = () => {
+      if (this.ambSrc === src) this.ambSrc = "";
+    };
+    img.src = src;
   }
 
   /** fly:卡片的封面沿弧线飞进播放器(横向先快后慢、纵向先慢后快)。 */

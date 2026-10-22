@@ -43,6 +43,11 @@ async function settle(el: Lit): Promise<void> {
 
 const shadow = (el: Element) => el.shadowRoot as ShadowRoot;
 
+/** touch 在元素上派发一次触摸的指针事件(冒泡并穿出 shadow DOM,与真实触摸一样)。 */
+function touch(el: Element, type: string, clientX: number, clientY: number): void {
+  el.dispatchEvent(new PointerEvent(type, { pointerId: 7, pointerType: "touch", clientX, clientY, bubbles: true, composed: true }));
+}
+
 describe("样式", () => {
   it("暗色变量展开成强制暗色与跟随系统两份", () => {
     expect(withDark(":host{--kite-fg:#fff}")).toBe(
@@ -112,6 +117,55 @@ describe("<kite-player>", () => {
     expect(player.state.playing).toBe(true);
     audio.emit("loadedmetadata");
     expect(audio.currentTime).toBe(4);
+  });
+
+  it("触摸点歌词切换播放控制,不跳到那一句", async () => {
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar-text")?.click();
+    await settle(el);
+    root.querySelector<HTMLButtonElement>(".dots [data-go='lyrics']")?.click();
+    await settle(el);
+    const line = root.querySelectorAll<HTMLButtonElement>(".lines .line")[1];
+    if (!line) throw new Error("没有歌词行");
+    const tap = async () => {
+      touch(line, "pointerdown", 100, 300);
+      touch(line, "pointerup", 100, 300);
+      line.click();
+      await settle(el);
+    };
+    await tap();
+    expect(root.querySelector(".kp")?.hasAttribute("data-idle")).toBe(true);
+    expect(player.state.time).toBe(0);
+    await tap();
+    expect(root.querySelector(".kp")?.hasAttribute("data-idle")).toBe(false);
+    expect(player.state.time).toBe(0);
+  });
+
+  it("横向拖动翻页:过半或甩出去才翻,否则弹回", async () => {
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar-text")?.click();
+    await settle(el);
+    const stage = root.querySelector<HTMLElement>(".stage");
+    const meta = root.querySelector<HTMLElement>(".meta");
+    if (!stage || !meta) throw new Error("没有面板");
+    Object.defineProperty(stage, "clientWidth", { value: 400 });
+    const drag = async (dx: number) => {
+      touch(meta, "pointerdown", 300, 400);
+      touch(meta, "pointermove", 300 + dx / 2, 400);
+      touch(meta, "pointermove", 300 + dx, 400);
+      // 停顿后松手:不算甩动,只看拖了多远。
+      await new Promise((r) => setTimeout(r, 120));
+      touch(meta, "pointerup", 300 + dx, 400);
+      await settle(el);
+    };
+    await drag(-100);
+    expect(root.querySelector(".kp")?.getAttribute("data-view")).toBe("cover");
+    expect(stage.classList.contains("paging")).toBe(false);
+    expect(stage.style.getPropertyValue("--pg")).toBe("");
+    await drag(-260);
+    expect(root.querySelector(".kp")?.getAttribute("data-view")).toBe("lyrics");
   });
 
   it("播放模式按钮循环切换", async () => {

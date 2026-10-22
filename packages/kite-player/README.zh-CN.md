@@ -81,6 +81,8 @@ import "@violetjs/kite-player/element"; // 注册 <kite-player>、<kite-track>�
 
 ### 手机
 
+全屏,从播放条长出来,收起时缩回播放条。左右拖动在封面页和歌词页之间切换,封面跟着手指缩到歌词页左上角;拖动歌词时控制区收起,右侧出现那一句的时间,点它跳过去;点歌词显示或隐藏控制区。
+
 <p>
   <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/mobile-cover.webp" width="260" alt="手机全屏,封面页">
   <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/mobile-lyrics.webp" width="260" alt="手机全屏,歌词页">

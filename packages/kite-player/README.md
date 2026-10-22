@@ -83,6 +83,8 @@ Every playlist listed in `playlists` gets a tab. Locked tracks explain why when 
 
 ### Phone
 
+Full screen, growing out of the bar and shrinking back into it. Drag sideways to switch between the cover and the lyrics, with the cover following your finger into the lyrics header; dragging the lyrics tucks the controls away and shows the time of the line in focus, which you tap to jump there; tap the lyrics to show or hide the controls.
+
 <p>
   <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/mobile-cover.webp" width="260" alt="Full screen on a phone, cover page">
   <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/mobile-lyrics.webp" width="260" alt="Full screen on a phone, lyrics page">
