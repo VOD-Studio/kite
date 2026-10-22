@@ -23,6 +23,12 @@ kite 的 gRPC 服务面向多种语言的客户端(Rust、Go、TypeScript……)
 | `DEADLINE_EXCEEDED` | `DEADLINE_EXCEEDED` | 504 | 请求超时 | 按需重试 |
 | `SERVER_AUTH_FAILED` | `UNAUTHENTICATED` | 401 | 缺少或错误的**服务访问令牌**(与上游登录无关,见 [服务部署与访问控制](server-security.md)) | 检查令牌配置;**不要**重试,更不要去重新登录网易云 |
 | `SERVER_RATE_LIMITED` | `RESOURCE_EXHAUSTED` | 429 | 被**本服务**限流:该令牌超出了 `KITE_SERVER_RATE_PER_MINUTE` 额度(与上游限流的 `RATE_LIMITED` 无关) | 退避后重试;长期超限请向服务部署方申请更高额度或独立令牌 |
+| `ACCOUNT_NOT_FOUND` | `NOT_FOUND` | 404 | 显式选择的托管账号不存在或已删除 | 删除本地保存的 ID,重新登录 |
+| `ACCOUNT_FORBIDDEN` | `PERMISSION_DENIED` | 403 | 账号属于其它服务调用方 | 使用自己的账号及令牌,不要重试 |
+| `ACCOUNT_EXPIRED` | `UNAUTHENTICATED` | 401 | 所选托管账号已过期或被上游确认未登录 | 重新登录,或显式 Logout 删除记录 |
+| `ACCOUNT_CHANGED` | `ABORTED` | 409 | 并发登录/刷新改变了记录,旧快照的刷新、过期或删除被拒绝 | 重新读取当前状态后决定操作,不要盲目重放 |
+| `ACCOUNTS_DISABLED` | `FAILED_PRECONDITION` | 400 | 选择了账号 ID,但未配置 `KITE_SERVER_ACCOUNTS_FILE` | 请部署方启用托管存储,或使用直传 cookie |
+| `INVALID_CREDENTIALS` | `INVALID_ARGUMENT` | 400 | 同时携带 cookie 和账号 ID,或账号 ID 为空/多个值 | 每次仅传一种凭据,账号 ID 必须是单个非空值 |
 
 `ErrorInfo` 的其它字段:
 
@@ -53,20 +59,23 @@ grpc-gateway 把 status 序列化为 JSON,`details` 里就是 `ErrorInfo`:
 
 ## 凭据
 
-需要登录的接口通过请求元数据传入上游 cookie,不进 proto 字段:
+凭据通过 metadata 传入,不进请求 proto 字段;以下两种模式互斥:
 
-- gRPC:metadata `x-netease-cookie`
-- REST:请求头 `Grpc-Metadata-X-Netease-Cookie`
+| 模式 | gRPC metadata | REST 请求头 |
+|---|---|---|
+| 直传 cookie | `x-netease-cookie` | `Grpc-Metadata-X-Netease-Cookie` |
+| 托管账号 ID | `x-kite-account-id` | `Grpc-Metadata-X-Kite-Account-Id` |
 
-缺失或失效时返回 `LOGIN_REQUIRED`。
+同时传两种凭据、空或多个账号 ID 返回 `INVALID_CREDENTIALS`。不配置 `KITE_SERVER_ACCOUNTS_FILE` 时保留直传行为,选择账号 ID 返回 `ACCOUNTS_DISABLED`。账号只能由其所属服务调用方使用,不会自动挑选或回退到其它账号;完整所有权与持久化规则见 [接入指南](integration.md)及[服务安全](server-security.md)。
+登录引导接口 `SendCaptcha`、`LoginQrcode`、`LoginByCellphone`、`CheckQrcode` 不接受账号选择器,携带账号 ID 也返回 `INVALID_CREDENTIALS`;这些调用应省略账号 ID 头。
 
-少数接口是**可选登录**(如 `SongService/GetSongURL`、`UserService/UserPlaylist`、`PlaylistService/GetPlaylist`、
-`PlaylistService/AllTracks`,以 proto 注释为准):不带 cookie 按匿名执行、不报 `LOGIN_REQUIRED`,带了 cookie
-就按该账号执行(例如 VIP 账号才能拿到 VIP 歌的播放链接,本人才能读到私有歌单)。cookie 失效时上游对这些读取
-按匿名返回公开内容,同样不报 `LOGIN_REQUIRED`。
+直传模式需要登录的接口缺失或失效返回 `LOGIN_REQUIRED`。少数接口为**可选登录**(如 `SongService/GetSongURL`、`UserService/UserPlaylist`、`PlaylistService/GetPlaylist`、`PlaylistService/AllTracks`,以 proto 为准):无凭据按匿名执行;带 cookie 按该账号执行,上游可能在 cookie 失效时按匿名返回公开内容。显式选择不存在、无权或已过期的托管账号则分别报账号原因码,即使接口允许匿名也不会悄悄降级。
 
-这与调用本服务所需的访问令牌(`authorization: Bearer ...`)是两回事:令牌决定「谁能调用 kite」,
-cookie 决定「以哪个网易云账号执行」。两者的错误分别是 `SERVER_AUTH_FAILED` 与 `LOGIN_REQUIRED`。
+托管 `LoginStatus` 的空登录态或上游未授权将该版本账号标为过期,返回 `ACCOUNT_EXPIRED`;一般网络错误及权益不足不会使账号过期。并发新登录使旧快照失效时返回 `ACCOUNT_CHANGED`。存储加载失败会拒绝启动,运行期持久化失败返回脱敏的 `INTERNAL`,不报告成功且不发布未落盘变更。
+
+服务访问令牌(`authorization: Bearer ...`)决定「谁能调用 kite」和托管账号归属,不替代账号凭据;访问令牌错误为 `SERVER_AUTH_FAILED`,不是网易云重新登录能解决的错误。
+
+下面的 Rust 示例保留为直传模式分类示例;托管客户端还应将 `ACCOUNT_EXPIRED` 归为重新登录,并分别处理上表其它账号原因码。
 
 ## Rust(tonic)示例
 

@@ -35,7 +35,7 @@ func TestRefreshLogin(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	eng := engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(srv.URL))
-	auth := NewAuthServer(eng, nil)
+	auth := NewAuthServer(eng)
 	ctx := engine.WithCookie(context.Background(), "MUSIC_U=old; __csrf=c")
 
 	resp, err := auth.RefreshLogin(ctx, &mmpb.RefreshLoginRequest{})
@@ -69,7 +69,7 @@ func TestCheckQrcodeCompletesSessionFromFreshCookie(t *testing.T) {
 		}
 	}))
 	t.Cleanup(upstream.Close)
-	auth := NewAuthServer(engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(upstream.URL)), nil)
+	auth := NewAuthServer(engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(upstream.URL)))
 	ctx := engine.WithCookie(context.Background(), "MUSIC_U=old; __csrf=old-csrf")
 
 	resp, err := auth.CheckQrcode(ctx, &mmpb.CheckQrcodeRequest{Key: "confirmed"})
@@ -102,7 +102,7 @@ func TestCheckQrcodePendingStates(t *testing.T) {
 				_, _ = fmt.Fprintf(w, `{"code":%d,"message":"等待授权"}`, code)
 			}))
 			t.Cleanup(upstream.Close)
-			auth := NewAuthServer(engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(upstream.URL)), nil)
+			auth := NewAuthServer(engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(upstream.URL)))
 
 			resp, err := auth.CheckQrcode(context.Background(), &mmpb.CheckQrcodeRequest{Key: "pending"})
 			require.NoError(t, err)
@@ -124,7 +124,7 @@ func TestCheckQrcodeUsesInlineAccount(t *testing.T) {
 		_, _ = w.Write([]byte(`{"code":803,"account":{"id":43},"profile":{"nickname":"完整响应"}}`))
 	}))
 	t.Cleanup(upstream.Close)
-	auth := NewAuthServer(engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(upstream.URL)), nil)
+	auth := NewAuthServer(engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(upstream.URL)))
 
 	resp, err := auth.CheckQrcode(context.Background(), &mmpb.CheckQrcodeRequest{Key: "inline"})
 	require.NoError(t, err)
@@ -194,7 +194,7 @@ func TestCheckQrcodeRejectsIncompleteSession(t *testing.T) {
 				}
 			}))
 			t.Cleanup(upstream.Close)
-			auth := NewAuthServer(engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(upstream.URL)), nil)
+			auth := NewAuthServer(engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(upstream.URL)))
 			ctx := engine.WithCookie(context.Background(), "MUSIC_U=old-account")
 
 			resp, err := auth.CheckQrcode(ctx, &mmpb.CheckQrcodeRequest{Key: "incomplete"})
@@ -216,7 +216,7 @@ func TestLoginByCellphone_NoAccountIsUnauthorized(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	eng := engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(srv.URL))
-	auth := NewAuthServer(eng, nil)
+	auth := NewAuthServer(eng)
 
 	_, err := auth.LoginByCellphone(context.Background(), &mmpb.LoginByCellphoneRequest{Phone: "8613800138000", Captcha: "1234"})
 	require.ErrorIs(t, err, merrors.ErrUnauthorized, "无账号信息的登录响应按未登录报错")

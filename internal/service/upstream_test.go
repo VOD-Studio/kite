@@ -66,7 +66,7 @@ func TestUpstreamSmoke(t *testing.T) {
 	song, album, artist := NewSongServer(eng), NewAlbumServer(eng), NewArtistServer(eng)
 	playlist, user := NewPlaylistServer(eng), NewUserServer(eng)
 	recommend, search := NewRecommendServer(eng), NewSearchServer(eng)
-	authsrv := NewAuthServer(eng, nil)
+	authsrv := NewAuthServer(eng)
 
 	cases := []smokeCase{
 		// --- 登录(匿名可验证的子集:取二维码 key / 匿名登录态) ---

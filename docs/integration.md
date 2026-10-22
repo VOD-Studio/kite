@@ -16,16 +16,39 @@ kite-server 以 gRPC(默认 `:3722`)和 REST(grpc-gateway,默认 `:3721`)提供�
 ## 三个约定
 
 1. **访问令牌**:每个请求带 `authorization: Bearer <令牌>`(REST 用同名 `Authorization` 头)。令牌决定「谁能调用 kite」,错误时原因码为 `SERVER_AUTH_FAILED`。
-2. **网易云登录态**:需要以某个账号执行时,带 metadata `x-netease-cookie`(REST:`Grpc-Metadata-X-Netease-Cookie`)。cookie 由**接入方保存**,kite 不存储任何人的登录态。
-   - 登录:`AuthService/LoginQrcode` 拿二维码 `url`(自己画二维码)→ 约 2 秒轮询 `CheckQrcode`;`CONFIRMED` 时返回包含 `user_id`、`cookie` 与账号资料的 `session`(REST 字段为 `userId`),接入方保存完整 `cookie`;`EXPIRED` 时重新取二维码。确认响应未附账号资料时,kite 使用本次登录的新 cookie 补查,不会沿用调用方的旧账号。上游缺少新凭据或返回无效账号资料时,返回 `UPSTREAM_INVALID_RESPONSE`,不会返回无凭据的 `CONFIRMED`。
-   - 续期:定期调 `AuthService/RefreshLogin`,用返回的完整 cookie 替换旧值。
-   - 退出:调 `AuthService/Logout`,**再删除自己保存的 cookie**(没带 cookie 时 Logout 也返回成功,不能据此判断已注销)。
-   - 缺失或失效时原因码为 `LOGIN_REQUIRED`:提示用户重新登录。
+2. **网易云登录态**:凭据有两种互斥模式,均不放进请求 message:
+   - **直传 cookie(默认)**:未配置 `KITE_SERVER_ACCOUNTS_FILE` 时,登录返回的 `session.cookie` 由接入方保存。gRPC 用 `x-netease-cookie`,REST 用 `Grpc-Metadata-X-Netease-Cookie`。续期调用 `AuthService/RefreshLogin`,用返回的完整 cookie 替换旧值;退出调用 `AuthService/Logout` 后删除自己保存的 cookie。没带凭据时 Logout 也可成功,不能据此判断已注销。需要登录的接口缺失或失效时返回 `LOGIN_REQUIRED`。
+   - **托管账号(可选)**:部署方配置 `KITE_SERVER_ACCOUNTS_FILE` 后,手机号登录或确认二维码登录把账号持久化,返回 `session.account_id`(REST:`accountId`),`session.cookie` 为空。接入方保存这个不透明 ID,gRPC 用 `x-kite-account-id`,REST 用 `Grpc-Metadata-X-Kite-Account-Id` 显式选择;不传凭据仍按匿名执行,不会自动借用任何托管账号。
+   - 二维码流程:`AuthService/LoginQrcode` 拿 `url` 自行画二维码,约 2 秒轮询 `CheckQrcode`;`CONFIRMED` 时保存对应模式的凭据,`EXPIRED` 时重新取二维码。确认响应未附资料时使用本次登录的新 cookie 补查,不会沿用旧账号;缺少新凭据或资料无效返回 `UPSTREAM_INVALID_RESPONSE`。
+   - cookie 与账号 ID **不得同时发送**;账号 ID 为空或重复发送多个值返回 `INVALID_CREDENTIALS`。未启用托管存储却选择账号返回 `ACCOUNTS_DISABLED`。
+   - 登录引导接口 `SendCaptcha`、`LoginQrcode`、`LoginByCellphone`、`CheckQrcode` 不接受账号选择器;携带 `x-kite-account-id` 返回 `INVALID_CREDENTIALS`,登录时应省略该头。
 3. **按原因码分支,不要解析错误文本**:错误以标准 gRPC status + `ErrorInfo` 返回,全部原因码见 [grpc-errors.md](grpc-errors.md)。
+
+## 托管账号的归属与生命周期
+
+账号 ID 不是服务访问令牌,只能由其所属调用方使用。命名令牌的所有者是 `caller:<名称>`,同名轮换令牌保留归属;单令牌来源(`KITE_SERVER_AUTH_TOKEN` 或 `_FILE`)共用 `single`;无鉴权回环部署的全部本机客户端共用 `local`。调用方不能通过 metadata 指定所有者。同一调用方重新登录同一网易云用户保留账号 ID、更新凭据;不同调用方登录同一用户得到独立 ID。多个账号可同时保存,每次请求必须显式选一个。
+
+- `LoginStatus` 带账号 ID 时返回同一 `account_id`,不返回 cookie。确定未登录的空状态或上游未授权会将该快照标为过期,返回 `ACCOUNT_EXPIRED`;普通网络故障或权益错误不会使账号过期。
+- 显式调用 `RefreshLogin` 才续期:成功先持久化合并后的 cookie,响应仅返回 `account_id`,`cookie` 为空。没有后台自动续期保证。
+- 显式调用 `Logout` 成功意味着记录已经持久化删除;过期账号可以直接本地删除,无需访问上游。直传 cookie 刷新或登出若精确匹配当前调用方的活跃托管记录,也会同步其持久化生命周期。
+- 不存在的 ID 返回 `ACCOUNT_NOT_FOUND`,其它调用方的 ID 返回 `ACCOUNT_FORBIDDEN`,过期账号返回 `ACCOUNT_EXPIRED`,均不会回退到其它账号或匿名。并发重新登录后,旧请求不能覆盖、过期或删除新凭据,而返回 `ACCOUNT_CHANGED`;重新读取当前状态再决定操作,不要盲目重放。
+- 持久化失败返回脱敏的 `INTERNAL`,不会报告保存/退出成功或把未落盘状态发布出来。重启后从同一文件恢复账号及归属;文件运维要求见 [server-security.md](server-security.md)。
+
+以下是独立的托管 REST 示例(先从登录响应的 `session.accountId` 保存 `KITE_ACCOUNT_ID`,不要再带 cookie):
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $KITE_TOKEN" \
+  -H "Grpc-Metadata-X-Kite-Account-Id: $KITE_ACCOUNT_ID" \
+  -H "Content-Type: application/json" -d '{}' \
+  http://127.0.0.1:3721/api/v1/auth/refresh
+```
+
+响应的 `accountId` 仍为所选账号,没有可用 cookie。以下 Go 示例保留为直传模式示例;托管模式改用上述账号 ID metadata,并按[错误契约](grpc-errors.md)处理账号原因码。
 
 ## 播放链接
 
-`SongService/GetSongURL` 是**可选登录**:不带 cookie 时只有免费歌,VIP / 无版权的歌 `url` 为空;带 VIP 账号的 cookie 时按该账号权益返回。直链几十分钟后过期,**不要存库**:在用户点播放时再取(例如后端 302 跳转到直链)。
+`SongService/GetSongURL` 是**可选登录**:不带凭据时只有免费歌,VIP / 无版权的歌 `url` 为空;直传 cookie 或显式选择托管账号时按该账号权益返回。直链几十分钟后过期,**不要存库**:在用户点播放时再取(例如后端 302 跳转到直链)。
 
 账号对该歌无权益(未购数字专辑、版权受限等)时,上游可能只返回约 30 秒的**试听片段**:`url.trial` 为 `true` 并带 `trialStartMs` / `trialEndMs`(毫秒),`url` 只覆盖试听区间;上游未提供试听信息时 `trial` 为 `false` 且两个区间字段保持 0。不要把 `url` 非空当作可完整播放,按 `trial` 分支。响应同时回传上游逐条的 `code` 与 `fee`。
 
@@ -33,9 +56,9 @@ kite-server 以 gRPC(默认 `:3722`)和 REST(grpc-gateway,默认 `:3721`)提供�
 
 `UserService/UserPlaylist`、`PlaylistService/GetPlaylist`、`PlaylistService/AllTracks` 也是**可选登录**:
 
-- 带本人的 cookie 时按该账号读,能看到私有歌单及其歌曲;不带时匿名,只有公开内容。服务端保存的账号不会被借给任何请求。
-- 带 cookie 的结果按账号单独缓存,不同账号、匿名请求之间不会串数据。
-- cookie 失效时上游按匿名返回公开内容,**不会**报 `LOGIN_REQUIRED`;要确认登录态,调 `AuthService/LoginStatus`(未登录时 `session` 为空)。
+- 带本人的 cookie 或拥有的托管账号 ID 时按该账号读,能看到私有歌单及其歌曲;不带时匿名,只有公开内容。服务端保存的账号不会被借给任何请求。
+- 已认证结果按凭据身份隔离缓存,不同账号、不同调用方与匿名请求之间不会串数据;缓存键不包含明文 cookie。
+- 直传 cookie 失效时上游可能按匿名返回公开内容,不报 `LOGIN_REQUIRED`;可调 `AuthService/LoginStatus` 确认(未登录时 `session` 为空)。显式选择已过期的托管账号始终返回 `ACCOUNT_EXPIRED`,不会匿名降级。
 - 分页:`total` 是总数(`UserPlaylist` 为当前 `filter` 下的总数),不随 `limit` / `offset` 变化;每页不超过 `limit`(默认值与上限见 proto 注释),`offset` 超出总数时返回空页。
 
 ## Go 示例

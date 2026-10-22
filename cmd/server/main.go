@@ -3,8 +3,7 @@
 // 启动 gRPC server（对外强类型 RPC）+ grpc-gateway（REST 暴露）双 server，
 // 收到 SIGINT/SIGTERM 时优雅关闭。
 //
-// 地基阶段：engine + session 池用 noop/cache 初始化（不接 Redis），
-// 真实 Redis 接入在后续。
+// 核心引擎不接入自动选号池;可通过 KITE_SERVER_ACCOUNTS_FILE 托管显式选择的账号。
 //
 // 配置走环境变量(见 config.Load):默认只监听 127.0.0.1:3722(gRPC)与 127.0.0.1:3721(REST);
 // 对外监听必须配置 KITE_SERVER_AUTH_TOKEN,否则拒绝启动。
@@ -25,8 +24,8 @@ import (
 
 	"github.com/VOD-Studio/kite/config"
 	"github.com/VOD-Studio/kite/internal/cache"
+	"github.com/VOD-Studio/kite/internal/netease/account"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
-	"github.com/VOD-Studio/kite/internal/netease/session"
 	"github.com/VOD-Studio/kite/internal/public"
 	"github.com/VOD-Studio/kite/internal/server"
 )
@@ -45,14 +44,21 @@ func main() {
 		}
 	}
 
-	// 地基阶段：engine + session 池用 noop 初始化（不接 Redis）。
-	// 真实接入在后续：WithCache(redis.New(rdb)) + WithSessions(store.NewSessionStore(rdb))。
+	// 未指定账号的请求不会借用托管账号;公开播放器的服务账号另行配置。
 	eng := engine.New(
 		engine.WithCache(cache.Noop{}),
 	)
-	sessions := session.NoopStore{}
 
 	cfg := config.Load()
+	var accounts *account.Store
+	if cfg.Server.AccountsFile != "" {
+		var err error
+		accounts, err = account.Open(cfg.Server.AccountsFile)
+		if err != nil {
+			slog.ErrorContext(startupCtx, "load managed accounts failed", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	}
 	tokens, err := cfg.Server.ResolveAuthTokens()
 	if err != nil {
 		slog.ErrorContext(startupCtx, "load auth tokens failed", slog.String("error", err.Error()))
@@ -70,7 +76,7 @@ func main() {
 		RatePerMinute: cfg.Server.RatePerMinute,
 		TLSCertFile:   cfg.Server.TLSCertFile,
 		TLSKeyFile:    cfg.Server.TLSKeyFile,
-	}, eng, sessions)
+	}, eng, accounts)
 	if err != nil {
 		slog.ErrorContext(startupCtx, "init server failed", slog.String("error", err.Error()))
 		os.Exit(1)

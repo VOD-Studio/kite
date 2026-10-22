@@ -39,6 +39,7 @@ cmd/*
        internal/netease/endpoint  API 声明(每接口一个包级 var)
        internal/netease/compose   跨接口组合:一次读取需要多次上游调用时(如按 trackIds 分页取歌曲)
        internal/netease/session   cookie 池接口
+       internal/netease/account   显式选号的调用方账号存储(持久化 / 凭据版本),不接自动选号池
        internal/netease/model     数据模型
        errors/  gen/(proto 生成物)
 ```
@@ -52,6 +53,7 @@ cmd/*
 - **CLI 与 TUI 平行不耦合**:两者共用的东西必须先提到 CLI 之外(如 `localstate`、`recall`),再各自引用。禁止 `tui → cli`。
 - **`internal/cli/mcp`(`kite mcp`)只暴露只读工具**:与 CLI 一样直连 engine + endpoint;不得绑定写类 / 登录类 endpoint,工具表与 `docs/mcp.md` 一致。由 `internal/cli/mcp/server_test.go` 守护。
 - **`internal/public` 只读、只暴露白名单**:与 CLI 一样直连 engine + endpoint,不经 service;只注册 GET 路由,白名单之外的歌单 / 歌曲 / 歌词一律拒绝,播放链接必须验签;服务账号的登录态只用于取播放链接。由 `internal/public/public_test.go` 守护,协议见 `docs/player.md`。
+- **通用托管账号按服务调用方隔离**:`internal/server` 解析显式账号 ID 并维护登录/续期/退出,`internal/netease/account` 只做持久化与版本比较,不依赖前端。未指定账号不自动借用,公开模式不消费此账号集合。由 `internal/server/account_e2e_test.go`、`internal/netease/account/store_test.go` 与 `internal/archtest` 守护。
 - **`internal/cli/kit` 只做 CLI 呈现**:渲染、进度、Kit 装配。与前端无关的东西(文件路径、会话、配置、召回池)不要放进来。
 - **proto 是 RPC 契约的唯一真相**(`proto/netease/music/v1/`)。改 RPC 先改 proto 再 `make proto`;不要手写与 proto 冲突的类型。
 - **proto ↔ CLI 一一对应由 `internal/cli/rpc_guard_test.go` 守护**:新增 rpc 要么接 CLI 命令,要么在 `rpcsWithoutCliAllowlist` 登记理由。
@@ -64,8 +66,7 @@ cmd/*
 | 现状 | 影响 | 处理时机 |
 |---|---|---|
 | `cli/songdl` 依赖 `kit.Kit`(进度渲染、HTTP client) | TUI 无法复用下载核心 | TUI 首次需要下载时,先拆出不含渲染的核心 |
-| `redis/`(`internal/cache/redis`、`internal/store/redis`、`internal/infra/redis`)与 `observability/` **已实现但未接入任何二进制** | `cmd/server` 实际用 `cache.Noop` + `session.NoopStore`,指标 / tracing 不生效 | 接入 `cmd/server`,或在确认不用时删除 |
-| `internal/service` 无测试 | adapter 的行为只靠 engine 侧测试间接覆盖 | 改动 service 时顺手补 |
+| `redis/`(`internal/cache/redis`、`internal/store/redis`、`internal/infra/redis`)与 `observability/` **已实现但未接入任何二进制** | `cmd/server` 使用 `cache.Noop`,托管账号使用独立文件存储,指标 / tracing 不生效 | 接入 `cmd/server`,或在确认不用时删除 |
 
 ## 开发命令
 

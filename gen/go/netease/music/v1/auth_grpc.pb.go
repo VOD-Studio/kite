@@ -46,8 +46,8 @@ type AuthServiceClient interface {
 	LoginStatus(ctx context.Context, in *LoginStatusRequest, opts ...grpc.CallOption) (*LoginStatusResponse, error)
 	// Logout 登出当前会话。
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
-	// RefreshLogin 刷新登录态,延长 cookie 的有效期。
-	// cookie 已失效时返回 LOGIN_REQUIRED,调用方应引导重新登录。
+	// RefreshLogin 刷新登录态；托管账号持久化新凭据，直传模式返回完整 cookie。
+	// 托管凭据失效时返回 ACCOUNT_EXPIRED，直传凭据失效时返回 LOGIN_REQUIRED。
 	RefreshLogin(ctx context.Context, in *RefreshLoginRequest, opts ...grpc.CallOption) (*RefreshLoginResponse, error)
 }
 
@@ -147,8 +147,8 @@ type AuthServiceServer interface {
 	LoginStatus(context.Context, *LoginStatusRequest) (*LoginStatusResponse, error)
 	// Logout 登出当前会话。
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
-	// RefreshLogin 刷新登录态,延长 cookie 的有效期。
-	// cookie 已失效时返回 LOGIN_REQUIRED,调用方应引导重新登录。
+	// RefreshLogin 刷新登录态；托管账号持久化新凭据，直传模式返回完整 cookie。
+	// 托管凭据失效时返回 ACCOUNT_EXPIRED，直传凭据失效时返回 LOGIN_REQUIRED。
 	RefreshLogin(context.Context, *RefreshLoginRequest) (*RefreshLoginResponse, error)
 }
 

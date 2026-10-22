@@ -24,7 +24,6 @@ import (
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cache"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
-	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 const testToken = "test-token-123"
@@ -43,7 +42,7 @@ func startApp(t *testing.T, token string) (app *App, upstreamHits *atomic.Int32)
 	t.Cleanup(up.Close)
 
 	eng := engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(up.URL))
-	app, err := NewApp(Options{GRPCAddr: "127.0.0.1:0", HTTPAddr: "127.0.0.1:0", AuthTokens: single(token)}, eng, session.NoopStore{})
+	app, err := NewApp(Options{GRPCAddr: "127.0.0.1:0", HTTPAddr: "127.0.0.1:0", AuthTokens: single(token)}, eng, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -217,7 +216,7 @@ func TestNewApp_RefusesExposedWithoutToken(t *testing.T) {
 		{"0.0.0.0:0", "127.0.0.1:0"},
 		{"127.0.0.1:0", ":0"},
 	} {
-		app, err := NewApp(Options{GRPCAddr: addrs[0], HTTPAddr: addrs[1]}, eng, session.NoopStore{})
+		app, err := NewApp(Options{GRPCAddr: addrs[0], HTTPAddr: addrs[1]}, eng, nil)
 		require.Error(t, err, addrs)
 		require.Nil(t, app)
 	}
@@ -236,7 +235,7 @@ func TestNewApp_ListenFailure(t *testing.T) {
 	require.NoError(t, free.Close())
 
 	eng := engine.New(engine.WithCache(cache.Noop{}))
-	_, err = NewApp(Options{GRPCAddr: freeAddr, HTTPAddr: busy.Addr().String()}, eng, session.NoopStore{})
+	_, err = NewApp(Options{GRPCAddr: freeAddr, HTTPAddr: busy.Addr().String()}, eng, nil)
 	require.ErrorContains(t, err, "listen http")
 
 	again, err := net.Listen("tcp", freeAddr)

@@ -29,7 +29,7 @@ type rule struct {
 var rules = []rule{
 	{
 		from:      "internal/netease/",
-		forbidden: []string{"internal/cli", "internal/tui", "internal/service", "internal/server", "internal/localstate", "internal/recall"},
+		forbidden: []string{"internal/cli", "internal/tui", "internal/service", "internal/server", "internal/public", "internal/localstate", "internal/recall"},
 		why:       "netease 是核心层,只能被上层依赖,不能反向依赖任何上层或本地状态",
 	},
 	{

@@ -37,6 +37,18 @@ type AuthToken struct {
 // callerCtxKey 是 authorize 注入调用方身份用的 context key。
 type callerCtxKey struct{}
 
+// principalCtxKey 与限流显示名称分开,只由成功的服务鉴权写入。
+type principalCtxKey struct{}
+
+// accountOwner 返回可信调用方的托管账号命名空间。
+// 未鉴权回环模式的所有本机进程共享 local 命名空间。
+func accountOwner(ctx context.Context) string {
+	if owner, ok := ctx.Value(principalCtxKey{}).(string); ok {
+		return owner
+	}
+	return "local"
+}
+
 // CallerFromContext 返回通过鉴权的调用方名称;单令牌部署或未鉴权模式返回空串。
 // 限流拦截器用它做 key,业务代码不得依赖它做访问控制。
 func CallerFromContext(ctx context.Context) string {
@@ -84,7 +96,12 @@ func (a *Auth) authorize(ctx context.Context, fullMethod string) (context.Contex
 		// 摘要做 map key:查表耗时与令牌内容无关,等价于原常数时间比较的安全性质。
 		got := sha256.Sum256([]byte(strings.TrimSpace(token)))
 		if name, ok := a.callers[got]; ok {
-			return context.WithValue(ctx, callerCtxKey{}, name), nil
+			owner := "single"
+			if name != "" {
+				owner = "caller:" + name
+			}
+			ctx = context.WithValue(ctx, callerCtxKey{}, name)
+			return context.WithValue(ctx, principalCtxKey{}, owner), nil
 		}
 	}
 	// 缺失与错误不区分,不给调用方额外信息。
