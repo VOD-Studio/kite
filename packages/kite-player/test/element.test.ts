@@ -125,6 +125,21 @@ describe("<kite-player>", () => {
     expect(btn?.getAttribute("aria-label")).toContain("单曲循环");
   });
 
+  it("面板封面缺失时隐藏碎图,由占位样式兜底", async () => {
+    const bare = track("9", { title: "无封面", album: { id: "al", name: "晴朗的周三", cover: "" } });
+    player.setSource(fakeSource({ ...playlist, tracks: [bare, track("2", { title: "慢车" })] }));
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar .toggle")?.click();
+    await settle(el);
+    for (const sel of [".cover img", ".amb img", ".disc-img img"]) {
+      const img = root.querySelector<HTMLImageElement>(sel);
+      expect(img?.hasAttribute("src"), sel).toBe(false);
+      img?.dispatchEvent(new Event("error"));
+      expect(img?.hidden, sel).toBe(true);
+    }
+  });
+
   it("播放列表抽屉:列出歌曲,VIP 歌不能播并给出提示", async () => {
     const el = await mount(`<kite-player playlists="100"></kite-player>`);
     const root = shadow(el);
@@ -178,6 +193,21 @@ describe("<kite-player>", () => {
 });
 
 describe("<kite-track>", () => {
+  it("封面缺失或加载失败时隐藏碎图,由占位样式兜底", async () => {
+    const bare = track("9", { title: "无封面", album: { id: "al", name: "晴朗的周三", cover: "" } });
+    player.setSource(fakeSource({ ...playlist, tracks: [bare] }));
+    for (const size of ["s", "m", "l"]) {
+      const el = await mount(`<kite-track song="9" size="${size}"></kite-track>`);
+      const imgs = [...shadow(el).querySelectorAll<HTMLImageElement>(".cover img, .amb img")];
+      expect(imgs.length, size).toBeGreaterThan(0);
+      for (const img of imgs) {
+        expect(img.hasAttribute("src"), size).toBe(false);
+        img.dispatchEvent(new Event("error"));
+        expect(img.hidden, size).toBe(true);
+      }
+    }
+  });
+
   it("三种尺寸都能渲染,点播放与播放器同步", async () => {
     for (const size of ["s", "m", "l"]) {
       const el = await mount(`<kite-track song="2" size="${size}"></kite-track>`);

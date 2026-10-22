@@ -1,11 +1,12 @@
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { classMap } from "lit/directives/class-map.js";
+import { ifDefined } from "lit/directives/if-defined.js";
 import { formatTime } from "../core/lyrics";
 import type { Player } from "../core/player";
 import type { PlayerState, Playlist } from "../core/types";
 import { icons } from "./icons";
 import { cardSheet } from "./styles";
-import { artists, canPlay, emit, emitFly, openQueueEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow } from "./util";
+import { artists, canPlay, emit, emitFly, hideBroken, openQueueEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow } from "./util";
 
 /** 标准卡片列出的歌曲数。 */
 const previewRows = 4;
@@ -102,9 +103,9 @@ export class KitePlaylistElement extends LitElement {
     return html`<div class=${classMap({ card: true, pl: true, big, cur: inThis, playing: inThis && this.s.playing })} part="card">
       <div class="head">
         <div class="stack">
-          <div class="cover c3"><img alt="" src=${covers[2] ?? ""} /></div>
-          <div class="cover c2"><img alt="" src=${covers[1] ?? ""} /></div>
-          <div class="cover c1"><img alt="" src=${covers[0] ?? ""} /></div>
+          <div class="cover c3"><img alt="" src=${ifDefined(covers[2] || undefined)} @error=${hideBroken} /></div>
+          <div class="cover c2"><img alt="" src=${ifDefined(covers[1] || undefined)} @error=${hideBroken} /></div>
+          <div class="cover c1"><img alt="" src=${ifDefined(covers[0] || undefined)} @error=${hideBroken} /></div>
         </div>
         <div class="info">
           <div class="kicker">歌单</div>

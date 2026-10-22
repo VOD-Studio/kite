@@ -23,6 +23,11 @@ export function canAnimate(el: Element): boolean {
   return typeof (el as HTMLElement).animate === "function" && !prefersReducedMotion();
 }
 
+/** hideBroken:封面加载失败时隐藏碎图,让容器的占位样式(渐变 + 音符)显示出来。 */
+export function hideBroken(e: Event): void {
+  (e.currentTarget as HTMLElement).hidden = true;
+}
+
 /**
  * 元素用到的播放核心。数据来源取自元素自己的 api 属性,没有时取页面里第一个带 api 的元素;
  * 都没有时由 whenSource 等待(例如页面之后用 JS 设置自定义数据来源)。

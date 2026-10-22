@@ -1,12 +1,13 @@
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { classMap } from "lit/directives/class-map.js";
+import { ifDefined } from "lit/directives/if-defined.js";
 import { keyed } from "lit/directives/keyed.js";
 import { firstSungIndex, formatTime, lineUnits, wordProgress } from "../core/lyrics";
 import type { Player } from "../core/player";
 import type { LyricLine, Lyrics, PlayerState, Track } from "../core/types";
 import { blob, eq, icons } from "./icons";
 import { cardSheet } from "./styles";
-import { artists, canPlay, emit, emitFly, openEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow, type OpenDetail } from "./util";
+import { artists, canPlay, emit, emitFly, hideBroken, openEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow, type OpenDetail } from "./util";
 
 const sizes = ["s", "m", "l"] as const;
 type Size = (typeof sizes)[number];
@@ -134,7 +135,7 @@ export class KiteTrackElement extends LitElement {
       ? html`${icons.lock}<span class="ell">${unplayableMessage(t)}</span>`
       : html`<span class="ell">${[artists(t), t.album.name, formatTime(t.durationMs / 1000)].filter(Boolean).join(" · ")}</span>`;
     return html`<div class=${classes} part="card">
-      <div class="cover"><img alt="" src=${t.album.cover} /></div>
+      <div class="cover"><img alt="" src=${ifDefined(t.album.cover || undefined)} @error=${hideBroken} /></div>
       <div class="main">
         <div class="title">${eq}<span class="ell">${t.title}</span>${t.trial ? html`<span class="tg trial">仅试听</span>` : nothing}<span class="who ell">${artists(t)}</span></div>
         <div class="sub" ?hidden=${cur && canPlay(t)}>${sub}</div>
@@ -156,7 +157,7 @@ export class KiteTrackElement extends LitElement {
     const locked = !canPlay(t);
     const lv = this.lyricView(cur);
     return html`<div class=${classes} part="card">
-      <div class="cover"><img alt="" src=${t.album.cover} /></div>
+      <div class="cover"><img alt="" src=${ifDefined(t.album.cover || undefined)} @error=${hideBroken} /></div>
       <div class="main">
         <div class="head">
           <div style="flex:1;min-width:0">
@@ -180,10 +181,10 @@ export class KiteTrackElement extends LitElement {
     const locked = !canPlay(t);
     const lv = this.lyricView(cur);
     return html`<div class=${classes} part="card">
-      <div class="amb"><img alt="" src=${t.album.cover} /></div>
+      <div class="amb"><img alt="" src=${ifDefined(t.album.cover || undefined)} @error=${hideBroken} /></div>
       <div class="scrim"></div>
       <div class="top">
-        <div class="cover"><img alt="" src=${t.album.cover} /></div>
+        <div class="cover"><img alt="" src=${ifDefined(t.album.cover || undefined)} @error=${hideBroken} /></div>
         <div class="info">
           <div class="kicker">${cur ? "单曲 · 正在播放" : "单曲"}</div>
           <div class="title ell">${t.title}</div>

@@ -33,6 +33,23 @@ img {
   height: 100%;
   object-fit: cover;
 }
+/* 封面占位:图缺失或加载失败(失败时 img 被 hideBroken 隐藏)时显示底色与音符。
+   底色各主题自定(base 深色给面板,card.css 覆盖浅色给卡片);音符用 mask 取 currentColor 随主题变色。 */
+.cover {
+  background: linear-gradient(145deg, #39415f, #232946);
+}
+.cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  opacity: 0.4;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M20 3.3v10.9a3.3 3.3 0 1 1-2.2-3.11V7.3L9.9 9v9.2a3.3 3.3 0 1 1-2.2-3.11V7.5L20 3.3z'/%3E%3C/svg%3E") center / 34% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M20 3.3v10.9a3.3 3.3 0 1 1-2.2-3.11V7.3L9.9 9v9.2a3.3 3.3 0 1 1-2.2-3.11V7.5L20 3.3z'/%3E%3C/svg%3E") center / 34% no-repeat;
+}
+.cover img {
+  position: relative;
+}
 [hidden] {
   display: none !important;
 }

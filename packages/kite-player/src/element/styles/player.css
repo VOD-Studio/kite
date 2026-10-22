@@ -163,9 +163,19 @@
   height: auto;
   border-radius: 50%;
   overflow: hidden;
-  background: #D9DCE2;
+  background: linear-gradient(145deg, #39415f, #232946);
+}
+.disc-img::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  opacity: 0.4;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M20 3.3v10.9a3.3 3.3 0 1 1-2.2-3.11V7.3L9.9 9v9.2a3.3 3.3 0 1 1-2.2-3.11V7.5L20 3.3z'/%3E%3C/svg%3E") center / 40% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M20 3.3v10.9a3.3 3.3 0 1 1-2.2-3.11V7.3L9.9 9v9.2a3.3 3.3 0 1 1-2.2-3.11V7.5L20 3.3z'/%3E%3C/svg%3E") center / 40% no-repeat;
 }
 .disc-img img {
+  position: relative;
   animation: spin 9s linear infinite;
   animation-play-state: paused;
 }

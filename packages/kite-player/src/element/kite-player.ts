@@ -23,6 +23,7 @@ import {
   toastEvent,
   unplayableMessage,
   writeFlag,
+  hideBroken,
   type FlyDetail,
   type OpenDetail,
 } from "./util";
@@ -269,7 +270,7 @@ export class KitePlayerElement extends LitElement {
     const ticker = this.tickerText(s);
     return html`<div class="bar" part="bar">
       <button class="disc expand" aria-label="展开播放器" @click=${this.onExpand}>
-        <span class="ring" style=${styleMap({ "--pct": String(pct) })}></span><span class="disc-img"><img alt="" src=${ifDefined(t?.album.cover || undefined)} /></span>
+        <span class="ring" style=${styleMap({ "--pct": String(pct) })}></span><span class="disc-img"><img alt="" src=${ifDefined(t?.album.cover || undefined)} @error=${hideBroken} /></span>
       </button>
       <button class="bar-text expand" aria-label="展开播放器" @click=${this.onExpand}>
         <span class="bar-line"
@@ -308,7 +309,7 @@ export class KitePlayerElement extends LitElement {
       @pointerdown=${this.resetIdle}
       @wheel=${{ handleEvent: () => this.resetIdle(), passive: true }}
     >
-      <div class="amb"><img alt="" src=${ifDefined(cover)} /></div>
+      <div class="amb"><img alt="" src=${ifDefined(cover)} @error=${hideBroken} /></div>
       <div class="scrim"></div>
       <div class="pages" @pointerdown=${this.onSwipeStart} @pointerup=${this.onSwipeEnd}>
         <section class="page page-cover">
@@ -336,7 +337,7 @@ export class KitePlayerElement extends LitElement {
         </section>
       </div>
       <button class="cover" aria-label=${ui.view === "cover" ? "查看歌词" : "返回封面"} @click=${this.onCoverClick}>
-        <img alt="" src=${ifDefined(cover)} /><span class="badge" ?hidden=${!ui.badge}><b>${ui.badge?.[0] ?? ""}</b><span>${ui.badge?.[1] ?? ""}</span></span>
+        <img alt="" src=${ifDefined(cover)} @error=${hideBroken} /><span class="badge" ?hidden=${!ui.badge}><b>${ui.badge?.[0] ?? ""}</b><span>${ui.badge?.[1] ?? ""}</span></span>
       </button>
       <div class="top enter">
         <button class="ib close" aria-label="收起" @click=${this.close}>${icons.chevron}</button>
