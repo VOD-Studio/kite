@@ -9,4 +9,6 @@
   --kite-track: rgba(255,255,255,.12);
   --kite-blob: #F2F3F5;
   --kite-blob-icon: #15171C;
+  --kite-ph-bg: linear-gradient(135deg, #2B2E36, #1E2026);
+  --kite-ph-fg: #6B717D;
 }

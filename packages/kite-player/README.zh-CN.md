@@ -53,7 +53,7 @@ import "@violetjs/kite-player/element"; // 注册 <kite-player>、<kite-track>�
 
 ### 播放条与圆形
 
-播放条在页面右下角(手机上在底部),副标题显示当前歌词;向下滚动时收成带进度环、会转动的圆形。
+播放条默认在页面右下角(`position` 可放到左下或底部正中;手机上在底部),副标题显示当前歌词;向下滚动时收成带进度环、会转动的圆形。
 
 <p>
   <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/bar.webp" width="472" alt="悬浮播放条">
@@ -81,7 +81,7 @@ import "@violetjs/kite-player/element"; // 注册 <kite-player>、<kite-track>�
 
 ### 手机
 
-全屏,从播放条长出来,收起时缩回播放条。左右拖动在封面页和歌词页之间切换,封面跟着手指缩到歌词页左上角;拖动歌词时控制区收起,右侧出现那一句的时间,点它跳过去;点歌词显示或隐藏控制区。
+全屏,从播放条长出来,收起时缩回播放条;按住播放条往上拉、在封面页往下拉,卡片都跟着手指走。左右拖动在封面页和歌词页之间切换,封面跟着手指缩到歌词页左上角。拖动歌词时控制区收起,松手后按速度继续滑一段,最多滑到首句或末句;右侧出现那一句的时间,点它或点那一句跳过去;点歌词显示或隐藏控制区。
 
 <p>
   <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/mobile-cover.webp" width="260" alt="手机全屏,封面页">
@@ -127,6 +127,7 @@ import "@violetjs/kite-player/element"; // 注册 <kite-player>、<kite-track>�
 | `playlists` | 播放列表里作为标签列出的歌单 ID,逗号分隔。第一个是初始队列(只加载,不自动播放)。 |
 | `theme` | `auto`(默认,跟随系统)/ `light` / `dark`。 |
 | `collapse` | `scroll`(默认,向下滚动时收成圆形)/ `none`。 |
+| `position` | 桌面上放在哪一侧:`right`(默认)/ `left` / `center`。播放条、面板和播放列表都贴这一侧,展开时只往上长。手机上始终在底部。 |
 
 方法:`open(view?: "cover" | "lyrics"): Promise<void>` 展开播放器;`close()` 收起。
 
@@ -160,14 +161,15 @@ kite-player, kite-track, kite-playlist {
   --kite-font: "LXGW WenKai", sans-serif;
 }
 kite-player {
-  --kite-offset: 16px; /* 离视口边缘的距离 */
+  --kite-width: 420px; /* 桌面上播放条与面板的宽度,默认 400px */
+  --kite-offset: 16px; /* 离视口边缘的距离;也可以用 --kite-offset-x / --kite-offset-y 分别设置 */
 }
 kite-track::part(card) {
   border-radius: 12px;
 }
 ```
 
-常用变量:`--kite-accent`、`--kite-font`、`--kite-fg`、`--kite-muted`、`--kite-card`、`--kite-sheet`、`--kite-offset`。可用的 part:`<kite-player>` 有 `root`、`bar`、`panel`、`lyrics`、`controls`、`queue`;两种卡片有 `card`。内部类名不是公开接口。
+常用变量:`--kite-accent`、`--kite-font`、`--kite-fg`、`--kite-muted`、`--kite-card`、`--kite-sheet`、`--kite-width`、`--kite-offset`(或 `--kite-offset-x`、`--kite-offset-y`)。没有封面的歌显示中性底色加音符,颜色是 `--kite-ph-bg`、`--kite-ph-fg`。可用的 part:`<kite-player>` 有 `root`、`bar`、`panel`、`lyrics`、`controls`、`queue`;两种卡片有 `card`。内部类名不是公开接口。
 
 ## React
 
@@ -221,7 +223,7 @@ const source: DataSource = {
 getPlayer({ source });
 ```
 
-返回的数据结构与 `/player/v1` 相同(`Playlist`、`Track`、`Lyrics` 类型)。stream 只是试听片段时,给这首歌标 `trial: true`:试听照常播放,播放条、播放列表行和卡片都标「仅试听」。kite-server 公开模式如何透传试听信息待 #103 定案,目前该字段由能判断试听的自建后端填充。演示页的 `demo/demo.js` 是一个完整的离线例子,包括模拟的音频元素。
+返回的数据结构与 `/player/v1` 相同(`Playlist`、`Track`、`Lyrics` 类型)。`quality` 是这首歌能播放的最高音质(`standard` / `exhigh` / `lossless` / `hires`),可以不填;填了 `exhigh` 及以上,封面左下角会显示音质标签。stream 只是试听片段时,给这首歌标 `trial: true`:试听照常播放,播放条、播放列表行和卡片都标「仅试听」。kite-server 公开模式如何透传试听信息待 #103 定案,目前该字段由能判断试听的自建后端填充。演示页的 `demo/demo.js` 是一个完整的离线例子,包括模拟的音频元素。
 
 ## 其它框架
 

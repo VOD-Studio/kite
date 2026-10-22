@@ -7,8 +7,8 @@ import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { firstSungIndex, formatTime, lineUnits, wordProgress } from "../core/lyrics";
 import { modeLabels, type Player } from "../core/player";
-import type { Lyrics, PlayerState, Playlist, Track } from "../core/types";
-import { blob, eq, icons } from "./icons";
+import type { Lyrics, PlayerState, Playlist, Quality, Track } from "../core/types";
+import { blob, coverPh, eq, icons } from "./icons";
 import { playerSheet } from "./styles";
 import {
   $,
@@ -16,6 +16,8 @@ import {
   canPlay,
   canAnimate,
   flyEvent,
+  onCoverError,
+  onCoverLoad,
   openEvent,
   openQueueEvent,
   playerFor,
@@ -29,6 +31,9 @@ import {
 
 type Mode = "bar" | "orb" | "open";
 type View = "cover" | "lyrics";
+type Position = "left" | "center" | "right";
+/** 歌词行怎么移到新位置:瞬间、跟随(无错开)、换句的逐行波浪、以当前句为中心向两侧错开(翻译开关)。 */
+type Motion = "instant" | "follow" | "wave" | "center";
 
 /** 换句时每往下一行多晚 35ms 开始移动,形成逐行错开的波浪。 */
 const lyricStagger = 35;
@@ -43,16 +48,57 @@ const dragSlop = 8;
 /** 松手时横向速度超过它(px/ms)就翻到下一页,不看拖了多远。 */
 const flingSpeed = 0.35;
 /** 展开 / 收起的时长与缓动(容器形变:迷你条 ↔ 全屏)。 */
-const morphOpen = { duration: 460, easing: "cubic-bezier(.2,.85,.25,1)" };
+const easeOut = "cubic-bezier(.2,.85,.25,1)";
+const morphOpen = { duration: 460, easing: easeOut };
 const morphClose = { duration: 380, easing: "cubic-bezier(.4,0,.2,1)" };
+/** 上拉展开 / 下拉收起:松手时甩动速度超过它(px/ms)就按方向完成,不看拖了多远。 */
+const pullSpeed = 0.5;
+/** 歌词拖过首句 / 末句之后的跟手比例与最多能拖出去多远。 */
+const rubberRatio = 0.35;
+const rubberMax = 80;
+/** 拖歌词松手后的惯性:速度按这个时间常数(ms)指数衰减,最多滑这么久。 */
+const flingTau = 325;
+const flingMax = 1200;
 
-/** 封面左下角的音质标签,来自数据来源的 info()。 */
-const qualityLabels: Record<string, [string, string]> = {
-  standard: ["标准", "128 kbps"],
-  exhigh: ["极高音质", "320 kbps"],
+/** 封面左下角的音质标签:只有极高及以上才标,标准音质、试听片段、没有信息时不显示。 */
+const qualityBadges: Partial<Record<Quality, [string, string]>> = {
+  exhigh: ["极高", "320k"],
   lossless: ["无损", "FLAC"],
-  hires: ["Hi-Res", "FLAC"],
+  hires: ["Hi-Res", "24bit"],
 };
+
+function qualityBadge(t: Track | null | undefined): [string, string] | null {
+  if (!t || t.trial || !t.quality) return null;
+  return qualityBadges[t.quality] ?? null;
+}
+
+/** 容器形变的几何:播放条与面板的矩形,以及面板到位后的圆角。 */
+interface MorphGeo {
+  bar: DOMRect;
+  box: DOMRect;
+  radius: number;
+}
+
+/**
+ * morphFrame 是容器形变在进度 p(0 = 播放条,1 = 面板)时的样式:可见区域在两个矩形之间插值,
+ * 前景按可见高度等比缩放并贴左上角;最开始 10% 从透明淡入,与播放条交叉。
+ */
+function morphFrame(g: MorphGeo, p: number): { clipPath: string; transform: string; opacity: number } {
+  const q = 1 - p;
+  const top = (g.bar.top - g.box.top) * q;
+  const right = (g.box.right - g.bar.right) * q;
+  const bottom = (g.box.bottom - g.bar.bottom) * q;
+  const left = (g.bar.left - g.box.left) * q;
+  const scale = (g.box.height - top - bottom) / g.box.height;
+  const radius = (g.bar.height / 2) * q + g.radius * p;
+  return {
+    clipPath: `inset(${top}px ${right}px ${bottom}px ${left}px round ${radius}px)`,
+    transform: `translate(${left}px, ${top}px) scale(${scale})`,
+    opacity: Math.min(1, Math.max(0, p / 0.1)),
+  };
+}
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 interface Ui {
   mode: Mode;
@@ -68,7 +114,6 @@ interface Ui {
   toastOn: boolean;
   tipText: string;
   tipOn: boolean;
-  badge: [string, string] | null;
   dragging: boolean;
   dragPct: number;
   // 播放列表抽屉
@@ -86,7 +131,8 @@ interface Ui {
  * 外加播放列表抽屉。页面里的 <kite-track> / <kite-playlist> 与它共用同一个播放核心。
  *
  * 属性:api(公开模式地址)、playlists(播放列表里列出的歌单 ID,逗号分隔;第一个作为初始队列)、
- * theme(auto / light / dark)、collapse(scroll:滚动时自动收起;none:不收起)。
+ * theme(auto / light / dark)、collapse(scroll:滚动时自动收起;none:不收起)、
+ * position(桌面上放在 left / center / right,默认 right;手机始终底部通栏)。
  */
 export class KitePlayerElement extends LitElement {
   static override styles = playerSheet;
@@ -95,12 +141,14 @@ export class KitePlayerElement extends LitElement {
     playlists: { type: String },
     theme: { type: String, reflect: true },
     collapse: { type: String },
+    position: { type: String, reflect: true },
   };
 
   declare api: string | null;
   declare playlists: string;
   declare theme: string | null;
   declare collapse: string | null;
+  declare position: Position | null;
 
   private player!: Player;
   private s!: PlayerState;
@@ -119,7 +167,6 @@ export class KitePlayerElement extends LitElement {
     toastOn: false,
     tipText: "",
     tipOn: false,
-    badge: null,
     dragging: false,
     dragPct: 0,
     tab: "",
@@ -140,7 +187,31 @@ export class KitePlayerElement extends LitElement {
    * 面板上的一次触摸手势:先按移动方向定轴,横向拖动翻页(封面 ↔ 歌词,跟手),
    * 在歌词上纵向拖动是手动滚歌词,没移动就是点按。
    */
-  private gesture = { pointer: -1, x: 0, y: 0, axis: "" as "" | "x" | "y", onLyrics: false, from: 0, width: 1, pg: 0, vx: 0, lastX: 0, lastT: 0 };
+  private gesture = {
+    pointer: -1,
+    x: 0,
+    y: 0,
+    axis: "" as "" | "x" | "y",
+    onLyrics: false,
+    from: 0,
+    width: 1,
+    pg: 0,
+    vx: 0,
+    vy: 0,
+    lastX: 0,
+    lastY: 0,
+    lastT: 0,
+  };
+  /**
+   * 上拉展开 / 下拉收起的跟手状态(手机):卡片顶边跟着手指,p 是形变进度(0 播放条,1 全屏)。
+   * geo 在面板显示出来之后才有,在那之前的移动只记下位置。
+   */
+  private pull: { pointer: number; opening: boolean; startY: number; lastY: number; lastT: number; vy: number; p: number; geo: MorphGeo | null } | null = null;
+  /** 播放条上一次按下的位置,用来判断是不是在往上拉。 */
+  private barPress = { pointer: -1, x: 0, y: 0 };
+  /** 每次显示 / 收起面板加一,过期的收起回调据此放弃。 */
+  private stageToken = 0;
+  private momentum = 0;
   /** 拖动或点按已经处理过时,吞掉随后的 click,避免松手处的按钮再触发一次。 */
   private swallowClick = false;
   private morphing: Animation[] = [];
@@ -157,6 +228,7 @@ export class KitePlayerElement extends LitElement {
     this.playlists = "";
     this.theme = null;
     this.collapse = null;
+    this.position = null;
   }
 
   override connectedCallback(): void {
@@ -172,7 +244,6 @@ export class KitePlayerElement extends LitElement {
       this.player.onTime((t) => this.onFrame(t)),
     );
     void this.loadInitial();
-    void this.loadBadge();
   }
 
   override disconnectedCallback(): void {
@@ -188,79 +259,244 @@ export class KitePlayerElement extends LitElement {
     if (view) this.setView(view);
     if (this.ui.mode === "open" || !this.player.state.current) return;
     const bar = this.q(".bar").getBoundingClientRect();
+    await this.showStage();
+    const geo = this.morphGeo(bar);
+    if (geo && this.morph(geo, 0, 1, morphOpen)) this.holdFirstFrame();
+    this.resetIdle();
+    this.q(".stage .close").focus({ preventScroll: true });
+  }
+
+  /** close 收起回播放条。沉浸模式下改为整屏缩小淡出(比例差太大,不做容器形变)。 */
+  close(): void {
+    if (this.ui.mode !== "open") return;
+    this.closeSheet();
+    if (this.ui.immersive) {
+      this.closeImmersive();
+      return;
+    }
+    this.collapseFrom(this.morphGeo(this.q(".bar").getBoundingClientRect()), 1, morphClose);
+  }
+
+  /** showStage 把面板放进页面(还没有动画),每次展开或开始上拉时调用。 */
+  private async showStage(): Promise<void> {
+    this.stageToken++;
+    this.cancelMorph();
     this.patch({ mode: "open", stageShown: true });
     this.lockScroll();
     await this.updateComplete;
     this.paintAmbient();
     requestAnimationFrame(() => this.layoutLines());
-    this.morph(bar, true);
-    this.resetIdle();
-    this.q(".stage .close").focus({ preventScroll: true });
   }
 
-  /** close 收起回迷你条:迷你条先在面板下面出现,面板缩回它的位置后淡出。 */
-  close(): void {
-    if (this.ui.mode !== "open") return;
-    this.closeSheet();
-    const bar = this.q(".bar").getBoundingClientRect();
+  /** hideStage 收起动画结束后把面板移出页面。 */
+  private hideStage(): void {
+    this.cancelMorph();
+    this.clearMorphStyles();
+    this.patch({ immersive: false, stageShown: false });
+    this.unlockScroll();
+  }
+
+  /** collapseFrom 从形变进度 p 收起到播放条:播放条先在面板下面出现,面板缩回它的位置后淡出。 */
+  private collapseFrom(geo: MorphGeo | null, p: number, timing: { duration: number; easing: string }): void {
+    const token = ++this.stageToken;
     this.patch({ mode: "bar", idle: false });
-    let done = false;
     const finish = () => {
-      if (done || this.ui.mode === "open") return;
-      done = true;
-      this.patch({ immersive: false, stageShown: false });
-      this.unlockScroll();
+      if (token === this.stageToken) this.hideStage();
     };
-    const anim = this.morph(bar, false);
+    const anim = geo ? this.morph(geo, p, 0, timing) : null;
     if (!anim) {
       finish();
       return;
     }
     anim.finished.then(finish, finish);
     // 环境不派发 finished 时也要收起。
-    setTimeout(finish, morphClose.duration + 60);
+    setTimeout(finish, timing.duration + 60);
+  }
+
+  /** closeImmersive 沉浸模式收起:整屏缩到 0.96 并淡出,播放条稍后在原位淡入上浮。 */
+  private closeImmersive(): void {
+    const token = ++this.stageToken;
+    const stage = this.q(".stage");
+    const finish = () => {
+      if (token === this.stageToken) this.hideStage();
+    };
+    this.cancelMorph();
+    if (!canAnimate(stage)) {
+      this.patch({ mode: "bar", idle: false });
+      finish();
+      return;
+    }
+    const anim = stage.animate([{ transform: "none", opacity: 1 }, { transform: "scale(.96)", opacity: 0 }], {
+      duration: 220,
+      easing: "cubic-bezier(.4,0,1,1)",
+      fill: "forwards",
+    });
+    this.morphing = [anim];
+    setTimeout(() => {
+      if (token !== this.stageToken) return;
+      this.patch({ mode: "bar", idle: false });
+      this.q(".bar").animate([{ transform: "translateY(8px)" }, { transform: "none" }], { duration: 200, easing: easeOut });
+    }, 80);
+    anim.finished.then(finish, finish);
+    setTimeout(finish, 300);
+  }
+
+  private morphGeo(bar: DOMRect): MorphGeo | null {
+    const stage = this.q(".stage");
+    const box = stage.getBoundingClientRect();
+    if (!box.height || !bar.height) return null;
+    return { bar, box, radius: parseFloat(getComputedStyle(stage).borderTopLeftRadius) || 0 };
   }
 
   /**
-   * morph 在迷你条与面板之间做容器形变(参考网易云):面板的可见区域从迷你条的矩形长到整块,
-   * 里面的内容按可见区域的高度等比缩放、贴着左上角,所以收起时大封面正好缩到迷你条唱片的位置。
-   * 只动 clip-path、transform 与 opacity,不触发重新布局。返回主动画,不能做动画时返回 null。
+   * morph 在迷你条与面板之间做容器形变(参考网易云),从进度 from 动到 to:可见区域在两个矩形之间插值,
+   * 内容按可见高度等比缩放、贴左上角,所以大封面正好落在播放条唱片的位置。宽度相同时只沿竖直方向长缩。
+   * 只动 clip-path、transform 与 opacity。返回主动画,不能做动画时返回 null。
    */
-  private morph(bar: DOMRect, opening: boolean): Animation | null {
+  private morph(geo: MorphGeo, from: number, to: number, timing: { duration: number; easing: string }): Animation | null {
+    this.cancelMorph();
+    this.clearMorphStyles();
+    const stage = this.q(".stage");
+    if (!canAnimate(stage)) return null;
+    const a = morphFrame(geo, from);
+    const b = morphFrame(geo, to);
+    // 交叉淡入淡出:展开时只在开头一小段淡入;收起时最后 28% 淡出,露出下面的播放条。
+    const fade =
+      to > from
+        ? [{ opacity: a.opacity }, { opacity: 1, offset: clamp((0.1 - from) / (to - from), 0, 1) }, { opacity: 1 }]
+        : [{ opacity: a.opacity }, { opacity: a.opacity, offset: 0.72 }, { opacity: b.opacity }];
+    const main = stage.animate([{ clipPath: a.clipPath }, { clipPath: b.clipPath }], timing);
+    this.morphing = [
+      main,
+      this.q(".fg").animate([{ transform: a.transform }, { transform: b.transform }], timing),
+      stage.animate(fade, { duration: timing.duration, fill: to === 0 ? "forwards" : "none" }),
+    ];
+    return main;
+  }
+
+  /**
+   * holdFirstFrame:面板第一次显示的那一帧要排版、绘制整块内容,可能很慢;先停在起点,
+   * 等这一帧画完再开始,否则动画时间在这一帧里就过去了大半,看起来是直接跳到展开。
+   */
+  private holdFirstFrame(): void {
+    const anims = this.morphing;
+    for (const a of anims) a.pause();
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        for (const a of anims) if (a.playState === "paused") a.play();
+      }),
+    );
+  }
+
+  private cancelMorph(): void {
     for (const a of this.morphing) a.cancel();
     this.morphing = [];
+  }
+
+  /** applyMorph 把跟手中的形变进度直接写到样式上(不经过动画)。 */
+  private applyMorph(geo: MorphGeo, p: number): void {
+    const f = morphFrame(geo, p);
     const stage = this.q(".stage");
-    const fg = this.q(".fg");
-    if (!canAnimate(stage)) return null;
-    const box = stage.getBoundingClientRect();
-    if (!box.height || !bar.height) return null;
-    const radius = parseFloat(getComputedStyle(stage).borderTopLeftRadius) || 0;
-    const k = bar.height / box.height;
-    const small = [
-      { clipPath: insetFrom(bar, box, bar.height / 2) },
-      { transform: `translate(${bar.left - box.left}px, ${bar.top - box.top}px) scale(${k})` },
-    ] as const;
-    const big = [{ clipPath: `inset(0px 0px 0px 0px round ${radius}px)` }, { transform: "translate(0px, 0px) scale(1)" }] as const;
-    const [from, to] = opening ? [small, big] : [big, small];
-    const timing = opening ? morphOpen : morphClose;
-    // 与迷你条交叉淡入淡出:展开时开头一小段淡入,收起时最后一小段淡出,露出下面的迷你条。
-    const fade = opening
-      ? [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1 }]
-      : [{ opacity: 1 }, { opacity: 1, offset: 0.72 }, { opacity: 0 }];
-    const main = stage.animate([from[0], to[0]], timing);
-    this.morphing = [main, fg.animate([from[1], to[1]], timing), stage.animate(fade, { duration: timing.duration, fill: opening ? "none" : "forwards" })];
-    if (opening) {
-      // 面板第一次显示的那一帧要排版、绘制整块内容,可能很慢;先停在起点,等这一帧画完再开始,
-      // 否则动画时间在这一帧里就过去了大半,看起来是直接跳到展开。
-      const anims = this.morphing;
-      for (const a of anims) a.pause();
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          for (const a of anims) if (a.playState === "paused") a.play();
-        }),
-      );
+    stage.style.clipPath = f.clipPath;
+    stage.style.opacity = String(f.opacity);
+    this.q(".fg").style.transform = f.transform;
+  }
+
+  private clearMorphStyles(): void {
+    const stage = this.renderRoot.querySelector<HTMLElement>(".stage");
+    stage?.style.removeProperty("clip-path");
+    stage?.style.removeProperty("opacity");
+    this.renderRoot.querySelector<HTMLElement>(".fg")?.style.removeProperty("transform");
+  }
+
+  // ---- 上拉展开 / 下拉收起(手机,跟手) ----
+
+  /** 播放条上按下:记下位置;往上拉超过判定距离才开始跟手展开,横向或往下就不管。 */
+  private onBarDown = (e: PointerEvent): void => {
+    if (e.pointerType === "mouse" || !this.ui.mobile || this.ui.mode === "open" || !this.player.state.current || this.pull) return;
+    this.barPress = { pointer: e.pointerId, x: e.clientX, y: e.clientY };
+    const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== this.barPress.pointer) return;
+      const dx = ev.clientX - this.barPress.x;
+      const dy = ev.clientY - this.barPress.y;
+      if (this.pull) {
+        this.movePull(ev);
+        return;
+      }
+      if (Math.hypot(dx, dy) < dragSlop) return;
+      if (dy < 0 && Math.abs(dy) > Math.abs(dx)) {
+        this.swallow();
+        void this.startPull(ev, true);
+      } else stop();
+    };
+    const up = (ev: PointerEvent) => {
+      if (ev.pointerId !== this.barPress.pointer) return;
+      stop();
+      if (this.pull) this.endPull(ev.type === "pointercancel");
+    };
+    const stop = () => {
+      this.barPress.pointer = -1;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+
+  /** startPull 开始跟手:展开时先把面板放进页面(从播放条大小开始),收起时面板已经在。 */
+  private async startPull(e: PointerEvent, opening: boolean): Promise<void> {
+    const bar = this.q(".bar").getBoundingClientRect();
+    this.pull = { pointer: e.pointerId, opening, startY: e.clientY, lastY: e.clientY, lastT: e.timeStamp, vy: 0, p: opening ? 0 : 1, geo: null };
+    if (opening) await this.showStage();
+    else this.cancelMorph();
+    if (!this.pull) return;
+    this.pull.geo = this.morphGeo(bar);
+    this.updatePull();
+  }
+
+  private movePull(e: PointerEvent): void {
+    const pl = this.pull;
+    if (!pl || e.pointerId !== pl.pointer) return;
+    const dt = e.timeStamp - pl.lastT;
+    if (dt > 0) pl.vy = 0.7 * ((e.clientY - pl.lastY) / dt) + 0.3 * pl.vy;
+    pl.lastY = e.clientY;
+    pl.lastT = e.timeStamp;
+    this.updatePull();
+  }
+
+  /** updatePull 卡片顶边跟着手指:进度 = 顶边移动的距离 ÷ 播放条到面板顶边的距离。 */
+  private updatePull(): void {
+    const pl = this.pull;
+    if (!pl?.geo) return;
+    const travel = pl.geo.bar.top - pl.geo.box.top || 1;
+    const moved = (pl.lastY - pl.startY) / travel;
+    pl.p = clamp(pl.opening ? -moved : 1 - moved, 0, 1);
+    this.applyMorph(pl.geo, pl.p);
+  }
+
+  /** endPull 松手:拖过判定距离或甩得够快就完成,否则回到原来的样子;剩下的路程按比例缩短时长。 */
+  private endPull(cancelled = false): void {
+    const pl = this.pull;
+    this.pull = null;
+    if (!pl) return;
+    const fling = performance.now() - pl.lastT < 100 ? pl.vy : 0;
+    const toOpen = !cancelled && (pl.opening ? pl.p > 1 / 3 || fling < -pullSpeed : !(pl.p < 0.75 || fling > pullSpeed));
+    if (!pl.geo) {
+      if (!toOpen) this.hideStage();
+      return;
     }
-    return main;
+    if (toOpen) {
+      this.patch({ mode: "open" });
+      const done = () => this.clearMorphStyles();
+      const anim = this.morph(pl.geo, pl.p, 1, { duration: Math.max(160, (pl.opening ? 460 : 300) * (1 - pl.p)), easing: easeOut });
+      if (anim) anim.finished.then(done, done);
+      else done();
+      this.resetIdle();
+    } else {
+      this.collapseFrom(pl.geo, pl.p, { duration: Math.max(160, (pl.opening ? 300 : 380) * pl.p), easing: pl.opening ? easeOut : morphClose.easing });
+    }
   }
 
   // ---- 渲染 ----
@@ -276,6 +512,7 @@ export class KitePlayerElement extends LitElement {
       data-view=${ui.view}
       data-pm=${s.mode}
       data-device=${ui.mobile ? "mobile" : "desktop"}
+      data-pos=${this.position === "left" || this.position === "center" ? this.position : "right"}
       ?data-trans=${ui.trans}
       ?data-immersive=${ui.immersive}
       ?data-idle=${ui.idle}
@@ -292,9 +529,11 @@ export class KitePlayerElement extends LitElement {
   private renderBar(s: PlayerState, t: Track | null): TemplateResult {
     const pct = s.duration > 0 ? Math.min(1, s.time / s.duration) : 0;
     const ticker = this.tickerText(s);
-    return html`<div class="bar" part="bar">
-      <button class="disc expand" aria-label="展开播放器" @click=${this.onExpand}>
-        <span class="ring" style=${styleMap({ "--pct": String(pct) })}></span><span class="disc-img"><img alt="" src=${ifDefined(t?.album.cover || undefined)} /></span>
+    const cover = t?.album.cover || undefined;
+    return html`<div class="bar" part="bar" @pointerdown=${this.onBarDown} @click=${{ handleEvent: (e: Event) => this.onStageClickCapture(e), capture: true }}>
+      <button class="disc expand" aria-label="展开播放器" ?data-empty=${!cover} @click=${this.onExpand}>
+        <span class="ring" style=${styleMap({ "--pct": String(pct) })}></span
+        ><span class="disc-img">${coverPh}<img alt="" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} /></span>
       </button>
       <button class="bar-text expand" aria-label="展开播放器" @click=${this.onExpand}>
         <span class="bar-line"
@@ -316,6 +555,7 @@ export class KitePlayerElement extends LitElement {
     const cover = t?.album.cover || undefined;
     const who = artists(t);
     const tag = [t?.trial ? "仅试听" : "", t?.access === "vip" ? "VIP" : t?.access === "paid" ? "数字专辑" : ""].filter(Boolean).join(" · ");
+    const badge = qualityBadge(t);
     const lyr = s.lyrics;
     const empty = !lyr || lyr.instrumental || lyr.lines.length === 0;
     const chorus = lyr?.chorus[0];
@@ -336,7 +576,7 @@ export class KitePlayerElement extends LitElement {
       @click=${{ handleEvent: (e: Event) => this.onStageClickCapture(e), capture: true }}
       @wheel=${{ handleEvent: () => this.resetIdle(), passive: true }}
     >
-      <div class="amb"><canvas width="32" height="48"></canvas></div>
+      <div class="amb"><canvas width="32" height="48"></canvas><span class="veil"></span><span class="spot spot-a"></span><span class="spot spot-b"></span><span class="dim"></span><span class="grain"></span></div>
       <div class="scrim"></div>
       <div class="fg">
         <div class="pages">
@@ -358,7 +598,9 @@ export class KitePlayerElement extends LitElement {
           </section>
         </div>
         <button class="cover" aria-label=${ui.view === "cover" ? "查看歌词" : "返回封面"} @click=${this.onCoverClick}>
-          <img alt="" src=${ifDefined(cover)} /><span class="badge" ?hidden=${!ui.badge}><b>${ui.badge?.[0] ?? ""}</b><span>${ui.badge?.[1] ?? ""}</span></span>
+          ${coverPh}<img alt="" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} /><span class="badge" ?hidden=${!badge}
+            ><b>${badge?.[0] ?? ""}</b><span>${badge?.[1] ?? ""}</span></span
+          >
         </button>
         <div class="top">
           <button class="ib close" aria-label="收起" @click=${this.close}>${icons.chevron}</button>
@@ -462,11 +704,14 @@ export class KitePlayerElement extends LitElement {
     if (!prev || s.current !== prev.current) {
       this.lastLine = -1;
       this.endManual(false);
-      // 换歌时封面交叉淡入(参考网易云:标题立即换,封面约 300ms 淡入)。
-      const old = prev?.current?.album.cover;
-      if (old && old !== s.current?.album.cover) {
-        this.crossfade(".disc-img", old);
-        if (this.ui.stageShown) this.crossfade(".cover", old);
+      // 换歌时封面与音质标签交叉淡化(参考网易云:标题立即换,封面约 300ms 淡入)。
+      const old = prev?.current;
+      if (old) {
+        const oldCover = old.album.cover || "";
+        const oldBadge = qualityBadge(old);
+        const coverChanged = oldCover !== (s.current?.album.cover || "");
+        if (coverChanged) this.crossfade(".disc-img", oldCover, null);
+        if (this.ui.stageShown && (coverChanged || String(oldBadge) !== String(qualityBadge(s.current)))) this.crossfade(".cover", oldCover, oldBadge);
       }
       if (this.ui.stageShown) this.paintAmbient(true);
     }
@@ -484,7 +729,7 @@ export class KitePlayerElement extends LitElement {
       this.lastLine = -1;
       this.layoutLines();
     } else if (s.lyricIndex !== prev.lyricIndex) {
-      this.positionLines(false);
+      this.positionLines("wave");
     }
     if (prev && s.playing !== prev.playing && !s.playing) this.resetIdle();
     if (prev && s.error && s.error !== prev.error) this.toast(s.error.message);
@@ -543,8 +788,10 @@ export class KitePlayerElement extends LitElement {
     this.swallowClick = false;
     const target = e.target as HTMLElement;
     if (e.pointerType === "mouse" || target.closest(".ctl")) this.resetIdle();
-    if (e.pointerType === "mouse" || this.gesture.pointer !== -1 || target.closest(".ctl, .top, .seek, .lyr-trans")) return;
+    if (e.pointerType === "mouse" || this.gesture.pointer !== -1 || this.pull || target.closest(".ctl, .seek, .lyr-trans")) return;
     const onLyrics = !!target.closest(".lyrics") && (this.ui.view === "lyrics" || this.ui.immersive);
+    // 正在惯性滑行的歌词被按住就停下。
+    if (onLyrics) cancelAnimationFrame(this.momentum);
     this.gesture = {
       pointer: e.pointerId,
       x: e.clientX,
@@ -555,7 +802,9 @@ export class KitePlayerElement extends LitElement {
       width: this.q(".stage").clientWidth || 1,
       pg: 0,
       vx: 0,
+      vy: 0,
       lastX: e.clientX,
+      lastY: e.clientY,
       lastT: e.timeStamp,
     };
   };
@@ -565,6 +814,10 @@ export class KitePlayerElement extends LitElement {
       this.resetIdle();
       return;
     }
+    if (this.pull) {
+      this.movePull(e);
+      return;
+    }
     const g = this.gesture;
     if (e.pointerId !== g.pointer) return;
     const dx = e.clientX - g.x;
@@ -572,17 +825,22 @@ export class KitePlayerElement extends LitElement {
     if (!g.axis) {
       if (Math.hypot(dx, dy) < dragSlop) return;
       g.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      const stage = this.q(".stage");
+      // 往下拉收起(手机):封面页任何位置,歌词页只在顶栏和歌名上(歌词区的纵向拖动是滚歌词)。
+      const onTop = !!(e.target as HTMLElement).closest(".top, .head");
+      if (g.axis === "y" && dy > 0 && this.ui.mobile && !this.ui.immersive && (!g.onLyrics || onTop) && (this.ui.view === "cover" || onTop)) {
+        g.pointer = -1;
+        this.capture(stage, e.pointerId);
+        this.swallow();
+        void this.startPull(e, false);
+        return;
+      }
       // 沉浸模式没有分页;纵向只在歌词上有意义。
       if ((g.axis === "x" && this.ui.immersive) || (g.axis === "y" && !(g.onLyrics && this.lineEls.length))) {
         g.pointer = -1;
         return;
       }
-      const stage = this.q(".stage");
-      try {
-        stage.setPointerCapture(e.pointerId);
-      } catch {
-        // 指针已经结束时拿不到捕获,照常处理。
-      }
+      this.capture(stage, e.pointerId);
       if (g.axis === "x") {
         stage.classList.add("paging");
       } else {
@@ -591,47 +849,73 @@ export class KitePlayerElement extends LitElement {
         this.hideControls();
       }
     }
+    const dt = e.timeStamp - g.lastT;
+    if (dt > 0) {
+      g.vx = 0.7 * ((e.clientX - g.lastX) / dt) + 0.3 * g.vx;
+      g.vy = 0.7 * ((e.clientY - g.lastY) / dt) + 0.3 * g.vy;
+    }
+    g.lastX = e.clientX;
+    g.lastY = e.clientY;
+    g.lastT = e.timeStamp;
     if (g.axis === "x") {
       // 封面与歌词之间的进度跟着手指走(0 封面,1 歌词),CSS 用 --pg 插值页面、封面与控制区。
-      g.pg = Math.min(1, Math.max(0, g.from - dx / g.width));
+      g.pg = clamp(g.from - dx / g.width, 0, 1);
       this.q(".stage").style.setProperty("--pg", String(g.pg));
-      const dt = e.timeStamp - g.lastT;
-      if (dt > 0) g.vx = 0.7 * ((e.clientX - g.lastX) / dt) + 0.3 * g.vx;
-      g.lastX = e.clientX;
-      g.lastT = e.timeStamp;
     } else {
-      this.manual.offset = this.manual.startOffset + dy;
-      this.positionLines(true);
+      // 首句到末句都能停在锚点;再往外拖有阻力,最多拖出去 80px。
+      this.manual.offset = this.rubber(this.manual.startOffset + dy);
+      this.positionLines("instant");
     }
   };
 
   private onStageUp = (e: PointerEvent): void => {
+    if (e.pointerType === "mouse") return;
+    if (this.pull && e.pointerId === this.pull.pointer) {
+      this.endPull();
+      return;
+    }
     const g = this.gesture;
-    if (e.pointerType === "mouse" || e.pointerId !== g.pointer) return;
+    if (e.pointerId !== g.pointer) return;
     g.pointer = -1;
+    // 松手前停顿过就不算甩动。
+    const recent = e.timeStamp - g.lastT < 100;
     if (g.axis === "x") {
       // 甩得够快就按方向翻页,否则看过没过一半。
-      const fling = e.timeStamp - g.lastT < 100 ? g.vx : 0;
+      const fling = recent ? g.vx : 0;
       this.endPaging(fling < -flingSpeed ? "lyrics" : fling > flingSpeed ? "cover" : g.pg > 0.5 ? "lyrics" : "cover");
       this.swallow();
     } else if (g.axis === "y") {
-      this.scheduleResume();
+      this.fling(recent ? g.vy : 0);
       this.swallow();
     } else if (g.onLyrics && this.ui.view === "lyrics" && !this.ui.immersive) {
-      // 手机上点歌词切换播放控制的显示(参考网易云);跳到某一句用拖动歌词时出现的 ▶ 时间。
-      if (this.ui.idle) this.resetIdle();
+      // 手机上点歌词切换播放控制的显示(参考网易云);滚动中点焦点句(▶ 时间旁那句)就跳过去。
+      const line = (e.target as HTMLElement).closest<HTMLElement>(".line");
+      if (this.manual.active && line && Number(line.dataset.i) === this.hintLine) this.seekToHint();
+      else if (this.ui.idle) this.resetIdle();
       else this.hideControls();
       this.swallow();
     }
   };
 
   private onStageCancel = (e: PointerEvent): void => {
+    if (this.pull && e.pointerId === this.pull.pointer) {
+      this.endPull(true);
+      return;
+    }
     const g = this.gesture;
     if (e.pointerId !== g.pointer) return;
     g.pointer = -1;
     if (g.axis === "x") this.endPaging(this.ui.view);
-    else if (g.axis === "y") this.scheduleResume();
+    else if (g.axis === "y") this.fling(0);
   };
+
+  private capture(el: HTMLElement, pointer: number): void {
+    try {
+      el.setPointerCapture(pointer);
+    } catch {
+      // 指针已经结束时拿不到捕获,照常处理。
+    }
+  }
 
   /** 手势已经处理过这次按下:吞掉随后的 click(触摸的 click 可能晚于 pointerup 一个任务才到)。 */
   private swallow(): void {
@@ -655,12 +939,15 @@ export class KitePlayerElement extends LitElement {
     this.setView(view);
   }
 
+  /** 滚轮滚歌词:每一格 120ms 平滑过渡,首句和末句停在锚点(滚轮没有回弹,直接停住)。 */
   private onLyricsWheel(e: WheelEvent): void {
     if (!this.lineEls.length) return;
     e.preventDefault();
+    cancelAnimationFrame(this.momentum);
     this.beginManual();
-    this.manual.offset -= e.deltaY;
-    this.positionLines(true);
+    const [lo, hi] = this.manualBounds();
+    this.manual.offset = clamp(this.manual.offset - e.deltaY, lo, hi);
+    this.positionLines("follow", 120);
     this.scheduleResume();
   }
 
@@ -724,22 +1011,53 @@ export class KitePlayerElement extends LitElement {
     requestAnimationFrame(() => this.layoutLines());
   }
 
+  /**
+   * setImmersive 进入 / 退出沉浸模式。两种布局差别太大,不做逐个元素的位移:先淡出内容,
+   * 这一帧直接换布局(去掉过渡),再让容器在面板与整屏之间过渡、内容淡入。
+   * 进入时整屏的可见区域从面板的位置长开;退出时面板从整屏大小缩回(背景是模糊色块,拉伸看不出来)。
+   */
   private async setImmersive(on: boolean, animate = false): Promise<void> {
     if (this.ui.immersive === on || (on && this.ui.mobile)) return;
     const stage = this.q(".stage");
+    const fg = this.q(".fg");
+    if (!animate || !this.ui.stageShown || !canAnimate(stage)) {
+      this.patch({ immersive: on });
+      this.resetIdle();
+      await this.updateComplete;
+      this.layoutLines();
+      return;
+    }
+    this.cancelMorph();
+    const radius = parseFloat(getComputedStyle(stage).borderTopLeftRadius) || 0;
     const before = stage.getBoundingClientRect();
+    await fg
+      .animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: "ease-in", fill: "forwards" })
+      .finished.catch(() => undefined);
+    stage.classList.add("snap");
     this.patch({ immersive: on });
     this.resetIdle();
     await this.updateComplete;
-    if (animate && on && canAnimate(stage)) {
-      const after = stage.getBoundingClientRect();
-      stage.animate([{ clipPath: insetFrom(before, after, 28) }, { clipPath: "inset(0px 0px 0px 0px round 0px)" }], {
-        duration: 600,
-        easing: "cubic-bezier(.2,.85,.25,1)",
-      });
+    this.layoutLines();
+    const after = stage.getBoundingClientRect();
+    requestAnimationFrame(() => stage.classList.remove("snap"));
+    for (const a of fg.getAnimations()) a.cancel();
+    if (on) {
+      stage.animate([{ clipPath: insetFrom(before, after, radius) }, { clipPath: "inset(0px 0px 0px 0px round 0px)" }], { duration: 420, easing: easeOut });
+    } else {
+      const endRadius = parseFloat(getComputedStyle(stage).borderTopLeftRadius) || 0;
+      stage.animate(
+        [
+          {
+            transformOrigin: "0 0",
+            transform: `translate(${before.left - after.left}px, ${before.top - after.top}px) scale(${before.width / after.width}, ${before.height / after.height})`,
+            borderRadius: "0px",
+          },
+          { transformOrigin: "0 0", transform: "none", borderRadius: `${endRadius}px` },
+        ],
+        { duration: 360, easing: easeOut },
+      );
     }
-    setTimeout(() => this.layoutLines(), 520);
-    requestAnimationFrame(() => this.layoutLines());
+    fg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: on ? 260 : 220, delay: on ? 120 : 160, easing: "ease-out", fill: "backwards" });
   }
 
   private cycleMode(showTip: boolean): void {
@@ -750,12 +1068,29 @@ export class KitePlayerElement extends LitElement {
     this.timers.tip = window.setTimeout(() => this.patch({ tipOn: false }), 1400);
   }
 
+  /**
+   * toggleTrans 显示 / 隐藏翻译(参考网易云):隐藏时译文先淡出,各行再收拢;显示时各行先让位,译文随后淡入。
+   * 行的移动以当前句为中心向两侧逐行错开,当前句停在锚点不动。
+   */
   private toggleTrans = async (): Promise<void> => {
     const trans = !this.ui.trans;
     writeFlag("kite-player:trans", trans);
+    const animate = this.ui.mode === "open" && this.lineEls.length > 0 && canAnimate(this.q(".lyrics"));
+    const trs = animate ? [...this.renderRoot.querySelectorAll<HTMLElement>(".lines .tr")] : [];
+    if (!trans && trs.length) {
+      await Promise.all(trs.map((tr) => tr.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: "ease-in", fill: "forwards" }).finished)).catch(
+        () => undefined,
+      );
+    }
     this.patch({ trans });
     await this.updateComplete;
-    this.layoutLines();
+    for (const tr of trs) for (const a of tr.getAnimations()) a.cancel();
+    this.layoutLines(animate ? "center" : "instant");
+    if (trans) {
+      for (const tr of trs) {
+        tr.animate([{ opacity: 0, translate: "0 -4px" }, { opacity: 1, translate: "0 0" }], { duration: 240, delay: 120, easing: "ease-out", fill: "backwards" });
+      }
+    }
   };
 
   /**
@@ -801,13 +1136,6 @@ export class KitePlayerElement extends LitElement {
     }
   }
 
-  private async loadBadge(): Promise<void> {
-    await this.player.whenSource();
-    const info = await this.player.info().catch(() => null);
-    const label = info ? qualityLabels[info.quality] : undefined;
-    if (label) this.patch({ badge: label });
-  }
-
   private playlistIds(): string[] {
     return (this.playlists ?? "")
       .split(",")
@@ -822,7 +1150,7 @@ export class KitePlayerElement extends LitElement {
   // ---- 歌词 ----
 
   /** layoutLines 量出每行的高度,算好每行的位置。面板隐藏时量不到,打开后再算。 */
-  private layoutLines(): void {
+  private layoutLines(motion: Motion = "instant"): void {
     if (!this.isConnected || !this.lineEls.length || this.ui.mode !== "open") return;
     let top = 0;
     this.tops = this.lineEls.map((el) => {
@@ -830,14 +1158,19 @@ export class KitePlayerElement extends LitElement {
       top += el.offsetHeight + 14;
       return t;
     });
-    this.positionLines(true);
+    if (this.manual.active) {
+      const [lo, hi] = this.manualBounds();
+      this.manual.offset = clamp(this.manual.offset, lo, hi);
+    }
+    this.positionLines(motion);
   }
 
   /**
-   * positionLines 把当前行移到锚点。换句时每行的 transition-delay 按离当前行的距离递增,
-   * 下方的行晚一点出发,行距先拉开再合拢(参考网易云的歌词滚动)。
+   * positionLines 把当前行(手动滚动时加上偏移)移到锚点。motion 决定怎么过去:
+   * wave 是换句,锚点以下每行晚 35ms 出发,行距先拉开再合拢(参考网易云);center 是翻译开关,
+   * 以当前句为中心向两侧每行错开 25ms;follow 是跟随(滚轮、回弹),没有错开;instant 是跟手。
    */
-  private positionLines(immediate: boolean): void {
+  private positionLines(motion: Motion = "wave", ms = 0): void {
     if (!this.isConnected || !this.lineEls.length || !this.tops.length) return;
     const { lyricIndex } = this.player.state;
     const cur = Math.max(lyricIndex, 0);
@@ -846,9 +1179,18 @@ export class KitePlayerElement extends LitElement {
     const base = anchor - (this.tops[cur] ?? 0) + this.manual.offset;
     const forward = cur >= this.lastLine;
     this.lineEls.forEach((el, i) => {
-      const steps = forward ? i - cur + 1 : cur - i + 1;
-      const delay = immediate || this.manual.active ? 0 : Math.min(Math.max(steps, 0), 12) * lyricStagger;
-      el.style.transitionDuration = immediate ? "0ms" : "";
+      let duration = "";
+      let delay = 0;
+      if (motion === "instant") duration = "0ms";
+      else if (motion === "follow") duration = `${ms}ms`;
+      else if (motion === "center") {
+        duration = "420ms";
+        delay = Math.min(Math.abs(i - cur), 12) * 25;
+      } else if (!this.manual.active) {
+        const steps = forward ? i - cur + 1 : cur - i + 1;
+        delay = Math.min(Math.max(steps, 0), 12) * lyricStagger;
+      }
+      el.style.transitionDuration = duration;
       el.style.transitionDelay = `${delay}ms`;
       el.style.transform = `translateY(${(this.tops[i] ?? 0) + base}px)`;
       el.classList.toggle("cur", i === lyricIndex);
@@ -860,6 +1202,64 @@ export class KitePlayerElement extends LitElement {
     }
     this.lastLine = cur;
     if (this.manual.active) this.updateHint(base, anchor);
+  }
+
+  /** manualBounds 手动滚动偏移的范围:首句最多到锚点(上限),末句最多到锚点(下限)。 */
+  private manualBounds(): [number, number] {
+    const cur = Math.max(this.player.state.lyricIndex, 0);
+    const at = this.tops[cur] ?? 0;
+    return [at - (this.tops[this.tops.length - 1] ?? 0), at];
+  }
+
+  /** rubber 越过首句 / 末句的部分只按 0.35 跟手,最多拖出去 80px。 */
+  private rubber(offset: number): number {
+    const [lo, hi] = this.manualBounds();
+    if (offset > hi) return hi + Math.min(rubberMax, (offset - hi) * rubberRatio);
+    if (offset < lo) return lo - Math.min(rubberMax, (lo - offset) * rubberRatio);
+    return offset;
+  }
+
+  /**
+   * fling 拖歌词松手:越界了就回弹;否则按松手速度惯性滑行(指数减速,最长 1.2s),碰到首句或末句停住回弹。
+   * 停下后再等 2.5s 滚回当前句。
+   */
+  private fling(v: number): void {
+    cancelAnimationFrame(this.momentum);
+    const [lo, hi] = this.manualBounds();
+    if (this.manual.offset > hi || this.manual.offset < lo) {
+      this.manual.offset = clamp(this.manual.offset, lo, hi);
+      this.positionLines("follow", 360);
+      this.scheduleResume();
+      return;
+    }
+    if (Math.abs(v) < 0.05 || !canAnimate(this.q(".lyrics"))) {
+      this.scheduleResume();
+      return;
+    }
+    const start = performance.now();
+    let last = start;
+    let vel = v;
+    const step = (now: number) => {
+      const dt = Math.min(32, now - last);
+      last = now;
+      vel *= Math.exp(-dt / flingTau);
+      const [min, max] = this.manualBounds();
+      const next = this.manual.offset + vel * dt;
+      if (next > max || next < min) {
+        this.manual.offset = clamp(next, min, max);
+        this.positionLines("follow", 360);
+        this.scheduleResume();
+        return;
+      }
+      this.manual.offset = next;
+      this.positionLines("instant");
+      if (Math.abs(vel) < 0.02 || now - start > flingMax) {
+        this.scheduleResume();
+        return;
+      }
+      this.momentum = requestAnimationFrame(step);
+    };
+    this.momentum = requestAnimationFrame(step);
   }
 
   private onFrame(t: number): void {
@@ -890,15 +1290,23 @@ export class KitePlayerElement extends LitElement {
     this.timers.resume = window.setTimeout(() => this.endManual(true), resumeDelay);
   }
 
+  /** endManual 结束手动滚动:去掉焦点句,animate 时与换句一样逐行滚回当前句。 */
   private endManual(animate: boolean): void {
     clearTimeout(this.timers.resume);
+    cancelAnimationFrame(this.momentum);
     if (!this.manual.active && this.manual.offset === 0) return;
     this.manual.active = false;
     this.manual.offset = 0;
+    this.lineEls[this.hintLine]?.classList.remove("focus");
+    this.hintLine = -1;
     this.renderRoot.querySelector(".lyrics")?.classList.remove("manual");
-    if (animate) this.positionLines(false);
+    if (animate) this.positionLines("wave");
   }
 
+  /**
+   * updateHint 滚动中锚点上的那句是焦点句:用当前句的样式(参考网易云,没有背景色块),
+   * 右侧的 ▶ 时间与它垂直居中,点它或点焦点句就跳过去。
+   */
   private updateHint(base: number, anchor: number): void {
     let best = 0;
     let bestD = Infinity;
@@ -909,10 +1317,14 @@ export class KitePlayerElement extends LitElement {
         best = i;
       }
     });
-    this.hintLine = best;
+    if (best !== this.hintLine) {
+      this.lineEls[this.hintLine]?.classList.remove("focus");
+      this.lineEls[best]?.classList.add("focus");
+      this.hintLine = best;
+    }
     const line = this.player.state.lyrics?.lines[best];
     const hint = this.q(".seek");
-    hint.style.top = `${anchor + 4}px`;
+    hint.style.top = `${anchor + (this.lineEls[best]?.offsetHeight ?? 34) / 2 - 11}px`;
     $(hint, "span").textContent = formatTime((line?.time ?? 0) / 1000);
   }
 
@@ -1026,19 +1438,36 @@ export class KitePlayerElement extends LitElement {
   }
 
   /**
-   * crossfade 换歌时把上一首的封面盖在新封面上淡出。等新图加载好再淡,
-   * 否则网络慢时中间会露出空白。临时元素不进模板。
+   * crossfade 换歌时把上一首的封面(没有封面时是占位)和音质标签盖在新的上面淡出。
+   * 等新图加载好再淡,否则网络慢时中间会露出占位又跳回。临时元素不进模板。
    */
-  private crossfade(sel: string, oldSrc: string): void {
+  private crossfade(sel: string, oldSrc: string, oldBadge: [string, string] | null): void {
     const box = this.renderRoot.querySelector<HTMLElement>(sel);
-    const img = box?.querySelector<HTMLImageElement>("img:not(.xfade)");
+    const img = box?.querySelector<HTMLImageElement>(":scope > img");
     if (!box || !img || !canAnimate(box)) return;
-    box.querySelectorAll(".xfade").forEach((el) => el.remove());
-    const ghost = document.createElement("img");
+    box.querySelectorAll(":scope > .xfade").forEach((el) => el.remove());
+    const ghost = document.createElement("span");
     ghost.className = "xfade";
-    ghost.alt = "";
-    ghost.src = oldSrc;
-    img.after(ghost);
+    if (oldSrc) {
+      const old = document.createElement("img");
+      old.alt = "";
+      old.src = oldSrc;
+      ghost.append(old);
+    } else {
+      const ph = box.querySelector(":scope > .ph");
+      if (ph) ghost.append(ph.cloneNode(true));
+    }
+    if (oldBadge) {
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      const b = document.createElement("b");
+      b.textContent = oldBadge[0];
+      const t = document.createElement("span");
+      t.textContent = oldBadge[1];
+      badge.append(b, t);
+      ghost.append(badge);
+    }
+    box.append(ghost);
     let started = false;
     const start = () => {
       if (started) return;
@@ -1048,7 +1477,7 @@ export class KitePlayerElement extends LitElement {
         () => ghost.remove(),
       );
     };
-    if (img.complete) start();
+    if (!img.getAttribute("src") || img.complete) start();
     else {
       img.addEventListener("load", start, { once: true });
       img.addEventListener("error", start, { once: true });
@@ -1057,63 +1486,78 @@ export class KitePlayerElement extends LitElement {
   }
 
   /**
-   * paintAmbient 用当前封面画面板背景:先缩到 8×12 再放大到 32×48 的画布,画布再由 CSS 拉满面板。
-   * 两次双线性缩放就是一层很重的模糊,效果接近原来的 blur(64px),但不需要每帧做滤镜,展开动画不掉帧。
-   * 跨域封面画进画布只是不能读像素,显示不受影响。fade 时旧背景淡出(面板开着时换歌)。
+   * paintAmbient 用当前封面画面板的光感背景:整张封面缩到 40×40,取中间一块缩到 8×12,再放大到 32×48 的画布,
+   * 画布由 CSS 拉满面板。两次双线性缩放就是一层很重的模糊,不需要每帧做滤镜,展开动画不掉帧。
+   * 封面允许跨域读取(网易云图床返回 Access-Control-Allow-Origin: *)时,再取右下角的颜色作为光斑,
+   * 并按平均亮度算出还要压暗多少,让背景落到主题的目标亮度(--kite-amb-target),白字和小字都看得清;
+   * 不允许读取时按 --kite-amb-dim 的默认值压暗。没有封面或加载失败时显示中性底色。
+   * fade 时旧背景淡出(面板开着时换歌)。
    */
   private paintAmbient(fade = false): void {
     const src = this.player.state.current?.album.cover ?? "";
     if (src === this.ambSrc) return;
     this.ambSrc = src;
-    const canvas = this.renderRoot.querySelector<HTMLCanvasElement>(".amb canvas:not(.xfade)");
+    const amb = this.renderRoot.querySelector<HTMLElement>(".amb");
+    const canvas = amb?.querySelector<HTMLCanvasElement>(":scope > canvas:not(.xfade)");
     const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
-    const draw = (img: HTMLImageElement | null) => {
+    if (!amb || !canvas || !ctx) return;
+    const draw = (img: HTMLImageElement | null, readable: boolean) => {
       if (this.ambSrc !== src) return;
       if (fade && canAnimate(canvas)) {
         const old = canvas.cloneNode() as HTMLCanvasElement;
         old.classList.add("xfade");
         old.getContext("2d")?.drawImage(canvas, 0, 0);
         canvas.after(old);
-        old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 480, easing: "ease-out", fill: "forwards" }).finished.then(
+        old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600, easing: "ease-out", fill: "forwards" }).finished.then(
           () => old.remove(),
           () => old.remove(),
         );
       }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      amb.toggleAttribute("data-empty", !img);
+      amb.style.removeProperty("--amb-dim");
+      amb.style.removeProperty("--amb-tint");
       if (!img) return;
-      // 先整张画到 40×40(没有固有尺寸的 SVG 封面也能画),再取中间一块缩到 8×12:
-      // 与原来放大裁切的效果一致,四周的颜色不会把背景冲淡。分两步缩小,颜色是平均过的而不是取样。
       const mid = document.createElement("canvas");
       mid.width = mid.height = 40;
       const tiny = document.createElement("canvas");
       tiny.width = 8;
       tiny.height = 12;
-      const mctx = mid.getContext("2d");
+      const mctx = mid.getContext("2d", { willReadFrequently: true });
       const tctx = tiny.getContext("2d");
       if (!mctx || !tctx) return;
-      mctx.imageSmoothingQuality = tctx.imageSmoothingQuality = "high";
+      mctx.imageSmoothingQuality = tctx.imageSmoothingQuality = ctx.imageSmoothingQuality = "high";
       mctx.drawImage(img, 0, 0, 40, 40);
       tctx.drawImage(mid, 8, 4, 24, 32, 0, 0, tiny.width, tiny.height);
-      ctx.imageSmoothingQuality = "high";
-      if ("filter" in ctx) ctx.filter = "saturate(1.35)";
       ctx.drawImage(tiny, 0, 0, canvas.width, canvas.height);
-      ctx.filter = "none";
-      // 压暗(等于原来的 brightness(.72)),白色、浅色封面上也能看清白字。
-      ctx.fillStyle = "rgba(0,0,0,.28)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (!readable) return;
+      try {
+        const css = getComputedStyle(amb);
+        const veil = parseVeil(css.getPropertyValue("--kite-amb-veil"));
+        const target = parseFloat(css.getPropertyValue("--kite-amb-target")) || 0.12;
+        const { luminance, tint } = palette(mctx.getImageData(0, 0, 40, 40).data, veil);
+        // 叠黑色 a 后各通道乘以 (1 - a),亮度约乘以 (1 - a)^2.2。
+        const dim = luminance > target ? 1 - (target / luminance) ** (1 / 2.2) : 0;
+        amb.style.setProperty("--amb-dim", String(Math.round(Math.min(dim, 0.7) * 100) / 100));
+        amb.style.setProperty("--amb-tint", tint);
+      } catch {
+        // 画布被跨域图片污染时读不到像素,只用默认的压暗。
+      }
     };
     if (!src) {
-      draw(null);
+      draw(null, false);
       return;
     }
-    const img = new Image();
-    img.decoding = "async";
-    img.onload = () => draw(img);
-    img.onerror = () => {
-      if (this.ambSrc === src) this.ambSrc = "";
+    // 先按跨域方式加载以便取色;图床不允许跨域时改用普通方式,只画背景。
+    const load = (cors: boolean) => {
+      const img = new Image();
+      if (cors) img.crossOrigin = "anonymous";
+      img.decoding = "async";
+      img.onload = () => draw(img, cors);
+      img.onerror = () => (cors ? load(false) : draw(null, false));
+      img.src = ambientUrl(src);
     };
-    img.src = src;
+    load(true);
   }
 
   /** fly:卡片的封面沿弧线飞进播放器(横向先快后慢、纵向先慢后快)。 */
@@ -1195,4 +1639,50 @@ function insetFrom(inner: DOMRect, outer: DOMRect, radius: number): string {
   const b = outer.bottom - inner.bottom;
   const l = inner.left - outer.left;
   return `inset(${t}px ${r}px ${b}px ${l}px round ${radius}px)`;
+}
+
+/** ambientUrl 背景只需要很小的图:网易云图床支持 ?param=宽y高 缩略,其它地址原样使用。 */
+function ambientUrl(src: string): string {
+  if (!/(^|\.)music\.126\.net\//.test(src.replace(/^https?:\/\//, ""))) return src;
+  return src + (src.includes("?") ? "&" : "?") + "param=96y96";
+}
+
+/** parseVeil 读出薄雾的颜色与不透明度(rgba(...)),读不出来时当作没有薄雾。 */
+function parseVeil(value: string): [number, number, number, number] {
+  const m = value.match(/rgba?\(([^)]+)\)/);
+  const n = m?.[1]?.split(",").map((v) => parseFloat(v)) ?? [];
+  return n.length >= 3 ? [n[0] ?? 0, n[1] ?? 0, n[2] ?? 0, n[3] ?? 1] : [0, 0, 0, 0];
+}
+
+/** palette 从 40×40 的像素里算叠上薄雾之后的平均相对亮度,以及右下四分之一的平均色(光斑颜色)。 */
+function palette(px: Uint8ClampedArray, veil: [number, number, number, number]): { luminance: number; tint: string } {
+  const lin = (c: number) => {
+    const v = c / 255;
+    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  let lum = 0;
+  let n = 0;
+  let tr = 0;
+  let tg = 0;
+  let tb = 0;
+  let tn = 0;
+  for (let y = 0; y < 40; y++) {
+    for (let x = 0; x < 40; x++) {
+      const i = (y * 40 + x) * 4;
+      const r = px[i] ?? 0;
+      const g = px[i + 1] ?? 0;
+      const b = px[i + 2] ?? 0;
+      const [vr, vg, vb, va] = veil;
+      lum += 0.2126 * lin(r * (1 - va) + vr * va) + 0.7152 * lin(g * (1 - va) + vg * va) + 0.0722 * lin(b * (1 - va) + vb * va);
+      n++;
+      if (x >= 20 && y >= 20) {
+        tr += r;
+        tg += g;
+        tb += b;
+        tn++;
+      }
+    }
+  }
+  const avg = (c: number) => Math.round(c / Math.max(tn, 1));
+  return { luminance: lum / Math.max(n, 1), tint: `rgb(${avg(tr)}, ${avg(tg)}, ${avg(tb)})` };
 }

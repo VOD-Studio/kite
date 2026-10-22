@@ -1,10 +1,31 @@
 /* <kite-player>:迷你播放条、展开面板、手机全屏、沉浸模式、播放列表抽屉。内部类名不是公开接口。 */
 
 :host {
-  --kite-offset: 24px;
-  --kite-glass: linear-gradient(180deg, rgba(255,255,255,.66), rgba(255,255,255,.5));
-  --kite-glass-edge: rgba(255,255,255,.95);
-  --kite-glass-rim: rgba(255,255,255,.6);
+  /* 桌面上播放条与面板同宽、同侧对齐;边距可分别覆盖,--kite-offset 同时设两者。 */
+  --kite-width: 400px;
+  --kite-offset-x: var(--kite-offset, 24px);
+  --kite-offset-y: var(--kite-offset, 24px);
+  /* 毛玻璃(播放条、抽屉):浅色白底通透,深色见 player.dark.css。 */
+  --kite-glass: rgba(255,255,255,.72);
+  --kite-glass-edge: rgba(255,255,255,.9);
+  --kite-glass-rim: rgba(22,24,29,.1);
+  --kite-glass-sheen: rgba(255,255,255,.45);
+  --kite-glass-shadow: 0 16px 40px -16px rgba(15,18,30,.28), 0 2px 8px rgba(21,23,28,.05);
+  --kite-glass-filter: blur(24px) saturate(1.8);
+  --kite-sheet-glass: rgba(255,255,255,.88);
+  /* 面板的光感背景:封面铺底叠一层薄雾、两处光斑与颗粒,只在顶栏和控制区局部压暗。 */
+  --kite-amb-sat: 1.15;
+  --kite-amb-veil: rgba(255,255,255,.08);
+  /* 背景的目标平均亮度(相对亮度):按封面算出还要压暗多少;读不到封面像素时用 --kite-amb-dim。 */
+  --kite-amb-target: .12;
+  --kite-amb-dim: .32;
+  --kite-amb-spot: rgba(255,255,255,.3);
+  --kite-amb-tint: .45;
+  --kite-amb-scrim-top: rgba(20,22,40,.16);
+  --kite-amb-scrim-bottom: rgba(20,22,40,.26);
+  --kite-amb-grain: .03;
+  --kite-amb-empty: linear-gradient(180deg, #7D8798 0%, #5C6574 100%);
+  --kite-amb-empty-spot: .22;
   --kite-fg: #15171C;
   --kite-muted: #4A505C;
   --kite-line: rgba(21,23,28,.12);
@@ -115,29 +136,29 @@
 .bar {
   position: fixed;
   z-index: 2147482000;
-  right: var(--kite-offset);
-  bottom: var(--kite-offset);
-  width: 424px;
+  right: var(--kite-offset-x);
+  bottom: var(--kite-offset-y);
+  width: var(--kite-width);
   height: 72px;
   border-radius: 36px;
   overflow: hidden;
   color: var(--kite-fg);
   background: var(--kite-glass);
-  -webkit-backdrop-filter: blur(28px) saturate(1.9) brightness(1.05);
-  backdrop-filter: blur(28px) saturate(1.9) brightness(1.05);
-  box-shadow: inset 0 1px 0 var(--kite-glass-edge), inset 0 0 0 1px var(--kite-glass-rim), 0 0 0 .5px rgba(21,23,28,.12), 0 20px 46px -18px rgba(21,23,28,.34), 0 2px 8px rgba(21,23,28,.06);
-  transition: width .48s var(--spring), height .42s var(--ease), border-radius .42s var(--ease), opacity .2s, transform .2s, visibility 0s;
+  -webkit-backdrop-filter: var(--kite-glass-filter);
+  backdrop-filter: var(--kite-glass-filter);
+  box-shadow: inset 0 1px 0 var(--kite-glass-edge), 0 0 0 .5px var(--kite-glass-rim), var(--kite-glass-shadow);
+  transition: width .48s var(--spring), margin-left .48s var(--spring), height .42s var(--ease), border-radius .42s var(--ease), opacity .2s, transform .2s, visibility 0s;
 }
 .bar::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(120% 160% at 10% -30%, rgba(255,255,255,.55), rgba(255,255,255,0) 55%);
+  background: radial-gradient(120% 160% at 10% -30%, var(--kite-glass-sheen), rgba(255,255,255,0) 55%);
   pointer-events: none;
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .bar {
+  .bar, .sheet {
     background: var(--kite-sheet);
   }
 }
@@ -173,6 +194,29 @@
 }
 .playing .disc-img {
   animation-play-state: running;
+}
+.disc[data-empty] .disc-img {
+  animation: none;
+}
+/* 封面:占位在下,图片盖在上面;没有地址、加载失败时图片隐藏,露出占位。 */
+.ph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--kite-ph-bg);
+  color: var(--kite-ph-fg);
+}
+.ph svg {
+  width: 36%;
+  height: 36%;
+}
+.disc-img > img, .cover > img, .xfade > img {
+  position: absolute;
+  inset: 0;
+}
+img[data-err], img:not([src]) {
+  visibility: hidden;
 }
 .xfade {
   position: absolute;
@@ -278,12 +322,29 @@
 .kp:not([data-has-track]) .bar {
   display: none;
 }
+/* position:播放条、面板、抽屉贴同一侧;center 时水平居中,收成圆形也在正中。只影响桌面。 */
+.kp[data-pos="left"] .bar, .kp[data-pos="left"] .stage, .kp[data-pos="left"] .sheet {
+  left: var(--kite-offset-x);
+  right: auto;
+}
+.kp[data-pos="center"] .bar, .kp[data-pos="center"] .stage, .kp[data-pos="center"] .sheet {
+  left: 50%;
+  right: auto;
+  margin-left: calc(var(--kite-width) / -2);
+}
+.kp[data-pos="center"][data-mode="orb"] .bar {
+  margin-left: -32px;
+}
 .kp[data-device="mobile"] .bar {
+  left: auto;
   right: 10px;
+  margin-left: 0;
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   width: calc(100vw - 20px);
   height: 58px;
   border-radius: 29px;
+  /* 上拉展开由脚本跟手,浏览器不要把这个手势当成滚动。 */
+  touch-action: none;
 }
 .kp[data-device="mobile"] .disc {
   left: 5px;
@@ -335,19 +396,19 @@
 .stage {
   position: fixed;
   z-index: 2147482500;
-  right: var(--kite-offset);
-  bottom: var(--kite-offset);
-  width: 400px;
-  height: min(712px, calc(100vh - 2 * var(--kite-offset)));
+  right: var(--kite-offset-x);
+  bottom: var(--kite-offset-y);
+  width: var(--kite-width);
+  height: min(712px, calc(100vh - 2 * var(--kite-offset-y)));
   border-radius: 28px;
   overflow: hidden;
   color: #FFFFFF;
   background: #2B3350;
   box-shadow: 0 40px 80px -30px rgba(10,12,30,.6), inset 0 0 0 1px rgba(255,255,255,.08);
   --pad: 32px;
-  --h: min(712px, calc(100vh - 2 * var(--kite-offset)));
+  --h: min(712px, calc(100vh - 2 * var(--kite-offset-y)));
   --cs: clamp(160px, calc(var(--h) - 376px), 336px);
-  --cx: calc((400px - var(--cs)) / 2);
+  --cx: calc((var(--kite-width) - var(--cs)) / 2);
   --cy: 60px;
   --ss: 48px;
   --sx: 28px;
@@ -378,8 +439,13 @@
 .stage.paging .page, .stage.paging .cover, .stage.paging .badge, .stage.paging .ctl, .stage.paging .extra {
   transition: none;
 }
+/* 进出沉浸模式时直接换布局,这一帧不要过渡(容器另有动画)。 */
+.stage.snap, .stage.snap * {
+  transition: none !important;
+}
 .kp[data-device="mobile"] .stage {
   inset: 0;
+  margin: 0;
   width: auto;
   height: auto;
   border-radius: 0;
@@ -398,6 +464,7 @@
 }
 .kp[data-immersive] .stage {
   inset: 0;
+  margin: 0;
   width: auto;
   height: auto;
   border-radius: 0;
@@ -405,24 +472,83 @@
   --cx: max(64px, calc(50vw - 560px));
   --cy: calc(50vh - var(--cs) / 2 - 120px);
 }
+/*
+ * 光感背景:没有封面时是中性底色;有封面时是一张 32×48 的小画布(见 paintAmbient),拉满后由双线性插值
+ * 变成柔和的色块,不用实时模糊滤镜。上面依次是薄雾(浅色提亮、深色压暗;封面太亮时再压一档)、
+ * 左上的白色光斑、右下的封面主色光斑、颗粒。光斑播放时缓慢漂移。
+ */
 .amb {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #2B3350;
+  background: var(--kite-amb-empty);
 }
-/* 背景是一张 32×48 的小画布(见 paintAmbient),拉满后由双线性插值变成柔和的色块,不用实时模糊滤镜。 */
 .amb canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  filter: saturate(var(--kite-amb-sat));
 }
-/* 白色、浅色封面会把底色洗白:整体压一层暗色,保证白字歌词的对比度。 */
+.spot {
+  position: absolute;
+  inset: -15%;
+  animation: drift 40s ease-in-out infinite alternate;
+  animation-play-state: paused;
+  pointer-events: none;
+}
+.playing .spot {
+  animation-play-state: running;
+}
+.veil, .dim {
+  position: absolute;
+  inset: 0;
+}
+.veil {
+  background: var(--kite-amb-veil);
+}
+/* 压暗到主题的目标亮度,光斑也一起压暗,所以光斑处仍比别处亮。 */
+.dim {
+  background: #000000;
+  opacity: var(--amb-dim, var(--kite-amb-dim));
+  transition: opacity .6s;
+}
+.amb[data-empty] .dim {
+  opacity: 0;
+}
+.spot-a {
+  background: radial-gradient(70% 45% at 28% 18%, var(--kite-amb-spot), rgba(255,255,255,0) 70%);
+}
+.spot-b {
+  background: radial-gradient(60% 40% at 78% 82%, var(--amb-tint, rgba(255,255,255,0)), rgba(255,255,255,0) 70%);
+  opacity: var(--kite-amb-tint);
+  animation-duration: 46s;
+  animation-direction: alternate-reverse;
+}
+.amb[data-empty] .spot-b {
+  background: radial-gradient(90% 60% at 22% 12%, var(--kite-accent), rgba(255,255,255,0) 70%);
+  opacity: var(--kite-amb-empty-spot);
+}
+.grain {
+  position: absolute;
+  inset: 0;
+  opacity: var(--kite-amb-grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+@keyframes drift {
+  from {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.08);
+  }
+}
+/* 只在顶栏和控制区局部压暗,中间的歌词保留封面的颜色。 */
 .scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(14,14,26,.34) 0%, rgba(14,14,26,.22) 42%, rgba(14,14,26,.52) 100%);
+  background: linear-gradient(180deg, var(--kite-amb-scrim-top) 0, rgba(0,0,0,0) 120px), linear-gradient(0deg, var(--kite-amb-scrim-bottom) 0, rgba(0,0,0,0) 280px);
 }
 .top {
   position: absolute;
@@ -546,7 +672,7 @@
   margin-top: 4px;
   font-size: 14px;
   line-height: 20px;
-  color: rgba(255,255,255,.72);
+  color: rgba(255,255,255,.8);
 }
 .tag {
   flex: none;
@@ -588,7 +714,7 @@
 .head-sub {
   font-size: 13px;
   line-height: 18px;
-  color: rgba(255,255,255,.72);
+  color: rgba(255,255,255,.8);
 }
 .kp[data-immersive] .head {
   display: none;
@@ -630,9 +756,10 @@
   transition: transform .6s var(--lyric), opacity .4s, filter .4s, background-color .16s;
   will-change: transform;
 }
+/* 鼠标悬停只提亮文字,不出背景色块。 */
 @media (hover: hover) {
-  .line:hover {
-    background: rgba(255,255,255,.08);
+  .line:hover .lt, .line:hover .tr {
+    color: rgba(255,255,255,.8);
   }
 }
 .lt {
@@ -675,6 +802,26 @@
 .line.far {
   opacity: .75;
 }
+/* 手动滚动:锚点上的焦点句用当前句的样式,正在唱的句子暂时变回普通样式;焦点切换 200ms。 */
+.lyrics.manual .lt, .lyrics.manual .tr {
+  transition-duration: .2s;
+}
+.lyrics.manual .line.cur:not(.focus) .lt, .lyrics.manual .line.cur:not(.focus) .tr {
+  transform: scale(.84);
+  color: rgba(255,255,255,.42);
+}
+.lyrics.manual .line.cur:not(.focus) .u {
+  color: inherit;
+  background: none;
+}
+.line.focus .lt, .line.focus .tr {
+  transform: none;
+  color: #FFFFFF;
+}
+.line.focus .u {
+  color: #FFFFFF;
+  background: none;
+}
 .kp:not([data-trans]) .tr {
   display: none;
 }
@@ -687,7 +834,7 @@
   justify-content: center;
   gap: 16px;
   font-size: 15px;
-  color: rgba(255,255,255,.72);
+  color: rgba(255,255,255,.8);
 }
 .lyr-empty .eq {
   height: 36px;
@@ -726,7 +873,7 @@
   position: absolute;
   right: calc(var(--pad) - 10px);
   bottom: calc(var(--ctl-h) - var(--xh) + var(--safe-b) + 26px);
-  color: rgba(255,255,255,.72);
+  color: rgba(255,255,255,.8);
   transition: transform .4s var(--ease), color .2s;
 }
 .lyr-trans svg {
@@ -825,7 +972,7 @@
   justify-content: space-between;
   font-size: 11px;
   line-height: 14px;
-  color: rgba(255,255,255,.72);
+  color: rgba(255,255,255,.8);
   font-variant-numeric: tabular-nums;
 }
 .buttons {
@@ -860,7 +1007,7 @@
   align-items: center;
   justify-content: space-between;
   margin-top: 12px;
-  color: rgba(255,255,255,.72);
+  color: rgba(255,255,255,.8);
   opacity: calc(1 - var(--pg) * 2.5);
   transition: opacity .3s var(--ease);
 }
@@ -935,15 +1082,17 @@
 .sheet {
   position: fixed;
   z-index: 2147482900;
-  right: var(--kite-offset);
-  bottom: calc(var(--kite-offset) + 84px);
-  width: 400px;
+  right: var(--kite-offset-x);
+  bottom: calc(var(--kite-offset-y) + 84px);
+  width: var(--kite-width);
   height: min(520px, calc(100vh - 140px));
   border-radius: 24px;
   overflow: hidden;
-  background: var(--kite-sheet);
+  background: var(--kite-sheet-glass);
+  -webkit-backdrop-filter: var(--kite-glass-filter);
+  backdrop-filter: var(--kite-glass-filter);
   color: var(--kite-fg);
-  box-shadow: 0 -12px 40px -12px rgba(10,12,18,.3);
+  box-shadow: inset 0 1px 0 var(--kite-glass-edge), 0 0 0 .5px var(--kite-glass-rim), 0 -12px 40px -12px rgba(10,12,18,.3);
   display: flex;
   flex-direction: column;
   transform: translateY(calc(100% + 120px));
@@ -951,7 +1100,7 @@
   transition: transform .26s var(--ease-in), visibility 0s .26s;
 }
 .kp[data-mode="open"] .sheet {
-  bottom: var(--kite-offset);
+  bottom: var(--kite-offset-y);
   border-radius: 24px;
 }
 .kp[data-sheet] .sheet {
@@ -962,6 +1111,7 @@
 .kp[data-device="mobile"] .sheet {
   left: 0;
   right: 0;
+  margin-left: 0;
   bottom: 0;
   width: auto;
   height: min(74vh, 640px);

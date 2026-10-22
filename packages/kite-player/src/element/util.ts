@@ -36,6 +36,17 @@ export function playerFor(el: HTMLElement, api?: string | null): Player {
   return player;
 }
 
+/**
+ * 封面 <img> 的 error / load:加载失败时隐藏图片,露出下面的占位(coverPh);换了地址加载成功再显示。
+ * 没有地址时 <img> 不带 src,本来就是透明的。
+ */
+export function onCoverError(e: Event): void {
+  (e.target as HTMLElement).setAttribute("data-err", "");
+}
+export function onCoverLoad(e: Event): void {
+  (e.target as HTMLElement).removeAttribute("data-err");
+}
+
 /** 卡片把封面「飞」进播放器时派发的事件(kite-player 负责动画)。 */
 export const flyEvent = "kite-player:fly";
 /** 歌单卡片请求在播放器里打开某个歌单。 */

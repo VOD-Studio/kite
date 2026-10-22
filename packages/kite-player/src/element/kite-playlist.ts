@@ -3,9 +3,9 @@ import { classMap } from "lit/directives/class-map.js";
 import { formatTime } from "../core/lyrics";
 import type { Player } from "../core/player";
 import type { PlayerState, Playlist } from "../core/types";
-import { icons } from "./icons";
+import { coverPh, icons } from "./icons";
 import { cardSheet } from "./styles";
-import { artists, canPlay, emit, emitFly, openQueueEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow } from "./util";
+import { artists, canPlay, emit, emitFly, onCoverError, onCoverLoad, openQueueEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow } from "./util";
 
 /** 标准卡片列出的歌曲数。 */
 const previewRows = 4;
@@ -102,9 +102,9 @@ export class KitePlaylistElement extends LitElement {
     return html`<div class=${classMap({ card: true, pl: true, big, cur: inThis, playing: inThis && this.s.playing })} part="card">
       <div class="head">
         <div class="stack">
-          <div class="cover c3"><img alt="" src=${covers[2] ?? ""} /></div>
-          <div class="cover c2"><img alt="" src=${covers[1] ?? ""} /></div>
-          <div class="cover c1"><img alt="" src=${covers[0] ?? ""} /></div>
+          <div class="cover c3">${coverPh}<img alt="" src=${covers[2] || nothing} @error=${onCoverError} @load=${onCoverLoad} /></div>
+          <div class="cover c2">${coverPh}<img alt="" src=${covers[1] || nothing} @error=${onCoverError} @load=${onCoverLoad} /></div>
+          <div class="cover c1">${coverPh}<img alt="" src=${covers[0] || nothing} @error=${onCoverError} @load=${onCoverLoad} /></div>
         </div>
         <div class="info">
           <div class="kicker">歌单</div>

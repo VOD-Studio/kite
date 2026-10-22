@@ -168,6 +168,69 @@ describe("<kite-player>", () => {
     expect(root.querySelector(".kp")?.getAttribute("data-view")).toBe("lyrics");
   });
 
+  it("音质标签只在歌曲支持极高及以上时显示,试听片段不显示", async () => {
+    const tracks = [
+      track("1", { title: "高", quality: "lossless" }),
+      track("2", { title: "标准", quality: "standard" }),
+      track("3", { title: "没有信息" }),
+      track("4", { title: "试听", quality: "hires", trial: true, playable: false }),
+    ];
+    player.setSource(fakeSource({ ...playlist, tracks }));
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar-text")?.click();
+    await settle(el);
+    const badge = () => root.querySelector<HTMLElement>(".cover > .badge");
+    expect(badge()?.hidden).toBe(false);
+    expect(badge()?.textContent).toBe("无损FLAC");
+    for (const i of [1, 2, 3]) {
+      player.setQueue(tracks, i, null, false);
+      await settle(el);
+      expect(badge()?.hidden).toBe(true);
+    }
+  });
+
+  it("没有封面时显示占位,不留空白图片", async () => {
+    player.setSource(fakeSource({ ...playlist, tracks: [track("1", { album: { id: "al", name: "专辑", cover: "" } })] }));
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    expect(root.querySelector(".disc-img .ph")).not.toBeNull();
+    expect(root.querySelector(".disc-img img")?.hasAttribute("src")).toBe(false);
+    expect(root.querySelector(".disc")?.hasAttribute("data-empty")).toBe(true);
+  });
+
+  it("position 属性决定播放器贴哪一侧,默认右侧", async () => {
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const kp = () => shadow(el).querySelector(".kp");
+    expect(kp()?.getAttribute("data-pos")).toBe("right");
+    el.setAttribute("position", "left");
+    await settle(el);
+    expect(kp()?.getAttribute("data-pos")).toBe("left");
+    el.setAttribute("position", "nowhere");
+    await settle(el);
+    expect(kp()?.getAttribute("data-pos")).toBe("right");
+  });
+
+  it("拖歌词越过首句有阻力,最多拖出去 80px,松手弹回", async () => {
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar-text")?.click();
+    await settle(el);
+    root.querySelector<HTMLButtonElement>(".dots [data-go='lyrics']")?.click();
+    await settle(el);
+    const line = root.querySelectorAll<HTMLElement>(".lines .line")[0];
+    if (!line) throw new Error("没有歌词行");
+    const y = () => parseFloat(/translateY\(([-\d.]+)px\)/.exec(line.style.transform)?.[1] ?? "NaN");
+    const start = y();
+    touch(line, "pointerdown", 100, 100);
+    touch(line, "pointermove", 100, 400);
+    touch(line, "pointermove", 100, 1100);
+    expect(y() - start).toBe(80);
+    await new Promise((r) => setTimeout(r, 120));
+    touch(line, "pointerup", 100, 1100);
+    expect(y()).toBe(start);
+  });
+
   it("播放模式按钮循环切换", async () => {
     const el = await mount(`<kite-player playlists="100"></kite-player>`);
     const root = shadow(el);
