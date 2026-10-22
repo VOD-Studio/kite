@@ -4,8 +4,9 @@
 
 ## 开发环境
 
-- **Go 版本以 `go.mod` 为准**(当前 1.26)。缺 Go 时 `make` 会直接失败。
+- **Go 版本以 `go.mod` 为准**,Node 大版本以 `Makefile` 的 `NODE_VERSION` 为准。
 - **buf**:改 `proto/` 时需要(Makefile 自动探测 `$GOPATH/bin/buf`)。安装见 [buf.build](https://buf.build/docs/installation/)。
+- **脚本检查**需要 Python 3、PyYAML、jq 和 ShellCheck;PyYAML 版本由 `make ci-env` 给出。
 
 ## 常用命令
 
@@ -21,21 +22,63 @@ go vet ./...              # 检查
 ## CI 约定
 
 - **本地自检**:`make check`(gofmt + go mod tidy + ShellCheck/脚本回归 + vet + test + lint + proto-lint)。部署事务和安装器回归需要 Linux,macOS 会明确打印 skip,由 Linux CI 补齐。`make vuln`、`make proto-breaking`、`make verify-gen` 依赖网络或 git 基线,按需单独跑。
-- **门禁只有一个**:`CI OK`。增减 / 重命名 job 时同步 `.github/workflows/ci.yml` 的 `needs` 和 `scripts/ci-results.sh`;失败、取消、意外跳过都不能变绿。发布只接受指定源码 SHA 在本仓 `ci.yml` 的成功 main push 运行,不能用同名外部检查替代。
-- **工具版本的唯一来源**:Go 以 `go.mod` 为准;golangci-lint / buf / govulncheck / GoReleaser / Cosign 以 `Makefile` 顶部为准。第三方 Actions 固定完整 commit SHA,镜像 base 固定 digest;不要在 workflow 重复维护工具版本。
-- **漏洞门禁**:PR 只在依赖变化时扫描,`scheduled.yml` 每日全量扫描并报告。已知修复版本的漏洞必须失败,不能因为它高于当前工具链就当成「尚未发布」;无已知修复版本要产生 advisory / issue,扫描器安装、执行和报告解析故障必须显式失败。
-- **执行隔离与排队**:使用固定 `ubuntu-24.04` 托管 runner,不把未受信 PR 送入持久化自托管环境。PR 的旧 CI 可以取消;main 按 SHA 保留发布所需证据;发版、BSR、生产部署各自使用 `queue: max` 串行排队,不丢弃中间等待项。
-- **release PR 的 CI**:`GITHUB_TOKEN` 创建 PR 不保证触发后续 workflow。`scripts/release-pr-ci.sh` 只接受本仓 `github-actions[bot]` 创建、目标为 main 的固定 release 分支;等待 / 批准 / 补派发 `ci.yml` 时核验准确 HEAD 和 workflow,动作前再次检查 HEAD。已有成功 producer 不重复派发,其它 bot 或同名 fork 分支不能借此获批。
-- **镜像冒烟**:`Docker Build` 验证开发镜像;`Release Check` 从 GoReleaser snapshot 的真实二进制构建 `Dockerfile.release` 后运行同一安全冒烟。验证无令牌拒绝启动、健康检查及 REST 鉴权,不用 Dockerfile 文本相等冒充运行时验证。正式公开前还验证发布镜像双架构;生产部署另外运行完整 REST/gRPC 探针。
-- **Go 互操作冒烟**:`Go Interop` job 跑 `make interop-go`(`scripts/go-interop.sh`):`interop/go` 依赖 BSR 上由 proto 生成的 Go SDK(接入方的真实路径),对真实运行的 `kite-server` 验证令牌鉴权与 `LOGIN_REQUIRED`;`docs/integration.md` 的 Go 示例与 `interop/go/kite.go` 逐字一致(测试守护)。SDK 版本锁在 `interop/go/go.mod`,随 BSR 新版本按需升级。
-- **Rust 互操作冒烟**:`Rust Interop` job 跑 `make interop-rust`(`scripts/rust-interop.sh`):`buf` 把 proto 编成描述符,`interop/rust` 据此生成 tonic 客户端,对真实运行的 `kite-server` 验证健康检查、令牌鉴权和 `ErrorInfo`。`docs/` 里的 Rust 示例与 `interop/rust/src/*.rs` 逐字一致(有测试守护):改示例先改文档,再原样同步。本地需要 `cargo`,较慢,不在 `make check` 里。
-- **网页播放器**:`Player` job 跑 `make player-check`(`packages/kite-player` 的 `npm ci` + 类型检查 + 测试 + 构建),Node 大版本取自 `Makefile` 顶部的 `NODE_VERSION`。它不在 `make check` 里(只改 Go 不需要 Node),改了 `packages/kite-player` 后本地跑一次。
-- **npm 发布**:`@violetjs/kite-player` 只手动发布——改 `packages/kite-player/package.json` 的 `version` 并合入 `main`,再 Actions → `npm` → Run workflow(选 `main`),或 `gh workflow run npm.yml --ref main`。workflow 只从 `main` 发布、拒绝已发布过的版本,预发布版本(带 `-`)发到 `next` dist-tag。不用 git tag 触发:GoReleaser 按上一个 tag 生成 kite 的 changelog,另一套 tag 会混进去;发布对应的 commit 由 npm provenance 记录。需要仓库 secret `NPM_TOKEN`(对 `@violetjs` scope 有发布权限)。
-- **真实上游冒烟**:`make upstream-smoke` 对真实上游逐个调用只读 RPC,断言响应不是空消息(专抓「成功但返回空」)。手动运行、不进 CI——外部服务的状态会让门禁漂移。endpoint 的 MapResponse 单测应优先用从真实上游抓取的响应(`testdata/`,裁剪并去除个人信息),而不是手写夹具。
-- **BSR 发布**:公开且验真通过的 release 才推送到 `buf.build/vod-studio/kite`。精确版本标签始终保留,`main` 仅跟随数值最大的正式版,补旧版不会倒退。`BUF_TOKEN` 只在推送一步可见;缺失必须失败,不能显示成功跳过。手动补推:Actions → `BSR` → Run workflow,在 main 上指定已公开 tag。
-- **生产部署**:release 公开后自动调用 `deploy.yml`,不增加日常人工批准。只从 main 工作流读取 `production` environment 的专用 SSH secrets,先检查宿主机部署器版本,再执行验签、切换、探针及失败回滚。缺 secret、旧部署器或健康失败均明确变红,不能假成功。管理员首次安装、权限治理和回滚见 [`docs/deploy.md`](docs/deploy.md)。
-- **发布完成的含义**:合并 release PR 批准发版,release-please 建 draft 和 tag,同一 workflow 调用 `release.yml`;所有跨平台档案、签名校验和、双架构镜像、签名部署安装包完成并验真后才公开 release。只有最大正式版推进 `latest`;minor 标签也只前进。手动重跑公开版只验原产物和恢复适用标签,不覆盖已发布字节;失败的 draft 可以继续完成。公开版缺损需发布修正版,不能悄悄重建旧版。
-- **仓库配置不是 YAML**:`python3 scripts/github-settings.py` 默认只读审计;管理员加 `--apply` 才应用主分支 / tag ruleset、Actions 权限与 production 分支白名单。脚本不读取、迁移或删除 secret 值,不移除已有人工审批规则;发现与自动部署冲突时必须先由管理员处理。
+- **先计划,再执行**:`scripts/ci-plan.py` 是任务注册表和选取规则的唯一来源。PR 按完整 base…head 差异选择检查,保留重命名前后的影响;main push 执行全部确定性检查。公开播放器协议变更同时覆盖 Go 和 player,可执行示例变更覆盖相应消费者,控制面变更和未知路径保守扩大检查。
+- **门禁只有一个**:`CI OK`。门禁重算计划并验证 SHA、run/attempt 和事件上下文,同时核对实际 workflow jobs 与 `needs`。只有计划明确授权的不适用任务可以跳过;失败、取消、缺失任务、必需任务跳过或未注册 job 都不能变绿。PR 标题编辑也不能绕过源码检查。
+- **工具版本的唯一来源**:Go 以 `go.mod` 为准;Node / golangci-lint / buf / govulncheck / cargo-audit / GoReleaser / Cosign / PyYAML 以 `Makefile` 顶部为准,Rust 以 `interop/rust/rust-toolchain.toml` 为准。第三方 Actions 固定完整 commit SHA,镜像 base 固定 digest;不要在 workflow 重复维护工具版本。
+- **漏洞门禁**:依赖或安全控制面变化时扫描对应模块,`scheduled.yml` 每日扫描根 Go 模块、`interop/go`、player 的完整 npm 依赖树及 Rust。已知修复版本必须失败,不能因为它高于当前工具链就当成「尚未发布」;无修复版本保留 advisory 并更新 issue。安装、执行和解析故障显式失败,某个扫描器失败不阻断其它已选扫描。
+- **执行隔离与排队**:PR 只使用托管 runner;Go 测试覆盖 Linux / macOS,另做 Windows vet。PR 的旧 CI 可以取消;main 按 SHA 保留发布证据。发版、BSR、部署各自使用 [`queue: max`](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency),不替换队列内等待项;GitHub 上限为 100 个 pending,满队列后的新运行会取消。
+- **release PR 的 CI**:`GITHUB_TOKEN` 创建 PR 不保证触发后续 workflow。`scripts/release-pr-ci.sh` 仅处理本仓 `github-actions[bot]` 创建、目标 main 的 `kite` / `player` 固定 release 分支;批准或补派发前再次核验准确 HEAD。已有成功 producer 不重复派发,同名 fork 和其它 bot 不获授权。
+- **Go 产物与镜像**:`Go Artifacts and Images` 将跨平台编译集中到一次 GoReleaser snapshot,再验证开发镜像及由 snapshot 二进制构建的发布镜像。冒烟检查无令牌拒绝启动、健康检查和 REST 鉴权,不以 Dockerfile 文本断言代替运行时验证。正式公开前仍须验证发布镜像双架构。
+- **Go / Rust 消费者**:`Contract Go Consumer` 跑 `make interop-go`,通过锁定的 BSR SDK 验证真实 server;`Contract Rust Consumer` 跑 `make interop-rust`,由当前 proto 生成 tonic 客户端后验证健康、鉴权和错误契约。文档示例与对应 `interop/` 源码逐字一致,改示例先改文档再同步。
+- **player 源码与成品**:`Player Source and Package` 先完成类型检查、Biome、测试和构建,只 pack 一次,再在仓库外安装同一 tgz,验证严格 TypeScript、ESM、React SSR、独立打包和 Chromium 交互。成功的 main CI 上传 tgz 与含 SHA / run / attempt / 摘要的 manifest,保留 30 天。`make player-check` 检查源码;`make player-package-check` 还验收可发布成品,不依赖真实网易云接口。
+- **真实上游冒烟**:`make upstream-smoke` 对真实上游逐个调用只读 RPC,专抓「成功但返回空」。它依赖外部服务,手动运行、不进确定性门禁。endpoint 响应夹具优先来自裁剪并去隐私的真实响应。
+- **仓库配置不是 YAML**:`python3 scripts/github-settings.py` 默认只读审计;管理员确认后用 `--apply` 配置 main / 两类发布 tag ruleset、Actions 策略及 `production` / `npm` 的 main 分支白名单。脚本不读取、迁移或删除 secret 值,也不移除已有人工审批;与自动部署冲突的规则须由管理员先处理。AI Review 已移除,不作为 CI 或发布依赖。
+
+## 发布与恢复
+
+Go 产品(CLI + server)仍共用版本;player 是独立发布单元。版本和 CHANGELOG 由 release-please 从各自路径的 Conventional Commits 生成,**不再手改 player 版本号来发版**。根 CHANGELOG 只记 Go 产品,player 的记录位于包内;既有混合历史不改写。tag 分别为 `vX.Y.Z` 和 `player-vX.Y.Z`,GoReleaser 显式选择 Go current / previous tag,不会把 player tag 当作 Go 版本。
+
+纯 Go 变更不会触发 player 发版,纯 player 变更不会触发 Go 发版;共享协议变更可以产生两张 release PR,分别批准。普通业务 PR 合并只更新候选版本,不是发布批准。
+
+```mermaid
+flowchart TD
+    Main[main 业务提交] --> Candidates[release-please 更新独立 release PR]
+    Candidates --> GoPR[Squash 合并 kite release PR]
+    Candidates --> PlayerPR[Squash 合并 player release PR]
+    GoPR --> GoCI[该源码 SHA 的 main push CI OK]
+    GoPR --> GoDraft[Go tag 与 draft]
+    GoCI --> GoRelease[构建签名并验真后公开 Go Release]
+    GoDraft --> GoRelease
+    GoRelease --> BSR[BSR 精确标签及单调 main]
+    GoRelease --> Deploy[仅最新正式版自动部署]
+    PlayerPR --> PlayerCI[该源码 SHA 的 main push CI OK 和已验收 tgz]
+    PlayerPR --> PlayerDraft[player tag 与 draft]
+    PlayerCI --> NPM[原 tgz 携 provenance 发布 npm]
+    PlayerDraft --> NPM
+    NPM --> PlayerRelease[校验 registry 后公开 player Release]
+```
+
+### Go 发布
+
+合并 kite release PR 后,release-please 建 tag / draft,同一编排调用 `release.yml`。所有跨平台档案、签名校验和、双架构镜像、签名部署安装包完成并验真后才公开。仅最大正式版推进 `latest`,minor 标签也只前进;已公开的产物不可重建或覆盖。失败 draft 可以在 main 上派发 `release.yml` 并指定原 Go tag 恢复;公开版缺损必须发修正版。
+
+只有已公开且验真的 Go 正式版进入 BSR 和生产部署。BSR 精确标签保留,`main` 只前进;自动部署旧版不切换线上,管理员在 main 上显式派发 `deploy.yml` 才允许回滚。缺 token / secret、部署器过旧或探针失败都明确变红。部署步骤见 [`docs/deploy.md`](docs/deploy.md)。
+
+### npm 发布
+
+`npm.yml` 校验本仓受信 player release PR、tag 指向及指定源码 SHA 的成功 main push CI,只下载该 run / attempt 的 `kite-player-package-*`。核对 manifest、包名、版本、SHA-256 / SHA-512 与 tgz 后,**发布已经验收的字节,不在发布端 build / pack**。需要 `npm` environment 中可发布 `@violetjs` scope 的 `NPM_TOKEN`;不要配置在仓库 / 组织级,迁移验证后由管理员移除同名旧项,避免环境缺项时回退。
+
+首次发布还要求当前 workflow 的源码 SHA 等于包的源码 SHA,保证 provenance 真实。正式版用 `latest`,预发布用 `next`;registry 校验成功后才公开 player Release,并始终设置 `make_latest: false`,不替换 GitHub 的 Go Latest,也不触发 BSR / server 部署。
+
+相同版本已经存在时,必须校验 registry 的 integrity 和实际字节;一致只恢复 GitHub 发布收尾,不再 publish,不一致立即失败。不存在的版本、网络故障和鉴权失败不能混为一谈。
+
+### 恢复规则
+
+- **发布队列来源**:release-please 读取实时 main,较早运行可能代后续提交建立 draft。每个运行仍只接管自己的 `GITHUB_SHA`,不依赖 action 当次是否返回“创建成功”。普通业务提交不能接管其它源码的发布。
+- **player 首次发布失败**:完整重跑原 release PR 合并 SHA 对应的 `Release Please` 运行,不要只重跑失败 jobs;其发布分支之前可能被跳过。不要在较新的 main 上手动派发来冒充旧源码的 provenance。
+- **CI 产物过期 / 缺失**:重跑原源码的 main push CI,产生新的成功 attempt 和已验证产物,再重跑原发布编排。发布端没有“重新 pack 凑一个包”的兜底。
+- **npm 已存在且字节一致**:可在 main 手动派发 `npm.yml`,指定 player tag,仅完成一致性校验及 GitHub Release 收尾。
+- **Go 已公开**:可重跑 `release.yml` 验证原产物并恢复适用浮动标签;BSR 或部署失败分别在 main 派发 `bsr.yml` / `deploy.yml`,指定已公开 Go tag。不重发、不覆盖公开产物。
 
 ## 工作流(分支与提交)
 

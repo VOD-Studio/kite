@@ -15,6 +15,8 @@ BUF_VERSION           := 1.71.0
 GOVULNCHECK_VERSION   := v1.6.0
 GORELEASER_VERSION    := 2.17.1
 COSIGN_VERSION        := v3.1.2
+CARGO_AUDIT_VERSION   := 0.22.2
+PYYAML_VERSION        := 6.0.3
 # packages/kite-player(npm 包 @violetjs/kite-player)用的 Node 大版本;CI 的 setup-node 读这里。
 NODE_VERSION          := 24
 # player-demo 的本地端口(demo 调试页)。
@@ -190,6 +192,8 @@ ci-env:
 	@echo "GOVULNCHECK_VERSION=$(GOVULNCHECK_VERSION)"
 	@echo "GORELEASER_VERSION=$(GORELEASER_VERSION)"
 	@echo "COSIGN_VERSION=$(COSIGN_VERSION)"
+	@echo "CARGO_AUDIT_VERSION=$(CARGO_AUDIT_VERSION)"
+	@echo "PYYAML_VERSION=$(PYYAML_VERSION)"
 	@echo "NODE_VERSION=$(NODE_VERSION)"
 
 ## clean: 清除本地构建产物(tmp/、bin/)。不清 gen/——已进版本控制。

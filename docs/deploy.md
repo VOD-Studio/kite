@@ -7,15 +7,17 @@ kite-server 的容器只加入 kite 专用网络 `kite_network`(网络别名 `ki
 
 ## 日常发布与权限边界
 
-业务 PR 可以 Merge / Squash / Rebase;合 main 只累计待发布变化。**Squash 合并 release PR 才批准发版**。
-发布流水线先完成并验证二进制档案、签名校验和、镜像和部署安装包,再公开 release,随后自动部署。
-正常发版不再增加 production 人工审批,也不需要手动登录服务器。
+业务 PR 可以 Merge / Squash / Rebase;合 main 只累计待发布变化。**Squash 合并 Go 产品的 release PR 才批准 Go 发版**;player 独立发布,不进入此部署链路。
+发布流水线先完成并验证二进制档案、签名校验和、镜像和部署安装包,再公开 release。只有数值最大的 Go 正式版自动部署,补旧版本不会把线上倒退。
+正常发版不增加 production 人工审批,也不需要手动登录服务器;显式回滚仍由管理员在 main 手动派发部署。
 
 ```mermaid
 flowchart LR
-  A[合并 release PR] --> B[draft: 构建、签名、验真]
+  A[合并 Go release PR] --> B[draft: 构建、签名、验真]
   B --> C[公开完整 Release]
-  C --> D[main 工作流 + production secrets]
+  C --> Latest{最新 Go 正式版?}
+  Latest -->|是| D[main 工作流 + production secrets]
+  Latest -->|否| Skip[不自动部署]
   D --> E[SSH 固定命令 / 部署器版本预检]
   E --> F[宿主机锁 / 校验发布及镜像签名]
   F --> G[按 index digest 拉取并替换]
@@ -47,15 +49,15 @@ flowchart LR
    `KITE_PRODUCTION_*` 名称重新设置 secrets。它们不得配置在仓库 / 组织级;新流程不引用旧 `KITE_DEPLOY_*`,
    因此环境漏配时不会静默使用迁移期间尚未删除的旧凭据。
 2. 从可信 main 工作树运行 `python3 scripts/github-settings.py --apply`,再运行不带参数的只读审计。
-   脚本保留业务 PR 的三种合并方式,要求 main 走 PR + `CI OK`,保护 release tags 不被改写 / 删除,
-   限制 production 只接受 main,要求第三方 Action 固定 SHA,保持默认只读 token。
+   脚本保留业务 PR 的三种合并方式,要求 main 走 PR + `CI OK`,保护 Go / player 两类 release tags 不被改写 / 删除,
+   限制 production 和 npm environments 只接受 main,要求第三方 Action 固定 SHA,保持默认只读 token。
    如果已有环境审批 / 等待规则,脚本会在任何写入前拒绝整次 `--apply`,不会重写或删除它们;
    管理员需先审核并处理与「release PR 是唯一日常批准点」的冲突。
-3. Squash 合并下一个 release PR。首个新版 release 的构建 / 验真 / 公开仍可完成;
+3. Squash 合并下一个 Go release PR。首个新版 release 的构建 / 验真 / 公开仍可完成;
    **如果服务器尚未安装新部署器,自动 Deploy 将明确失败,旧实例不动**。
 4. 按下一节验证这个新 release 的签名安装包,由管理员安装。不能从旧 release 下载不存在的新版安装包,
    也不能直接复制仓库里的一个脚本冒充完整安装。
-5. 从 **main** 重跑该版本的 Deploy,确认实际探针及部署历史成功。之后每次合并 release PR 均全自动部署。
+5. 从 **main** 重跑该版本的 Deploy,确认实际探针及部署历史成功。之后合并 Go release PR 后,最新正式版自动部署。
 6. 新链路验证成功后,管理员删除旧仓库级 `KITE_DEPLOY_*` secrets,再次执行只读审计。
    `github-settings.py` 无法读取 secret 值,不会自动迁移或删除它们;旧项或新的同名仓库 / 组织项都会明确报告。
 

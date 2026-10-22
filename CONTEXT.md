@@ -7,9 +7,10 @@
 
 | 术语 | 定义 |
 |---|---|
-| **双产物** | kite 的两个交付物:`server`(gRPC + grpc-gateway 服务)和 `kite`(直连 engine 的 CLI)。共享 `internal/netease/` 核心(engine + endpoint);`internal/service/` 只是 gRPC adapter,CLI 不经过它(见 ADR shared-boundary-engine)。 |
+| **Go 产品** | `kite` CLI 与 `kite-server` 服务共同组成的发布单元,共享核心和同一版本。两种交付物不等于两个独立版本。 |
+| **player 产品** | 网页播放器 `@violetjs/kite-player`,是独立于 Go 产品的发布单元;双方通过公开播放器协议协作,不要求版本号相等。 |
 | **gen/** | `buf generate` 从 `proto/` 产出的 Go stub/gRPC service/gateway/OpenAPI。被项目代码 `import` **硬依赖**(不生成则 vet/test 红)。性质同 `docs/cmd/`(生成产物且已提交)。 |
-| **release PR** | release-please 从 main 上的 Conventional Commits 推导版本号并更新 manifest / CHANGELOG 的 PR。以 Squash 合并表示批准发版;产物和签名完整、验真通过后才公开 release 并自动部署。业务 PR 可自选 Merge / Squash / Rebase,其合并本身不是发布批准。 |
+| **release PR** | release-please 为指定发布单元推导版本和变更记录的 PR。Squash 合并表示批准该产品发版;只有 Go 产品的公开发布进入服务部署,player 发布不部署 server。业务 PR 合并本身不是发布批准。 |
 | **部署器** | 管理员验签后安装的宿主机特权程序,与应用镜像独立升级。CI 只有受限应用部署权限;普通 release 不能更新部署器。能力版本定义兼容性,内容摘要标识实际安装构建。 |
 | **配置(config.toml)** | 用户偏好的持久化,只收「已存在 flag 或硬编码默认值」的 key,不造新语义。与**状态文件**(session.json / history.jsonl,程序运行产生)同住配置目录但性质不同:配置可删可重建,状态不可。 |
 
@@ -19,13 +20,13 @@
 |---|---|---|---|
 | LICENSE | MIT | 2026-07-27 | (无需 ADR,可逆且无惊奇) |
 | gen/ 是否进版本控制 | **提交** + CI 守护 job | 2026-07-27 | 需 ADR(难反悔 + 有真实取舍) |
-| 发版工作流 | release-please(版本号/changelog) + GoReleaser(构建/发布) | 2026-07-27 | (组合是 2026 标准,无惊奇) |
+| 发版工作流 | release-please 为 Go 与 player 分别生成版本和 release PR;GoReleaser 发布 Go 产物,npm 发布已验收的 player tarball | 2026-10-22 | 约束与恢复见 [CONTRIBUTING](CONTRIBUTING.md#发布与恢复) |
 | 首版本号 | v0.1.0 | 2026-07-27 | (无需 ADR) |
 | 镜像构建 | GoReleaser `dockers_v2` + 极简 Dockerfile(COPY 二进制,不重编译)+ distroless static-debian12 | 2026-07-27 | 需 ADR(老 dockers 弃用 + 双 Dockerfile 模式需背景) |
 | 镜像仓库 | ghcr.io | 2026-07-27 | (无需 ADR,GitHub 项目首选无争议) |
 | lint 严格度 | golangci-lint v2 中度(默认 6 + gosec/revive/bodyclose/misspell/unconvert/contextcheck/nilerr/gocritic),`only-new-issues: true` 避免历史债阻塞 | 2026-07-27 | (无需 ADR,可调) |
-| 发布产物范围 | 用户产物为 `cmd/server` + `cmd/kite`;`cmd/kite-probe` 仅随镜像和运维安装包分发,不是公开 CLI 档案;`cmd/kite-docs`、`cmd/demo` 不发布 | 2026-10-20 | [release-image-strategy](docs/adr/release-image-strategy.md) |
-| CHANGELOG 位置 | 仓库根目录 `CHANGELOG.md` | 2026-07-27 | (无需 ADR,行业约定) |
+| 发布产物范围 | Go 产品包含 CLI / server 档案及服务镜像;`kite-probe` 仅随镜像和运维安装包分发。player 另行发布 npm 包;`kite-docs`、`demo` 不发布 | 2026-10-22 | Go 镜像见 [release-image-strategy](docs/adr/release-image-strategy.md) |
+| CHANGELOG 位置 | Go 在根 `CHANGELOG.md`,player 在 `packages/kite-player/CHANGELOG.md`;独立版本和 tag,不改写已公开历史 | 2026-10-22 | 见 [CONTRIBUTING](CONTRIBUTING.md#发布与恢复) |
 | config 优先级 | `--json` > 非TTY自动JSON > config.toml > 内置默认;管道 JSON 契约**不被 config 覆盖**(config 是机器本地偏好,契约是全局的) | 2026-08-16 | (无需 ADR,Phase A 脚本契约的自然延伸) |
 | config get 输出 | 单 key 裸打**生效值**(不带格式,可在脚本中使用,gh/jj/git 惯例);无参列表带「来源」列;未知 key 报错退非零(key 是固定枚举,拼错要早暴露) | 2026-08-16 | (无需 ADR,业界惯例) |
 | config 校验原则 | 所有校验在 `set` 写盘前完成;`workers` 上限 5(与 `--workers` flag 契约一致);`download_dir` 只存不校验存在性 | 2026-08-16 | (无需 ADR) |

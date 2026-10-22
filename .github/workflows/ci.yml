@@ -1,67 +1,72 @@
-# CI 流水线
-#
-# PR 和 push 到 main 时触发。所有 job 汇总到唯一的门禁 job「CI OK」:
-#   - ruleset 的 required check 只需要它;
-#   - 发布流程(release.yml)也只等它,不再维护 job 名字白名单。
-# 增减 / 重命名 job 时只需同步 ci-ok 的 needs。
-#
-# 设计原则:
-#   1. 门禁不依赖会自行变化的外部状态(漏洞库、unpinned 插件、latest runner):
-#      凡是「没改代码也会变红」的检查,要么固定版本,要么只在相关改动时才拦 PR,
-#      全量扫描走 scheduled.yml 定时任务。
-#   2. 工具版本唯一来源是 Makefile(.github/actions/setup 读取),workflow 不重复写。
-#   3. 检查逻辑放 Makefile / scripts,CI 只负责编排,本地 `make check` 可复现。
-
+# The planner owns the task registry; CI OK independently reconstructs its plan.
+# Do not filter edited events: a title edit must rerun every applicable code check.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-    # edited:改 PR 标题要重新校验(PR Title job 依赖标题)。其它 job 也会重跑,
-    # 这是刻意的——若只跑 PR Title,新的 CI OK 会覆盖同一 SHA 上先前失败的结果。
     types: [opened, synchronize, reopened, edited]
-  # 手动触发入口(Actions 页 Run workflow)。PR 专属步骤(PR Title、proto breaking)在此事件下按条件跳过。
   workflow_dispatch:
 
-# PR 的新提交取代旧运行；main/dispatch 每个 SHA 独立，后续 push 不会取消发布所需证据。
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
-  pull-requests: read   # PR 标题检查
+  pull-requests: read
 
 jobs:
-  # gofmt / go mod tidy:纯机械漂移,最快暴露
-  hygiene:
-    name: Hygiene
+  plan:
+    name: Change Plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      plan: ${{ steps.plan.outputs.plan }}
+      tasks: ${{ steps.plan.outputs.tasks }}
+      security_modules: ${{ steps.plan.outputs.security_modules }}
+      pr_number: ${{ steps.plan.outputs.pr_number }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/ci-python
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci-plan.py plan
+
+  control:
+    name: Control Plane
+    needs: plan
+    if: fromJSON(needs.plan.outputs.tasks).control
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: ./.github/actions/setup
-      - run: make fmt-check
-      - run: make tidy-check
+      - uses: ./.github/actions/ci-python
       - run: make scripts-check
 
-  lint:
-    name: Lint
+  go-quality:
+    name: Go Quality
+    needs: plan
+    if: fromJSON(needs.plan.outputs.tasks).go-quality
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
-      # 全量检查,与本地 make check 一致:存量已清零,只看新增会让历史债重新悄悄堆积。
+      - run: make fmt-check tidy-check
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           args: --timeout 5m
 
-  # CLI 面向 macOS / Linux 用户,终端与路径相关逻辑在两个平台都要跑真实测试
-  test:
-    name: Test (${{ matrix.os }})
+  go-test:
+    name: Go Test (${{ matrix.os }})
+    needs: plan
+    if: fromJSON(needs.plan.outputs.tasks).go-test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -71,62 +76,64 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
-      # build 前置到 vet/test 之前:纯编译错误最快暴露
       - run: go build ./...
-      - run: make vet
-      - run: make test   # -race + coverage,与本地等价
+      - run: make vet test
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: matrix.os == 'ubuntu-24.04'
         with:
-          name: coverage
+          name: coverage-${{ github.run_attempt }}
           path: coverage.out
+          if-no-files-found: error
 
-  # goreleaser 发布 linux/darwin/windows × amd64/arm64,这里提前编译,
-  # 避免平台相关的编译错误拖到打 tag 才暴露。Windows 另跑 vet 以类型检查其测试代码。
-  cross-build:
-    name: Cross build
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: ./.github/actions/setup
-      - name: CLI 全平台编译
-        run: |
-          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
-            echo "→ cmd/kite ${target}"
-            GOOS="${target%/*}" GOARCH="${target#*/}" CGO_ENABLED=0 go build -o /dev/null ./cmd/kite
-          done
-      - name: server 编译(linux/arm64)
-        run: GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o /dev/null ./cmd/server
-      - name: Windows vet(含测试代码)
-        run: GOOS=windows GOARCH=amd64 go vet ./...
-
-  # proto:lint → breaking(仅 PR,对比 main)→ gen/ 漂移。
-  # gen/ 已提交且 gRPC/REST 对外,契约破坏必须在合并前暴露。
-  proto:
-    name: Proto
+  windows-vet:
+    name: Go Windows Vet
+    needs: plan
+    if: fromJSON(needs.plan.outputs.tasks).windows-vet
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0   # buf breaking 需要 origin/main
       - uses: ./.github/actions/setup
-      # buf-setup-action 已归档,统一用 buf-action(setup_only 仅装 CLI),版本取自 Makefile
-      - uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3 # v1
-        with:
-          setup_only: true
-          version: ${{ env.BUF_VERSION }}
-      - run: make proto-lint
-      - name: Breaking change(对比 main)
-        if: github.event_name == 'pull_request'
-        run: make proto-breaking
-      - run: make verify-gen
+      # GoReleaser snapshot covers cross-builds; vet also checks Windows tests.
+      - run: GOOS=windows GOARCH=amd64 go vet ./...
 
-  # 依赖漏洞:只在 PR 改动了依赖时才拦(门禁只对「本 PR 引入的变化」负责)。
-  # 漏洞库每天都在变,对无关 PR 拦截只会制造噪音;全量扫描见 scheduled.yml(定时)。
-  vuln:
-    name: Dependency Security
+  player:
+    name: Player Source and Package
+    needs: plan
+    if: fromJSON(needs.plan.outputs.tasks).player
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: packages/kite-player
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Load tool versions
+        working-directory: .
+        run: make -s ci-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: packages/kite-player/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npm exec -- playwright install --with-deps chromium
+      - run: npm run package:check
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: kite-player-package-${{ github.run_attempt }}
+          path: |
+            packages/kite-player/artifacts/kite-player.tgz
+            packages/kite-player/artifacts/manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+  proto:
+    name: Protocol
+    needs: plan
+    if: fromJSON(needs.plan.outputs.tasks).proto
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -134,56 +141,32 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-      - name: 判断依赖是否变化
-        id: deps
-        env:
-          EVENT: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref }}
-        run: |
-          if [ "${EVENT}" != "pull_request" ]; then
-            echo "非 PR 事件,全量扫描交给 scheduled.yml 定时任务"
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          elif git diff --quiet "origin/${BASE_REF}...HEAD" -- go.mod go.sum Makefile scripts/govulncheck-gate.sh .github/workflows/ci.yml .github/workflows/scheduled.yml .github/actions/setup/action.yml; then
-            echo "go.mod / go.sum 未变化,跳过(定时任务会全量扫描)"
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Install govulncheck
-        if: steps.deps.outputs.changed == 'true'
-        run: go install golang.org/x/vuln/cmd/"govulncheck@${GOVULNCHECK_VERSION}"
-      - name: govulncheck 门禁
-        if: steps.deps.outputs.changed == 'true'
-        run: make vuln
+      - uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3 # v1
+        with:
+          setup_only: true
+          version: ${{ env.BUF_VERSION }}
+      - run: make proto-lint
+      - name: Check breaking changes against main
+        if: needs.plan.outputs.pr_number != ''
+        run: make proto-breaking
+      - run: make verify-gen
 
-  # 根 Dockerfile 的构建与运行验证；发布 Dockerfile 在 Release Check 用 snapshot 二进制独立构建冒烟。
-  docker:
-    name: Docker Build
+  go-interop:
+    name: Contract Go Consumer
+    needs: plan
+    if: fromJSON(needs.plan.outputs.tasks).go-interop
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      actions: write   # buildx type=gha 缓存读写
-      contents: read
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
-        with:
-          context: .
-          push: false
-          load: true
-          tags: kite-server:ci
-          cache-from: type=gha,scope=kite-server
-          # 仅主干 push 写缓存:PR 分支命中率低,不写
-          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=kite-server' || '' }}
-      - name: 镜像冒烟
-        run: scripts/docker-smoke.sh kite-server:ci
+      - uses: ./.github/actions/setup
+      # Consume the public BSR-generated SDK, not locally generated substitutes.
+      - run: make interop-go
 
-  # Rust 互操作冒烟:服务是给 Rust 等其它语言的项目用的,这里证明「Rust 真的能用」——
-  # 用 proto 生成 tonic 客户端,对真实运行的 kite-server 验证鉴权与 ErrorInfo 错误契约,
-  # 并编译 / 运行文档里的 Rust 示例。不访问上游网易云。
   rust-interop:
-    name: Rust Interop
+    name: Contract Rust Consumer
+    needs: plan
+    if: fromJSON(needs.plan.outputs.tasks).rust-interop
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -193,10 +176,11 @@ jobs:
         with:
           setup_only: true
           version: ${{ env.BUF_VERSION }}
-      # rustup 1.28+ 不再自动安装 rust-toolchain.toml 指定的工具链,需显式安装
-      - name: 安装固定的 Rust 工具链
+      - name: Install pinned Rust toolchain
         working-directory: interop/rust
-        run: rustup toolchain install
+        run: |
+          toolchain=$(python3 -c 'import tomllib; print(tomllib.load(open("rust-toolchain.toml", "rb"))["toolchain"]["channel"])')
+          rustup toolchain install "$toolchain" --profile minimal
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
@@ -205,47 +189,37 @@ jobs:
             interop/rust/target
           key: rust-interop-${{ runner.os }}-${{ hashFiles('interop/rust/Cargo.lock', 'interop/rust/rust-toolchain.toml') }}
           restore-keys: rust-interop-${{ runner.os }}-
+      # Generate a tonic client and run the documented Rust examples against server.
       - run: make interop-rust
 
-  # Go 互操作冒烟:用 BSR 上生成的 SDK(接入方的真实路径)对真实运行的 kite-server
-  # 编译 / 运行 docs/integration.md 的 Go 示例。不访问上游网易云。
-  go-interop:
-    name: Go Interop
+  go-package:
+    name: Go Artifacts and Images
+    needs: plan
+    if: fromJSON(needs.plan.outputs.tasks).go-package
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: ./.github/actions/setup
-      - run: make interop-go
-
-  # 网页播放器 packages/kite-player(npm 包 @violetjs/kite-player):类型检查 + 测试 + 构建。
-  # 依赖由 package-lock.json 锁定,Node 大版本取自 Makefile。发布见 npm.yml。
-  player:
-    name: Player
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Load tool versions from Makefile
-        run: make -s ci-env >> "$GITHUB_ENV"
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: packages/kite-player/package-lock.json
-      - run: make player-check
-
-  # 发布配置的合并前校验:goreleaser 配置错误、跨平台构建失败原本要到打 tag 才暴露。
-  # snapshot 不发布/签名，但随后以其真实二进制构建 Dockerfile.release 并运行安全冒烟。
-  release-check:
-    name: Release Check
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
+    permissions:
+      actions: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 0   # goreleaser 需要完整历史与 tag
+          fetch-depth: 0
       - uses: ./.github/actions/setup
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - name: Build development image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          push: false
+          load: true
+          tags: kite-server:ci
+          cache-from: type=gha,scope=kite-server
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=kite-server' || '' }}
+      - name: Smoke development image
+        run: scripts/docker-smoke.sh kite-server:ci
+      - name: Select Go-only snapshot tags
+        run: python3 scripts/go-release-tags.py >> "$GITHUB_ENV"
       - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7
         with:
           distribution: goreleaser
@@ -256,56 +230,71 @@ jobs:
           distribution: goreleaser
           version: ${{ env.GORELEASER_VERSION }}
           args: release --snapshot --clean --skip=docker,sign,sbom,publish
-      - name: 发布镜像构建与真实冒烟
+      - name: Build and smoke release image from snapshot binaries
         run: scripts/release-image-smoke.sh
 
-  # 标题保证 Squash 路径可用于版本推导；原子 commit 检查保证 Merge/Rebase 路径同样可靠。
-  # 不强制普通业务 PR 采用某一种合并策略。
-  pr-title:
-    name: PR Title
-    if: github.event_name == 'pull_request'
+  security:
+    name: Dependency Security
+    needs: plan
+    if: fromJSON(needs.plan.outputs.tasks).security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Load tool versions
+        run: make -s ci-env >> "$GITHUB_ENV"
+      - uses: ./.github/actions/setup
+        if: ${{ !cancelled() && contains(needs.plan.outputs.security_modules, 'go') }}
+      - name: Install govulncheck
+        if: ${{ !cancelled() && contains(needs.plan.outputs.security_modules, 'go') }}
+        run: go install golang.org/x/vuln/cmd/"govulncheck@${GOVULNCHECK_VERSION}"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        if: ${{ !cancelled() && contains(needs.plan.outputs.security_modules, 'player') }}
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pinned Rust scanner
+        if: ${{ !cancelled() && contains(needs.plan.outputs.security_modules, 'rust') }}
+        working-directory: interop/rust
+        run: |
+          toolchain=$(python3 -c 'import tomllib; print(tomllib.load(open("rust-toolchain.toml", "rb"))["toolchain"]["channel"])')
+          rustup toolchain install "$toolchain" --profile minimal
+          cargo install cargo-audit --locked --version "$CARGO_AUDIT_VERSION"
+      - name: Scan all selected dependency scopes
+        if: ${{ !cancelled() }}
+        env:
+          MODULES: ${{ needs.plan.outputs.security_modules }}
+        run: |
+          read -r -a modules <<< "$MODULES"
+          scripts/dependency-security.sh "${modules[@]}"
+
+  metadata:
+    name: PR Metadata
+    needs: plan
+    if: fromJSON(needs.plan.outputs.tasks).metadata
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          # 与 CONTRIBUTING.md 的 type 列表一致
-          types: |
-            feat
-            fix
-            perf
-            refactor
-            docs
-            style
-            test
-            chore
-            build
-            ci
-            revert
-            hotfix
-          requireScope: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: 校验 Merge/Rebase 的原子提交
+      - name: Validate title, release identity and atomic commits
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ needs.plan.outputs.pr_number }}
         run: scripts/pr-commits.sh
 
-  # 唯一门禁:ruleset required check 与发布流程都只认它。
-  # 所有必要 job 必须 success；只有非 PR 事件的 pr-title 允许 skipped。
   ci-ok:
     name: CI OK
     if: always()
-    needs: [hygiene, lint, test, cross-build, proto, vuln, docker, rust-interop, go-interop, player, release-check, pr-title]
+    needs: [plan, control, go-quality, go-test, windows-vet, player, proto, go-interop, rust-interop, go-package, security, metadata]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: 汇总各 job 结果
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/ci-python
+      - name: Independently verify plan and every job result
         env:
+          GH_TOKEN: ${{ github.token }}
           NEEDS: ${{ toJSON(needs) }}
-          EVENT: ${{ github.event_name }}
-        run: scripts/ci-results.sh "$EVENT" <<<"$NEEDS"
+        run: scripts/ci-results.sh <<< "$NEEDS"

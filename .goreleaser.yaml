@@ -2,6 +2,12 @@ version: 2
 
 project_name: kite
 
+# Defense for git describe; OSS HEAD tag filtering is literal, so callers must
+# also export the current/previous values from scripts/go-release-tags.py.
+git:
+  ignore_tags:
+    - "player-*"
+
 builds:
   # ---- CLI:跨平台二进制(linux/darwin/windows × amd64/arm64)----
   - id: cli

@@ -7,6 +7,7 @@ All notable changes to `@violetjs/kite-player` are documented here. Versions fol
 ### Build and release
 
 - Validate a single packed tarball in an isolated consumer, covering TypeScript declarations, ESM, React SSR, bundling and Chromium interactions.
+- Publish the verified main-CI tarball through an independent player release PR and tag, without rebuilding during publication.
 - Upgrade Vitest, tsup and esbuild to remove the fixable vulnerabilities reported by the dependency audit.
 
 ## 0.1.0

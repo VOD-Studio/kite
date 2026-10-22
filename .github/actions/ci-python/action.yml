@@ -1,0 +1,14 @@
+name: CI Python
+description: Install the pinned workflow parser without modifying system Python
+runs:
+  using: composite
+  steps:
+    - name: Load tool versions
+      shell: bash
+      run: make -s ci-env >> "$GITHUB_ENV"
+    - name: Install isolated workflow parser
+      shell: bash
+      run: |
+        python3 -m venv "$RUNNER_TEMP/kite-ci-python"
+        "$RUNNER_TEMP/kite-ci-python/bin/python" -m pip install --disable-pip-version-check --only-binary=:all: "PyYAML==$PYYAML_VERSION"
+        echo "$RUNNER_TEMP/kite-ci-python/bin" >> "$GITHUB_PATH"

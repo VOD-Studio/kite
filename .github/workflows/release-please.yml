@@ -22,10 +22,10 @@ jobs:
       pull-requests: write
       actions: write
     outputs:
-      release_created: ${{ steps.rp.outputs.release_created }}
-      tag_name: ${{ steps.rp.outputs.tag_name }}
+      go_tag: ${{ steps.route.outputs.go_tag }}
+      player_tag: ${{ steps.route.outputs.player_tag }}
     steps:
-      - id: rp
+      - name: Update release PRs and draft releases
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         with:
           target-branch: main
@@ -34,15 +34,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          ref: ${{ github.sha }}
       - name: Ensure trusted release PR CI
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: scripts/release-pr-ci.sh
+      # release-please reads live main and can create B's draft during queued run A.
+      # Only B's own run may publish B, even when its action created no new release.
+      - name: Route releases owned by this exact run source
+        id: route
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release-route.py
 
   release:
     needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    if: needs.release-please.outputs.go_tag != ''
     permissions:
       contents: write
       packages: write
@@ -50,32 +58,43 @@ jobs:
       actions: read
     uses: ./.github/workflows/release.yml
     with:
-      tag: ${{ needs.release-please.outputs.tag_name }}
+      tag: ${{ needs.release-please.outputs.go_tag }}
 
   # Recovery: dispatch BSR or Deploy on main with the already-public tag.
   bsr:
     needs: [release-please, release]
-    if: needs.release-please.outputs.release_created == 'true'
+    if: needs.release-please.outputs.go_tag != ''
     permissions:
       contents: read
     uses: ./.github/workflows/bsr.yml
     with:
-      tag: ${{ needs.release-please.outputs.tag_name }}
+      tag: ${{ needs.release-please.outputs.go_tag }}
     secrets:
       BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
 
   deploy:
     needs: [release-please, release]
-    if: needs.release-please.outputs.release_created == 'true'
+    if: needs.release-please.outputs.go_tag != ''
     permissions:
       contents: read
       packages: read
     uses: ./.github/workflows/deploy.yml
     with:
-      tag: ${{ needs.release-please.outputs.tag_name }}
+      tag: ${{ needs.release-please.outputs.go_tag }}
     # 即使仅存在于 environment,复用工作流也要求调用方逐项传递同名 secret。
     secrets:
       KITE_PRODUCTION_SSH_KEY: ${{ secrets.KITE_PRODUCTION_SSH_KEY }}
       KITE_PRODUCTION_KNOWN_HOSTS: ${{ secrets.KITE_PRODUCTION_KNOWN_HOSTS }}
       KITE_PRODUCTION_HOST: ${{ secrets.KITE_PRODUCTION_HOST }}
       KITE_PRODUCTION_PORT: ${{ secrets.KITE_PRODUCTION_PORT }}
+
+  player:
+    needs: release-please
+    if: needs.release-please.outputs.player_tag != ''
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+    uses: ./.github/workflows/npm.yml
+    with:
+      tag: ${{ needs.release-please.outputs.player_tag }}

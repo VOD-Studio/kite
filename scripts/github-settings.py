@@ -39,21 +39,29 @@ def desired_main(existing):
             checks.extend(rule["parameters"]["required_status_checks"])
     checks = [check for check in checks if check["context"] != "CI OK"]
     checks.append({"context": "CI OK", "integration_id": 15368})
-    # 保留未知/人工追加的规则；线性历史会禁止用户选择普通 merge,因此显式移除。
-    replaced = {"pull_request", "required_status_checks", "required_linear_history"}
+    # Keep manual protection. Conflicting linear history/extra required checks are
+    # reported before apply; never silently delete administrator policy.
+    replaced = {"pull_request", "required_status_checks"}
     result = [rule for rule in rules if rule["type"] not in replaced]
     for kind in ("deletion", "non_fast_forward"):
         if not any(rule["type"] == kind for rule in result):
             result.append({"type": kind})
+    pull_request = {
+        "dismiss_stale_reviews_on_push": True, "require_code_owner_review": False,
+        "require_last_push_approval": False, "required_approving_review_count": 0,
+        "required_review_thread_resolution": True,
+    }
+    strict_checks = False
+    for rule in rules:
+        if rule["type"] == "pull_request":
+            pull_request.update(rule.get("parameters", {}))
+        if rule["type"] == "required_status_checks":
+            strict_checks = rule.get("parameters", {}).get("strict_required_status_checks_policy", False)
     result += [
-        {"type": "pull_request", "parameters": {
-            "dismiss_stale_reviews_on_push": True, "require_code_owner_review": False,
-            "require_last_push_approval": False, "required_approving_review_count": 0,
-            "required_review_thread_resolution": True,
-        }},
+        {"type": "pull_request", "parameters": pull_request},
         {"type": "required_status_checks", "parameters": {
             "do_not_enforce_on_create": False, "required_status_checks": checks,
-            "strict_required_status_checks_policy": False,
+            "strict_required_status_checks_policy": strict_checks,
         }},
     ]
     return {"name": "Protect main", "target": "branch", "enforcement": "active", "bypass_actors": [],
@@ -65,8 +73,10 @@ def desired_tags(existing):
     for kind in ("deletion", "update"):
         if not any(rule["type"] == kind for rule in rules):
             rules.append({"type": kind})
+    includes = [] if existing is None else existing.get("conditions", {}).get("ref_name", {}).get("include", [])
+    includes = list(dict.fromkeys(includes + ["refs/tags/v*", "refs/tags/player-v*"]))
     return {"name": "Protect release tags", "target": "tag", "enforcement": "active", "bypass_actors": [],
-            "conditions": {"ref_name": {"include": ["refs/tags/v*"], "exclude": []}}, "rules": rules}
+            "conditions": {"ref_name": {"include": includes, "exclude": []}}, "rules": rules}
 
 
 def put_ruleset(existing, desired):
@@ -82,18 +92,39 @@ def inspect():
     listed = api(f"{ROOT}/rulesets?includes_parents=false")
     main = find_ruleset("Protect main", listed)
     tags = find_ruleset("Protect release tags", listed)
-    env = api(f"{ROOT}/environments/production", missing_ok=True)
+    environments = {name: api(f"{ROOT}/environments/{name}", missing_ok=True) for name in ("production", "npm")}
     policy = api(f"{ROOT}/actions/permissions")
     workflow = api(f"{ROOT}/actions/permissions/workflow")
-    return repo, main, tags, env, policy, workflow
+    return repo, main, tags, environments, policy, workflow
+
+
+def conflicts(state):
+    _, main, tags, environments, _, _ = state
+    problems = []
+    if main is not None:
+        for rule in main["rules"]:
+            if rule["type"] == "required_linear_history":
+                problems.append("Protect main 的人工线性历史规则禁止普通 merge")
+            if rule["type"] == "required_status_checks":
+                extra = [check["context"] for check in rule["parameters"]["required_status_checks"] if check["context"] != "CI OK"]
+                if extra:
+                    problems.append(f"Protect main 有额外必需检查 {extra};唯一门禁应为 CI OK")
+        if main.get("conditions") != {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}}:
+            problems.append("Protect main 的人工分支范围与主干契约冲突")
+    for ruleset in (main, tags):
+        if ruleset and (ruleset.get("bypass_actors") or ruleset.get("conditions", {}).get("ref_name", {}).get("exclude")):
+            problems.append(f"{ruleset['name']} 存在人工 bypass/exclude;不能自动覆盖")
+    for name, environment in environments.items():
+        if environment is not None and any(rule["type"] != "branch_policy" for rule in environment.get("protection_rules", [])):
+            problems.append(f"{name} 存在人工审批/等待/自定义保护规则;不能自动覆盖")
+    return problems
 
 
 def configure(state):
-    _, main, tags, environment, policy, workflow = state
-    if environment is not None and any(
-        rule["type"] in ("required_reviewers", "wait_timer") for rule in environment.get("protection_rules", [])
-    ):
-        raise RuntimeError("production 仍有人工审批/等待规则;请管理员先审核处理,未应用任何配置")
+    _, main, tags, environments, policy, workflow = state
+    problems = conflicts(state)
+    if problems:
+        raise RuntimeError("; ".join(problems) + ";请管理员审核处理,未应用任何配置")
     api(ROOT, "PATCH", {"allow_merge_commit": True, "allow_squash_merge": True, "allow_rebase_merge": True,
                        "allow_auto_merge": False, "squash_merge_commit_title": "PR_TITLE", "squash_merge_commit_message": "COMMIT_MESSAGES"})
     put_ruleset(main, desired_main(main))
@@ -104,18 +135,19 @@ def configure(state):
         # GitHub 此开关也影响机器人创建 release PR,保留现有设置。
         "can_approve_pull_request_reviews": workflow["can_approve_pull_request_reviews"],
     })
-    api(f"{ROOT}/environments/production", "PUT", {"deployment_branch_policy": {
-        "protected_branches": False, "custom_branch_policies": True,
-    }})
-    policies = api(f"{ROOT}/environments/production/deployment-branch-policies")["branch_policies"]
-    found_main = False
-    for item in policies:
-        if item["name"] == "main" and item.get("type", "branch") == "branch":
-            found_main = True
-        else:
-            api(f"{ROOT}/environments/production/deployment-branch-policies/{item['id']}", "DELETE")
-    if not found_main:
-        api(f"{ROOT}/environments/production/deployment-branch-policies", "POST", {"name": "main", "type": "branch"})
+    for name in environments:
+        api(f"{ROOT}/environments/{name}", "PUT", {"deployment_branch_policy": {
+            "protected_branches": False, "custom_branch_policies": True,
+        }})
+        policies = api(f"{ROOT}/environments/{name}/deployment-branch-policies")["branch_policies"]
+        found_main = False
+        for item in policies:
+            if item["name"] == "main" and item.get("type", "branch") == "branch":
+                found_main = True
+            else:
+                api(f"{ROOT}/environments/{name}/deployment-branch-policies/{item['id']}", "DELETE")
+        if not found_main:
+            api(f"{ROOT}/environments/{name}/deployment-branch-policies", "POST", {"name": "main", "type": "branch"})
 
 
 def rules_match(actual, expected):
@@ -139,8 +171,8 @@ def rules_match(actual, expected):
 
 
 def audit(state):
-    repo, main, tags, env, policy, workflow = state
-    problems = []
+    repo, main, tags, environments, policy, workflow = state
+    problems = conflicts(state)
     if not all(repo.get(key) for key in ("allow_merge_commit", "allow_squash_merge", "allow_rebase_merge")) or repo.get("allow_auto_merge"):
         problems.append("合并设置应保留三种方式并关闭自动合并")
     if main is None:
@@ -165,29 +197,30 @@ def audit(state):
         problems.append("Actions 必须启用并要求第三方 Action 固定完整 SHA")
     if workflow.get("default_workflow_permissions") != "read":
         problems.append("GITHUB_TOKEN 默认权限必须为 read")
-    if env is None:
-        problems.append("缺少 production 环境")
-    else:
-        if env.get("deployment_branch_policy") != {"protected_branches": False, "custom_branch_policies": True}:
-            problems.append("production 必须使用明确分支白名单")
+    for name, environment in environments.items():
+        if environment is None:
+            problems.append(f"缺少 {name} 环境")
+            continue
+        if environment.get("deployment_branch_policy") != {"protected_branches": False, "custom_branch_policies": True}:
+            problems.append(f"{name} 必须使用明确分支白名单")
         else:
-            policies = api(f"{ROOT}/environments/production/deployment-branch-policies")["branch_policies"]
+            policies = api(f"{ROOT}/environments/{name}/deployment-branch-policies")["branch_policies"]
             if [(item["name"], item.get("type", "branch")) for item in policies] != [("main", "branch")]:
-                problems.append("production 只允许 main 分支,不允许 tag 或任意分支")
-        if any(rule["type"] in ("required_reviewers", "wait_timer") for rule in env.get("protection_rules", [])):
-            problems.append("production 存在额外人工审批/等待规则,与 release PR 合并后自动上线的契约不符;请管理员审核后调整")
-        names = {item["name"] for item in api(f"{ROOT}/environments/production/secrets?per_page=100")["secrets"]}
-        for name in sorted(DEPLOY_SECRETS - names):
-            problems.append(f"production 环境缺少 {name};管理员需重新设置,脚本不能读取或转移原 secret 值")
-    forbidden = DEPLOY_SECRETS | {"KITE_PRODUCTION_PORT"} | LEGACY_DEPLOY_SECRETS
+                problems.append(f"{name} 只允许 main 分支,不允许 tag 或任意分支")
+        required_secrets = DEPLOY_SECRETS if name == "production" else {"NPM_TOKEN"}
+        names = {item["name"] for item in api(f"{ROOT}/environments/{name}/secrets?per_page=100")["secrets"]}
+        for secret in sorted(required_secrets - names):
+            problems.append(f"{name} 环境缺少 {secret};管理员需重新设置,脚本不能读取或转移原 secret 值")
+    forbidden = DEPLOY_SECRETS | {"KITE_PRODUCTION_PORT", "NPM_TOKEN"} | LEGACY_DEPLOY_SECRETS
     for scope, endpoint in (("仓库", "secrets"), ("组织", "organization-secrets")):
         names = {item["name"] for item in api(f"{ROOT}/actions/{endpoint}?per_page=100")["secrets"]}
         for name in sorted(names & forbidden):
-            problems.append(f"{scope}级存在 {name};部署凭据只能配置到 production,迁移验证后由管理员移除旧项,避免同名 secret 回退")
+            environment = "npm" if name == "NPM_TOKEN" else "production"
+            problems.append(f"{scope}级存在 {name};凭据只能配置到 {environment},迁移验证后由管理员移除旧项,避免同名 secret 回退")
     for problem in problems:
         print(f"未满足: {problem}")
     if not problems:
-        print("ok: 合并选择、主干门禁、版本 tag、Action 固定及 production 凭据边界")
+        print("ok: 合并选择、唯一 CI OK、Go/player tag、Action 固定及 production/npm main 边界")
     return 1 if problems else 0
 
 

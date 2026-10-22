@@ -22,7 +22,48 @@ updates:
       semver-minor-days: 7  # minor 至少晾 7 天,避开刚发布的不稳定版本
     open-pull-requests-limit: 5
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "build(deps)"
+
+  # 独立 Go 互操作 module 不由根 go.mod 覆盖。
+  - package-ecosystem: gomod
+    directory: /interop/go
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      go-interop-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      go-interop-minor:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+        patterns: ["*"]
+    cooldown:
+      default-days: 3
+      semver-minor-days: 7
+    commit-message:
+      prefix: "ci(deps)"
+
+  # npm 包独立发布，开发/打包依赖也进入审计。
+  - package-ecosystem: npm
+    directory: /packages/kite-player
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      player-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      player-minor:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+        patterns: ["*"]
+    cooldown:
+      default-days: 3
+      semver-minor-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(deps)"
 
   # GitHub Actions(actions 自身有供应链风险,需监控)
   - package-ecosystem: github-actions
@@ -34,7 +75,7 @@ updates:
       actions:
         patterns: ["*"]
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "ci(deps)"
 
   # Dockerfile 基础镜像(golang / distroless),避免 tag 漂移或停更后才被发现
   - package-ecosystem: docker
@@ -43,7 +84,7 @@ updates:
       interval: weekly
       day: monday
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "build(deps)"
 
   # Rust 互操作冒烟的依赖(interop/rust,仅测试用,不是发布产物)
   - package-ecosystem: cargo
@@ -58,4 +99,4 @@ updates:
       default-days: 3
       semver-minor-days: 7
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "ci(deps)"
