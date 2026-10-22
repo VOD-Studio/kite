@@ -27,6 +27,8 @@ kite-server 以 gRPC(默认 `:3722`)和 REST(grpc-gateway,默认 `:3721`)提供�
 
 `SongService/GetSongURL` 是**可选登录**:不带 cookie 时只有免费歌,VIP / 无版权的歌 `url` 为空;带 VIP 账号的 cookie 时按该账号权益返回。直链几十分钟后过期,**不要存库**:在用户点播放时再取(例如后端 302 跳转到直链)。
 
+账号对该歌无权益(未购数字专辑、版权受限等)时,上游可能只返回约 30 秒的**试听片段**:`url.trial` 为 `true` 并带 `trialStartMs` / `trialEndMs`(毫秒),`url` 只覆盖试听区间;上游未提供试听信息时 `trial` 为 `false` 且两个区间字段保持 0。不要把 `url` 非空当作可完整播放,按 `trial` 分支。响应同时回传上游逐条的 `code` 与 `fee`。
+
 ## 账号歌单
 
 `UserService/UserPlaylist`、`PlaylistService/GetPlaylist`、`PlaylistService/AllTracks` 也是**可选登录**:
