@@ -40,7 +40,7 @@ const (
 	ReasonDeadlineExceeded        = "DEADLINE_EXCEEDED"         // 请求超时
 	ReasonServerAuthFailed        = "SERVER_AUTH_FAILED"        // 缺少或错误的服务访问令牌(与上游登录无关)
 	ReasonServerRateLimited       = "SERVER_RATE_LIMITED"       // 被本服务限流(与上游限流 RATE_LIMITED 无关)
-	ReasonInvalidCredentials      = "INVALID_CREDENTIALS"       // 账号 ID 与 Cookie 冲突或账号选择不唯一
+	ReasonInvalidCredentials      = "INVALID_CREDENTIALS"       //nolint:gosec // 公开错误码,不是凭据;账号 ID 与 Cookie 冲突或账号选择不唯一
 	ReasonAccountsDisabled        = "ACCOUNTS_DISABLED"         // 未配置托管账号存储
 	ReasonAccountNotFound         = "ACCOUNT_NOT_FOUND"         // 托管账号不存在或已退出
 	ReasonAccountForbidden        = "ACCOUNT_FORBIDDEN"         // 账号属于其他调用方
