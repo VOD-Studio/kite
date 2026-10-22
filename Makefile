@@ -136,8 +136,10 @@ docs:
 
 ## upstream-smoke: 真实上游冒烟(对网易云真实接口逐个调用服务端的 service 方法,断言响应非空)
 ## 手动运行,不进 make check / CI:外部依赖会让门禁「没改代码也变红」。改了 endpoint 或解码器后建议跑一次。
+## djradio 第一阶段尚未 proto 建模,冒烟登记在 endpoint 包(#33);其余域走 internal/service。
 upstream-smoke:
 	go test -tags upstream ./internal/service/ -run TestUpstreamSmoke -count=1 -v
+	go test -tags upstream ./internal/netease/endpoint/djradio/ -run TestUpstreamSmokeDjRadio -count=1 -v
 
 ## interop-rust: Rust 客户端互操作冒烟(buf 编 proto → 生成 tonic 客户端 → 对真实 kite-server 调用)
 ## 需要 cargo(工具链由 interop/rust/rust-toolchain.toml 固定);较慢,不在 make check 里。
