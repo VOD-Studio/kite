@@ -343,7 +343,18 @@ type SongURL struct {
 	// 文件大小（字节）。
 	Size int64 `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`
 	// 文件格式（mp3 / flac 等）。
-	Format        string `protobuf:"bytes,5,opt,name=format,proto3" json:"format,omitempty"`
+	Format string `protobuf:"bytes,5,opt,name=format,proto3" json:"format,omitempty"`
+	// 是否试听片段：账号对该歌无权益时上游只给约 30 秒的试听链接
+	// （随 freeTrialInfo 返回），trial=true 时 url 仅覆盖试听区间。
+	Trial bool `protobuf:"varint,6,opt,name=trial,proto3" json:"trial,omitempty"`
+	// 试听开始（毫秒）。上游未提供试听信息时保持 0，以 trial 区分。
+	TrialStartMs int64 `protobuf:"varint,7,opt,name=trial_start_ms,json=trialStartMs,proto3" json:"trial_start_ms,omitempty"`
+	// 试听结束（毫秒）。上游未提供试听信息时保持 0，以 trial 区分。
+	TrialEndMs int64 `protobuf:"varint,8,opt,name=trial_end_ms,json=trialEndMs,proto3" json:"trial_end_ms,omitempty"`
+	// 上游逐条状态码（200 正常）。
+	Code int32 `protobuf:"varint,9,opt,name=code,proto3" json:"code,omitempty"`
+	// 上游逐条付费类型（0 免费、1 VIP、4 数字专辑、8 试听片段，同 Song.fee）。
+	Fee           int32 `protobuf:"varint,10,opt,name=fee,proto3" json:"fee,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -411,6 +422,41 @@ func (x *SongURL) GetFormat() string {
 		return x.Format
 	}
 	return ""
+}
+
+func (x *SongURL) GetTrial() bool {
+	if x != nil {
+		return x.Trial
+	}
+	return false
+}
+
+func (x *SongURL) GetTrialStartMs() int64 {
+	if x != nil {
+		return x.TrialStartMs
+	}
+	return 0
+}
+
+func (x *SongURL) GetTrialEndMs() int64 {
+	if x != nil {
+		return x.TrialEndMs
+	}
+	return 0
+}
+
+func (x *SongURL) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *SongURL) GetFee() int32 {
+	if x != nil {
+		return x.Fee
+	}
+	return 0
 }
 
 // 歌词信息。
@@ -2386,13 +2432,20 @@ const file_netease_music_v1_song_proto_rawDesc = "" +
 	"\x05album\x18\x04 \x01(\v2\x17.netease.music.v1.AlbumR\x05album\x12\x1f\n" +
 	"\vduration_ms\x18\x05 \x01(\x03R\n" +
 	"durationMs\x12\x10\n" +
-	"\x03fee\x18\x06 \x01(\x05R\x03fee\"q\n" +
+	"\x03fee\x18\x06 \x01(\x05R\x03fee\"\xf5\x01\n" +
 	"\aSongURL\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12\x18\n" +
 	"\abitrate\x18\x03 \x01(\x03R\abitrate\x12\x12\n" +
 	"\x04size\x18\x04 \x01(\x03R\x04size\x12\x16\n" +
-	"\x06format\x18\x05 \x01(\tR\x06format\"W\n" +
+	"\x06format\x18\x05 \x01(\tR\x06format\x12\x14\n" +
+	"\x05trial\x18\x06 \x01(\bR\x05trial\x12$\n" +
+	"\x0etrial_start_ms\x18\a \x01(\x03R\ftrialStartMs\x12 \n" +
+	"\ftrial_end_ms\x18\b \x01(\x03R\n" +
+	"trialEndMs\x12\x12\n" +
+	"\x04code\x18\t \x01(\x05R\x04code\x12\x10\n" +
+	"\x03fee\x18\n" +
+	" \x01(\x05R\x03fee\"W\n" +
 	"\x05Lyric\x12\x10\n" +
 	"\x03lrc\x18\x01 \x01(\tR\x03lrc\x12\x1e\n" +
 	"\n" +

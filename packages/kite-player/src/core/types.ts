@@ -24,6 +24,11 @@ export interface Track {
   access: Access;
   /** 按服务端网易云账号的登录态推断能否播放,最终以播放链接为准。 */
   playable: boolean;
+  /**
+   * 仅试听:stream 只是试听片段(服务账号对该歌无权益时上游只给约 30 秒),仍可正常播放。
+   * 由数据来源填充;kite-server 公开模式如何透传试听信息待 #103 定案(公开协议字段只增不改,缺省视为完整版)。
+   */
+  trial?: boolean;
   /** 播放地址,直接作为 <audio src>。 */
   stream: string;
   /** 歌词接口地址。 */

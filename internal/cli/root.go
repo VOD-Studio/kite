@@ -24,6 +24,7 @@ import (
 	"github.com/VOD-Studio/kite/internal/cli/recommend"
 	"github.com/VOD-Studio/kite/internal/cli/search"
 	"github.com/VOD-Studio/kite/internal/cli/song"
+	"github.com/VOD-Studio/kite/internal/cli/toplist"
 	"github.com/VOD-Studio/kite/internal/cli/user"
 	"github.com/VOD-Studio/kite/internal/cli/version"
 	"github.com/VOD-Studio/kite/internal/localstate"
@@ -165,8 +166,9 @@ func NewRootCommand() *cobra.Command {
 	for _, c := range []*cobra.Command{
 		recommend.NewCommand(k),
 		fm.NewCommand(k),
-		recent.NewCommand(k), // #47 recent 归发现(读召回池,复听场景)
-		dj.NewCommand(k),     // #33 电台归发现(音频内容源)
+		recent.NewCommand(k),  // #47 recent 归发现(读召回池,复听场景)
+		toplist.NewCommand(k), // #29 排行榜归发现(榜单浏览场景)
+		dj.NewCommand(k),      // #33 电台归发现(音频内容源)
 	} {
 		c.GroupID = "discover"
 		root.AddCommand(c)

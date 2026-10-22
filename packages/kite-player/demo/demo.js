@@ -146,7 +146,7 @@
   }
 
   const tracks = {};
-  function track(id, title, artist, album, art, minutes, lyricSet, access) {
+  function track(id, title, artist, album, art, minutes, lyricSet, access, trial) {
     const durationMs = Math.round(minutes * 60000);
     tracks[id] = {
       id,
@@ -155,7 +155,9 @@
       album: { id: album, name: album, cover: cover(art) },
       durationMs,
       access: access || "free",
-      playable: !access,
+      playable: trial || !access,
+      // 试听片段:上游只给约 30 秒,界面上标「仅试听」,仍可正常播放。
+      trial: !!trial,
       stream: `demo:${id}`,
       lyrics: `demo:${id}`,
       lyricsData: makeLyrics(lyricSets[lyricSet], durationMs),
@@ -175,6 +177,7 @@
         track("t4", "单车与夏天", "白日梦乐队", "单车与夏天", "bike", 3.4, "bike"),
         track("t7", "雨季来信", "林间", "晴朗的周三", "paper", 3.9, "paper", "vip"),
         track("t5", "夜灯", "慢鱼", "夜灯", "lamp", 4.3, "lamp"),
+        track("t9", "远方的信", "夏至", "星群", "night", 3.8, "paper", "vip", true),
         track("t8", "晴朗的周三", "林间", "晴朗的周三", "paper", 2.6, null),
         track("t6", "星群", "夏至", "星群", "night", 3.7, "paper", "paid"),
       ],
@@ -186,7 +189,7 @@
       tracks: [],
     },
   };
-  playlists.p2.tracks = ["t5", "t6", "t3", "t2", "t1"].map((id) => tracks[id]);
+  playlists.p2.tracks = ["t5", "t6", "t9", "t3", "t2", "t1"].map((id) => tracks[id]);
   for (const pl of Object.values(playlists)) pl.trackCount = pl.tracks.length;
 
   const strip = ({ lyricsData, ...t }) => t;
@@ -225,7 +228,8 @@
       this._src = value;
       this._base = 0;
       const t = tracks[String(value).replace(/^demo:/, "")];
-      this._duration = t ? t.durationMs / 1000 : NaN;
+      // 试听片段只有前 30 秒:进度条与自动切歌都按这个长度来,和真实上游的 freeTrialInfo 一致。
+      this._duration = t ? (t.trial ? 30 : t.durationMs / 1000) : NaN;
       setTimeout(() => ["loadedmetadata", "durationchange", "canplay"].forEach((e) => this._emit(e)), 20);
     }
     get duration() {

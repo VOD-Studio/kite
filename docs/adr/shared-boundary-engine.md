@@ -32,7 +32,10 @@
 
 **2026-10 更新:跨接口组合的触发条件已出现。** issue #88 / #89 要求「按 trackIds 分页取歌曲」「取全量用户歌单后再筛选、分页」,
 一次读取需要多次上游调用。按上面的约定新建 `internal/netease/compose` 承载,没有改造 `internal/service`
-(它仍是一行调用);组合里的每一步仍是 endpoint 声明、经 `engine.Execute` 执行,执行语义没有第二份。
+(它仍是一行调用);读取编排里的每一步仍是 endpoint 声明、经 `engine.Execute` 执行,执行语义没有第二份。
+
+扫码确认后补查账号资料也由 `compose` 编排。认证接口需要读取 `Set-Cookie`,沿用 `engine.RawDoWithCookieAndInput`;
+账号查询使用本次确认返回的新 cookie,完整会话才交给 gRPC adapter 返回。
 
 ## Consequences
 

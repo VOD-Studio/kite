@@ -172,6 +172,47 @@ describe("Player", () => {
     expect(audio.src).toBe(srcBefore);
   });
 
+  it("试听歌 playable=false 也照常播放:默认起点与切歌都不跳过", async () => {
+    const trial = track("5", { access: "vip", playable: false, trial: true });
+    const pl: Playlist = { ...playlist, tracks: [track("1"), trial, track("4")] };
+    const p = new Player({ audio: new FakeAudio(), source: fakeSource(pl), storageKey: false, mediaSession: false });
+    await p.playPlaylist("100"); // 默认从第一首能播的(含试听)开始
+    expect(p.state.current?.id).toBe("1");
+    p.next();
+    expect(p.state.current?.id).toBe("5"); // 不跳过试听歌
+    expect(p.state.error).toBeNull();
+    expect(p.state.playing).toBe(true); // 试听照常开播
+  });
+
+  it("随机模式把试听歌当候选", async () => {
+    const pl: Playlist = {
+      ...playlist,
+      tracks: [track("5", { access: "vip", playable: false, trial: true }), track("6", { access: "paid", playable: false, trial: true })],
+    };
+    const p = new Player({ audio: new FakeAudio(), source: fakeSource(pl), storageKey: false, mediaSession: false });
+    await p.playPlaylist("100");
+    p.setMode("shuffle");
+    for (let i = 0; i < 10; i++) {
+      p.next();
+      expect(p.state.current?.trial).toBe(true);
+      expect(p.state.playing).toBe(true);
+    }
+  });
+
+  it("快照恢复保留试听标记", async () => {
+    const trial = track("5", { access: "vip", playable: false, trial: true });
+    const pl: Playlist = { ...playlist, tracks: [trial, track("1")] };
+    const first = new Player({ audio: new FakeAudio(), source: fakeSource(pl), storageKey: "kite-trial", mediaSession: false });
+    await first.playPlaylist("100", 0);
+    first.pause();
+
+    const next = new Player({ audio: new FakeAudio(), source: fakeSource(pl), storageKey: "kite-trial", mediaSession: false });
+    expect(next.state.current?.id).toBe("5");
+    expect(next.state.current?.trial).toBe(true);
+    await next.play();
+    expect(next.state.playing).toBe(true);
+  });
+
   it("播放出错:重新取一次播放链接并回到原位置,再失败才报错", async () => {
     const { player, audio, source } = newPlayer();
     await player.playPlaylist("100", 0);

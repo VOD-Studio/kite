@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package netease.music.v1;
+
+option go_package = "github.com/VOD-Studio/kite/gen/go/netease/music/v1;mmpb";
+
+// 排行榜域(issue #29)。榜单即歌单:Toplist.id 可直接用于歌单接口
+// (PlaylistService/GetPlaylist 等)读取完整曲目。
+//
+// 第一阶段只有消息建模,ToplistService rpc 在第二阶段接入;endpoint 声明
+// (internal/netease/endpoint/toplist)与 CLI(kite toplist)已先用这些消息。
+
+// Toplist 是一个官方榜单。
+message Toplist {
+  // 榜单 ID(即歌单 ID)。
+  int64 id = 1;
+  // 榜单名(如「飙升榜」)。
+  string name = 2;
+  // 封面 URL。
+  string cover_url = 3;
+  // 更新周期(如「每天更新」)。
+  string update_frequency = 4;
+  // 榜单描述。
+  string description = 5;
+  // 播放数。
+  int64 play_count = 6;
+  // 歌曲总数。
+  int32 track_count = 7;
+  // 前三歌曲概要(仅榜单详情接口的四个主榜返回,列表接口为空)。
+  repeated ToplistPreviewTrack preview_tracks = 8;
+}
+
+// ToplistPreviewTrack 是榜单详情接口返回的前三歌曲概要。
+// 上游只给歌名与歌手名串两个字符串;歌手名串里的「/」是分隔符与艺名内容的
+// 混合(如「K/DA/英雄联盟」),不可拆分,保持原样。
+message ToplistPreviewTrack {
+  // 歌曲名。
+  string name = 1;
+  // 歌手名串(原样,不拆分)。
+  string artists = 2;
+}
+
+// Toplists 请求(/toplist)。
+message ToplistsRequest {}
+
+// Toplists 响应。
+message ToplistsResponse {
+  // 全部官方榜单。
+  repeated Toplist toplists = 1;
+}
+
+// ToplistDetail 请求(/toplist/detail)。
+message ToplistDetailRequest {}
+
+// ToplistDetail 响应。
+message ToplistDetailResponse {
+  // 全部官方榜单(四个主榜含前三歌曲概要)。
+  repeated Toplist toplists = 1;
+}

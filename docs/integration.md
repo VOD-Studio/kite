@@ -17,7 +17,7 @@ kite-server 以 gRPC(默认 `:3722`)和 REST(grpc-gateway,默认 `:3721`)提供�
 
 1. **访问令牌**:每个请求带 `authorization: Bearer <令牌>`(REST 用同名 `Authorization` 头)。令牌决定「谁能调用 kite」,错误时原因码为 `SERVER_AUTH_FAILED`。
 2. **网易云登录态**:需要以某个账号执行时,带 metadata `x-netease-cookie`(REST:`Grpc-Metadata-X-Netease-Cookie`)。cookie 由**接入方保存**,kite 不存储任何人的登录态。
-   - 登录:`AuthService/LoginQrcode` 拿二维码 `url`(自己画二维码)→ 约 2 秒轮询 `CheckQrcode`,`CONFIRMED` 时返回 `session.cookie`;`EXPIRED` 时重新取。
+   - 登录:`AuthService/LoginQrcode` 拿二维码 `url`(自己画二维码)→ 约 2 秒轮询 `CheckQrcode`;`CONFIRMED` 时返回包含 `user_id`、`cookie` 与账号资料的 `session`(REST 字段为 `userId`),接入方保存完整 `cookie`;`EXPIRED` 时重新取二维码。确认响应未附账号资料时,kite 使用本次登录的新 cookie 补查,不会沿用调用方的旧账号。上游缺少新凭据或返回无效账号资料时,返回 `UPSTREAM_INVALID_RESPONSE`,不会返回无凭据的 `CONFIRMED`。
    - 续期:定期调 `AuthService/RefreshLogin`,用返回的完整 cookie 替换旧值。
    - 退出:调 `AuthService/Logout`,**再删除自己保存的 cookie**(没带 cookie 时 Logout 也返回成功,不能据此判断已注销)。
    - 缺失或失效时原因码为 `LOGIN_REQUIRED`:提示用户重新登录。
@@ -26,6 +26,8 @@ kite-server 以 gRPC(默认 `:3722`)和 REST(grpc-gateway,默认 `:3721`)提供�
 ## 播放链接
 
 `SongService/GetSongURL` 是**可选登录**:不带 cookie 时只有免费歌,VIP / 无版权的歌 `url` 为空;带 VIP 账号的 cookie 时按该账号权益返回。直链几十分钟后过期,**不要存库**:在用户点播放时再取(例如后端 302 跳转到直链)。
+
+账号对该歌无权益(未购数字专辑、版权受限等)时,上游可能只返回约 30 秒的**试听片段**:`url.trial` 为 `true` 并带 `trialStartMs` / `trialEndMs`(毫秒),`url` 只覆盖试听区间;上游未提供试听信息时 `trial` 为 `false` 且两个区间字段保持 0。不要把 `url` 非空当作可完整播放,按 `trial` 分支。响应同时回传上游逐条的 `code` 与 `fee`。
 
 ## 账号歌单
 

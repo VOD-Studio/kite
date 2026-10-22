@@ -2440,7 +2440,7 @@
     },
     "/api/v1/songs/{songId}/url": {
       "get": {
-        "summary": "GetSongURL 获取歌曲播放直链。level 控制音质。\n可选登录:不带 cookie 按匿名取(VIP / 版权受限的歌 url 为空);\n经 metadata x-netease-cookie 带了 cookie 就按该账号的权益取。",
+        "summary": "GetSongURL 获取歌曲播放直链。level 控制音质。\n可选登录:不带 cookie 按匿名取(VIP / 版权受限的歌 url 为空);\n经 metadata x-netease-cookie 带了 cookie 就按该账号的权益取。\n账号无权益时可能只拿到试听片段:url 里的 trial 为 true 并带\ntrial_start_ms / trial_end_ms(上游未提供试听信息时 trial 为 false)。",
         "operationId": "SongService_GetSongURL",
         "responses": {
           "200": {
@@ -4593,6 +4593,30 @@
         "format": {
           "type": "string",
           "title": "文件格式（mp3 / flac 等）。"
+        },
+        "trial": {
+          "type": "boolean",
+          "title": "是否试听片段：账号对该歌无权益时上游只给约 30 秒的试听链接\n（随 freeTrialInfo 返回），trial=true 时 url 仅覆盖试听区间。"
+        },
+        "trialStartMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "试听开始（毫秒）。上游未提供试听信息时保持 0，以 trial 区分。"
+        },
+        "trialEndMs": {
+          "type": "string",
+          "format": "int64",
+          "title": "试听结束（毫秒）。上游未提供试听信息时保持 0，以 trial 区分。"
+        },
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "上游逐条状态码（200 正常）。"
+        },
+        "fee": {
+          "type": "integer",
+          "format": "int32",
+          "title": "上游逐条付费类型（0 免费、1 VIP、4 数字专辑、8 试听片段，同 Song.fee）。"
         }
       },
       "title": "播放 URL 信息。"

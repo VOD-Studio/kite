@@ -193,9 +193,17 @@
   border: 1px solid currentColor;
   color: var(--kite-accent);
 }
+.tg.trial {
+  border: 1px solid currentColor;
+  color: var(--kite-accent);
+}
 @supports (color: color-mix(in srgb, red 50%, blue)) {
   .tg.out {
     border-color: color-mix(in srgb, var(--kite-accent) 55%, transparent);
+  }
+  .tg.trial {
+    border-color: color-mix(in srgb, var(--kite-accent) 55%, transparent);
+    background: color-mix(in srgb, var(--kite-accent) 10%, transparent);
   }
 }
 .progress {
@@ -286,6 +294,9 @@
   font-size: 13.5px;
   font-weight: 400;
   color: var(--kite-muted);
+}
+.s .title .tg {
+  margin-left: 6px;
 }
 .s .sub {
   display: flex;

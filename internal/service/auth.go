@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/compose"
 	authendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/auth"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
 	"github.com/VOD-Studio/kite/internal/netease/model"
@@ -77,26 +78,13 @@ func (s *AuthServer) LoginQrcode(ctx context.Context, req *mmpb.LoginQrcodeReque
 
 // CheckQrcode 轮询二维码登录状态。
 func (s *AuthServer) CheckQrcode(ctx context.Context, req *mmpb.CheckQrcodeRequest) (*mmpb.CheckQrcodeResponse, error) {
-	raw, setCookie, err := s.eng.RawDoWithCookieAndInput(ctx, authendpoint.CheckQrcode, authendpoint.CheckQrcodeRequest(req))
+	resp, err := compose.CheckQrcode(ctx, s.eng, req)
 	if err != nil {
 		return nil, err
 	}
 
-	code, message, err := model.DecodeQrcodeStatus(raw)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &mmpb.CheckQrcodeResponse{Code: code, Message: message}
-
-	// code=803 登录成功，提取 cookie 存入 session 池。
-	if code == mmpb.QrcodeCode_QRCODE_CODE_CONFIRMED && setCookie != "" {
-		// 从登录响应体提取用户信息（CheckQrcode 的 803 响应也含 account 信息）。
-		if sess, err := model.DecodeLoginResponse(raw); err == nil && sess.UserId != 0 {
-			sess.Cookie = setCookie
-			resp.Session = sess
-			s.saveSession(ctx, sess.UserId, setCookie)
-		}
+	if sess := resp.GetSession(); sess != nil {
+		s.saveSession(ctx, sess.UserId, sess.Cookie)
 	}
 
 	return resp, nil

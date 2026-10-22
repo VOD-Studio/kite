@@ -50,6 +50,8 @@ type SongServiceClient interface {
 	// GetSongURL 获取歌曲播放直链。level 控制音质。
 	// 可选登录:不带 cookie 按匿名取(VIP / 版权受限的歌 url 为空);
 	// 经 metadata x-netease-cookie 带了 cookie 就按该账号的权益取。
+	// 账号无权益时可能只拿到试听片段:url 里的 trial 为 true 并带
+	// trial_start_ms / trial_end_ms(上游未提供试听信息时 trial 为 false)。
 	GetSongURL(ctx context.Context, in *GetSongURLRequest, opts ...grpc.CallOption) (*GetSongURLResponse, error)
 	// GetLyric 获取歌词（含原文、翻译、音译）。
 	GetLyric(ctx context.Context, in *GetLyricRequest, opts ...grpc.CallOption) (*GetLyricResponse, error)
@@ -261,6 +263,8 @@ type SongServiceServer interface {
 	// GetSongURL 获取歌曲播放直链。level 控制音质。
 	// 可选登录:不带 cookie 按匿名取(VIP / 版权受限的歌 url 为空);
 	// 经 metadata x-netease-cookie 带了 cookie 就按该账号的权益取。
+	// 账号无权益时可能只拿到试听片段:url 里的 trial 为 true 并带
+	// trial_start_ms / trial_end_ms(上游未提供试听信息时 trial 为 false)。
 	GetSongURL(context.Context, *GetSongURLRequest) (*GetSongURLResponse, error)
 	// GetLyric 获取歌词（含原文、翻译、音译）。
 	GetLyric(context.Context, *GetLyricRequest) (*GetLyricResponse, error)

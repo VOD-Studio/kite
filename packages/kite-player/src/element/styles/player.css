@@ -188,6 +188,14 @@
   padding: 0 4px;
   transition: opacity .2s;
 }
+.bar-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bar-line .bar-title {
+  min-width: 0;
+}
 .bar-title {
   font-size: 15px;
   line-height: 22px;
@@ -1103,6 +1111,16 @@
 }
 .rtag.paid {
   border: 1px solid currentColor;
+}
+.rtag.trial {
+  border: 1px solid currentColor;
+  color: var(--kite-accent);
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .rtag.trial {
+    border-color: color-mix(in srgb, var(--kite-accent) 55%, transparent);
+    background: color-mix(in srgb, var(--kite-accent) 10%, transparent);
+  }
 }
 .empty {
   padding: 40px 20px;

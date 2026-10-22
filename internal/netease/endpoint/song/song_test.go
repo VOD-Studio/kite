@@ -44,17 +44,50 @@ func TestURL_MapResponse_NoURL(t *testing.T) {
 	require.ErrorIs(t, err, merrors.ErrNotFound)
 }
 
-// TestURL_MapResponse 播放URL解析。
+// TestURL_MapResponse 播放URL解析(完整版:无 freeTrialInfo,trial 保持 false)。
 func TestURL_MapResponse(t *testing.T) {
 	t.Parallel()
 
-	fixture := `{"code":200,"data":[{"id":347230,"url":"http://m.mp3","br":320000,"size":5000000,"type":"mp3"}]}`
+	fixture := `{"code":200,"data":[{"id":347230,"url":"http://m.mp3","br":320000,"size":5000000,"type":"mp3","code":200,"fee":0,"freeTrialInfo":null}]}`
 
 	resp, err := URL.MapResponse(&mmpb.GetSongURLRequest{}, json.RawMessage(fixture))
 	require.NoError(t, err)
 	require.Equal(t, "http://m.mp3", resp.Url.Url)
 	require.Equal(t, int64(320000), resp.Url.Bitrate)
 	require.Equal(t, "mp3", resp.Url.Format)
+	require.False(t, resp.Url.Trial, "完整版无试听区间")
+	require.Zero(t, resp.Url.TrialStartMs)
+	require.Zero(t, resp.Url.TrialEndMs)
+	require.Equal(t, int32(200), resp.Url.Code)
+	require.Equal(t, int32(0), resp.Url.Fee)
+}
+
+// TestURL_MapResponse_Trial 账号无权益时上游给约 30 秒试听片段(freeTrialInfo,毫秒)。
+// 夹具按 issue #103 描述的上游形状构造(start=0/end=30000、逐条 code/fee);
+// 试听片段只在带无权益账号 cookie 时出现,本机无登录态,该路径未对真实上游实测。
+func TestURL_MapResponse_Trial(t *testing.T) {
+	t.Parallel()
+
+	fixture := `{"code":200,"data":[{"id":1,"url":"http://m801.music.126.net/trial.mp3","br":128000,"size":480000,"type":"mp3","code":200,"fee":8,"freeTrialInfo":{"start":0,"end":30000}}]}`
+
+	resp, err := URL.MapResponse(&mmpb.GetSongURLRequest{}, json.RawMessage(fixture))
+	require.NoError(t, err)
+	require.True(t, resp.Url.Trial, "freeTrialInfo 非空时应标记为试听片段")
+	require.Equal(t, int64(0), resp.Url.TrialStartMs)
+	require.Equal(t, int64(30000), resp.Url.TrialEndMs)
+	require.Equal(t, int32(200), resp.Url.Code)
+	require.Equal(t, int32(8), resp.Url.Fee, "fee=8 是试听片段付费类型")
+}
+
+// TestURL_MapResponse_FieldsAbsent 上游旧报文不带 code/fee/freeTrialInfo 时字段保持缺省。
+func TestURL_MapResponse_FieldsAbsent(t *testing.T) {
+	t.Parallel()
+
+	resp, err := URL.MapResponse(&mmpb.GetSongURLRequest{}, json.RawMessage(`{"code":200,"data":[{"id":347230,"url":"http://m.mp3","br":320000,"size":5000000,"type":"mp3"}]}`))
+	require.NoError(t, err)
+	require.False(t, resp.Url.Trial)
+	require.Zero(t, resp.Url.Code)
+	require.Zero(t, resp.Url.Fee)
 }
 
 // TestURL_MapResponse_VIP VIP歌曲URL为空。

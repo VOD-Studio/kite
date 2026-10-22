@@ -12,6 +12,7 @@ First public release.
 - Word-by-word lyrics with translations, a staggered scroll on line changes, drag-to-seek and a jump to the chorus.
 - `<kite-track>` cards in three sizes (`s`, `m`, `l`) and `<kite-playlist>` cards in two (`m`, `l`), switching to a compact layout in narrow containers.
 - A shared playback core: four play modes, skipping unplayable tracks, one retry with a fresh stream link, Media Session controls, and the queue and position remembered across pages without autoplaying.
+- Trial-only tracks: `Track.trial` (optional, filled by the data source; how kite-server surfaces it on `/player/v1` is pending #103) marks a stream as a trial clip; it still plays instead of being gated by `playable` alone, the bar, the queue rows and the cards label it 「仅试听」, and the marker survives snapshot restore.
 - Light and dark themes (following the system by default), CSS custom properties and `::part()` for styling.
 - React components (`KitePlayer`, `KiteTrack`, `KitePlaylist`) and hooks (`usePlayer`, `usePlayerState`, `usePlaybackTime`).
 - `createKiteSource` for the kite-server public mode (`/player/v1`) and a `DataSource` interface for custom backends.

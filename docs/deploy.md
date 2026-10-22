@@ -35,6 +35,9 @@ flowchart LR
 使用宿主机已安装的静态探针及同一 Podman secret。它检查 REST/gRPC 健康、无服务令牌拒绝访问、
 有服务令牌但无网易云 cookie 返回 `LOGIN_REQUIRED`,**不访问网易云**。因此老版本镜像不含探针也能验证。
 探针成功输出检查结果;最终失败输出最后一次诊断,随后执行回滚,不再把协议错误全部丢弃。
+本部署链路当前以明文探测(部署器不设置 `KITE_SERVER_TLS_*`);自建部署启用了服务端 TLS 时,
+探针须按 [`docs/server-security.md`](server-security.md) TLS 章节设置 `KITE_PROBE_CACERT`(私有 CA)
+或 `KITE_PROBE_TLS=true`(公共 CA),否则明文探测必然失败。
 
 ## 管理员首次切换
 
