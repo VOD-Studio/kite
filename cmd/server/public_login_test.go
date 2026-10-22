@@ -11,7 +11,9 @@ import (
 )
 
 func TestPublicLoginTarget(t *testing.T) {
-	dir := t.TempDir()
+	// macOS 的临时目录可能经 /var 符号链接访问,预期路径应使用真实父目录。
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, err)
 	primary := filepath.Join(dir, "primary.json")
 	secondary := filepath.Join(dir, "secondary.json")
 	raw, err := json.Marshal([]public.ServiceAccount{
