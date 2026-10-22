@@ -3,10 +3,10 @@
 // 使用方只需覆盖 --kite-* 变量,或用 ::part() 微调;内部类名不是公开接口。
 import { unsafeCSS } from "lit";
 import base from "./base.css?raw";
-import cardDark from "./card.dark.css?raw";
 import card from "./card.css?raw";
-import playerDark from "./player.dark.css?raw";
+import cardDark from "./card.dark.css?raw";
 import player from "./player.css?raw";
+import playerDark from "./player.dark.css?raw";
 
 /**
  * withDark 把只含 :host 规则的暗色变量展开成两份:写了 theme="dark" 时强制暗色,
@@ -14,7 +14,7 @@ import player from "./player.css?raw";
  */
 export function withDark(dark: string): string {
   const on = (host: string) => dark.replace(/:host\b/g, host);
-  return on(':host([theme="dark"])') + `@media (prefers-color-scheme: dark){${on(':host(:not([theme="light"]))')}}`;
+  return `${on(':host([theme="dark"])')}@media (prefers-color-scheme: dark){${on(':host(:not([theme="light"]))')}}`;
 }
 
 export const playerStyles = base + player + withDark(playerDark);

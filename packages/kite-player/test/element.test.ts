@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import "../src/element";
 import { Player } from "../src/core/player";
+import type { Playlist } from "../src/core/types";
 import { KitePlayerElement } from "../src/element";
 import { withDark } from "../src/element/styles";
-import type { Playlist } from "../src/core/types";
 import { FakeAudio, fakeSource, flush, track } from "./helpers";
 
 const playlist: Playlist = {
@@ -11,7 +11,11 @@ const playlist: Playlist = {
   name: "写作时听",
   cover: "https://p1.music.126.net/a.jpg",
   trackCount: 3,
-  tracks: [track("1", { title: "纸飞机" }), track("2", { title: "慢车" }), track("3", { title: "雨季来信", access: "vip", playable: false })],
+  tracks: [
+    track("1", { title: "纸飞机" }),
+    track("2", { title: "慢车" }),
+    track("3", { title: "雨季来信", access: "vip", playable: false }),
+  ],
 };
 
 let player: Player;
@@ -314,7 +318,9 @@ describe("紧凑布局", () => {
     globalThis.ResizeObserver = class {
       constructor(private cb: ResizeObserverCallback) {}
       observe(): void {
-        observers.push((width) => this.cb([{ contentRect: { width } } as ResizeObserverEntry], this as unknown as ResizeObserver));
+        observers.push((width) =>
+          this.cb([{ contentRect: { width } } as ResizeObserverEntry], this as unknown as ResizeObserver),
+        );
       }
       unobserve(): void {}
       disconnect(): void {}

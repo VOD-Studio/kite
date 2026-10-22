@@ -7,7 +7,20 @@ import type { Player } from "../core/player";
 import type { LyricLine, Lyrics, PlayerState, Track } from "../core/types";
 import { blob, eq, icons } from "./icons";
 import { cardSheet } from "./styles";
-import { artists, canPlay, emit, emitFly, hideBroken, openEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow, type OpenDetail } from "./util";
+import {
+  artists,
+  canPlay,
+  emit,
+  emitFly,
+  hideBroken,
+  type OpenDetail,
+  openEvent,
+  playerFor,
+  sizeOf,
+  toastEvent,
+  unplayableMessage,
+  watchNarrow,
+} from "./util";
 
 const sizes = ["s", "m", "l"] as const;
 type Size = (typeof sizes)[number];
@@ -118,7 +131,8 @@ export class KiteTrackElement extends LitElement {
 
   protected override render(): TemplateResult {
     const t = this.track;
-    if (this.status === "loading" || (!t && this.status !== "error")) return html`<div class="skeleton" aria-busy="true"></div>`;
+    if (this.status === "loading" || (!t && this.status !== "error"))
+      return html`<div class="skeleton" aria-busy="true"></div>`;
     if (this.status === "error" || !t) {
       return html`<div class="card s"><div class="main"><div class="title">这首歌暂时无法显示</div><div class="error">${this.errorText}</div></div></div>`;
     }
@@ -190,9 +204,11 @@ export class KiteTrackElement extends LitElement {
           <div class="title ell">${t.title}</div>
           <div class="who ell">${[artists(t), t.album.name].filter(Boolean).join(" · ")}</div>
           <div class="tags">${this.tags(t)}</div>
-          ${locked
-            ? html`<div class="error" style="color:rgba(255,255,255,.75)">${unplayableMessage(t)}</div>`
-            : html`<button class="chip chorus" @click=${this.onChorus}>${icons.wave}从副歌听</button>`}
+          ${
+            locked
+              ? html`<div class="error" style="color:rgba(255,255,255,.75)">${unplayableMessage(t)}</div>`
+              : html`<button class="chip chorus" @click=${this.onChorus}>${icons.wave}从副歌听</button>`
+          }
         </div>
         ${locked ? nothing : html`<button class="ib open" aria-label="在播放器中打开" style="color:rgba(255,255,255,.85)" @click=${this.onOpen}>${icons.expand}</button>`}
       </div>
@@ -216,7 +232,10 @@ export class KiteTrackElement extends LitElement {
     if (!lv.line) return html`<div class=${classes}>${lv.instrumental ? "纯音乐" : ""}</div>`;
     if (!lv.live) return html`<div class=${classes}>${lv.line.text}</div>`;
     const units = lineUnits(lv.line);
-    return html`<div class=${classes}>${keyed(lv.key, units.map((u) => html`<span class="u">${u}</span>`))}</div>`;
+    return html`<div class=${classes}>${keyed(
+      lv.key,
+      units.map((u) => html`<span class="u">${u}</span>`),
+    )}</div>`;
   }
 
   private renderProgress(t: Track, hidden: boolean): TemplateResult {
@@ -227,11 +246,13 @@ export class KiteTrackElement extends LitElement {
   }
 
   private tags(t: Track): unknown {
-    return html`${t.trial ? html`<span class="tg trial">仅试听</span>` : nothing}${t.access === "vip"
-      ? html`<span class="tg vip">VIP</span>`
-      : t.access === "paid"
-        ? html`<span class="tg out">数字专辑</span>`
-        : nothing}`;
+    return html`${t.trial ? html`<span class="tg trial">仅试听</span>` : nothing}${
+      t.access === "vip"
+        ? html`<span class="tg vip">VIP</span>`
+        : t.access === "paid"
+          ? html`<span class="tg out">数字专辑</span>`
+          : nothing
+    }`;
   }
 
   private playLabel(t: Track, cur: boolean): string {
@@ -266,7 +287,8 @@ export class KiteTrackElement extends LitElement {
 
   protected override updated(changed: PropertyValues): void {
     // 尺寸变了而宽度没变时 ResizeObserver 不会触发,紧凑布局的阈值要在这里重新判断。
-    if (changed.has("size")) this.toggleAttribute("data-narrow", this.clientWidth > 0 && this.clientWidth <= narrowAt[this.cardSize()]);
+    if (changed.has("size"))
+      this.toggleAttribute("data-narrow", this.clientWidth > 0 && this.clientWidth <= narrowAt[this.cardSize()]);
     this.units = [...this.renderRoot.querySelectorAll<HTMLElement>(".lyric-line.live .u")];
     const t = this.track;
     if (!t) return;
@@ -330,7 +352,9 @@ export class KiteTrackElement extends LitElement {
     const line = s.lyrics?.lines[s.lyricIndex];
     if (line && this.units.length) {
       const p = wordProgress(line, t * 1000);
-      this.units.forEach((u, k) => u.style.setProperty("--p", String(Math.round((p[k] ?? 0) * 100) / 100)));
+      this.units.forEach((u, k) => {
+        u.style.setProperty("--p", String(Math.round((p[k] ?? 0) * 100) / 100));
+      });
     }
   }
 
