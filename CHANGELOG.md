@@ -7,6 +7,12 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## Unreleased
+
+### 持续集成与交付
+
+- 升级 Go SDK 消费者的 gRPC / x/net 依赖,修复全模块扫描发现的六个可达漏洞。
+
 ## 0.6.0 (2026-10-22)
 
 ## What's Changed
