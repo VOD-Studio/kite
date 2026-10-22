@@ -10,6 +10,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -53,8 +55,17 @@ type Options struct {
 	GRPCAddr string
 	HTTPAddr string
 
-	// AuthToken 非空时启用 bearer token 鉴权;为空时只允许监听回环地址。
-	AuthToken string
+	// AuthTokens 是全部启用的访问令牌;空列表表示不鉴权,此时只允许监听回环地址。
+	// 单令牌部署是一个 Name 为空的条目;多令牌部署每个条目对应一个调用方(限流与吊销的单位)。
+	AuthTokens []AuthToken
+
+	// RatePerMinute 是每个调用方每分钟允许的请求数,0 表示不限流(默认,行为与旧版一致)。
+	RatePerMinute int
+
+	// TLSCertFile / TLSKeyFile 是 TLS 证书与私钥文件,两者必须同时设置;
+	// 设置后 gRPC 与 REST 监听都走 TLS,令牌不再经明文连接传输。
+	TLSCertFile string
+	TLSKeyFile  string
 }
 
 // App 持有 gRPC server 与 gateway HTTP server，统一管理生命周期。
@@ -70,17 +81,22 @@ type App struct {
 }
 
 // newGRPCServer 装配 gRPC server(拦截器链 + 全部领域 service + health + reflection),
-// 不监听端口,便于测试。auth 为 nil 表示不鉴权。
+// 不监听端口,便于测试。auth 为 nil 表示不鉴权;creds 为 nil 表示明文。
 //
 // 拦截器顺序:ErrorInterceptor 在最外层,保证任何内层(含其它拦截器)返回的错误都被统一映射为
-// gRPC status;其后 Auth 先于 Cookie(约定:未通过鉴权的请求不进入后续任何逻辑,
-// 目前 Cookie 拦截器无副作用,这个顺序没有测试守护);CookieInterceptor 把 metadata 里的上游 cookie 注入 context。
-// 链式为未来 recovery/trace/log/rate interceptor 留位。
-func newGRPCServer(eng *engine.Engine, sessions session.SessionStore, auth *Auth) (*grpc.Server, *health.Server) {
-	grpcServer := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(ErrorInterceptor, auth.UnaryInterceptor, CookieInterceptor),
-		grpc.ChainStreamInterceptor(auth.StreamInterceptor),
-	)
+// gRPC status;其后 Auth 先于限流、限流先于 Cookie(约定:未通过鉴权的请求不进入后续任何逻辑,
+// 也不会消耗限流配额,目前 Cookie 拦截器无副作用,这个顺序没有测试守护);
+// CookieInterceptor 把 metadata 里的上游 cookie 注入 context。
+// 链式为未来 recovery/trace/log interceptor 留位。
+func newGRPCServer(eng *engine.Engine, sessions session.SessionStore, auth *Auth, limiter *rateLimiter, creds credentials.TransportCredentials) (*grpc.Server, *health.Server) {
+	opts := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(ErrorInterceptor, auth.UnaryInterceptor, limiter.UnaryInterceptor, CookieInterceptor),
+		grpc.ChainStreamInterceptor(auth.StreamInterceptor, limiter.StreamInterceptor),
+	}
+	if creds != nil {
+		opts = append(opts, grpc.Creds(creds))
+	}
+	grpcServer := grpc.NewServer(opts...)
 
 	// 注册全部领域 service（真实 impl，持有 *engine.Engine）。
 	mmpb.RegisterSongServiceServer(grpcServer, service.NewSongServer(eng))
@@ -139,9 +155,13 @@ func healthzHandler(h *health.Server) http.HandlerFunc {
 //
 // 两个端口都在返回前完成监听:端口被占用等错误直接从这里返回,而不是启动后只写一行日志。
 func NewApp(opts Options, eng *engine.Engine, sessions session.SessionStore) (*App, error) {
-	auth := NewAuth(opts.AuthToken)
+	auth := NewAuth(opts.AuthTokens)
 	if err := checkExposure(auth, opts.GRPCAddr, opts.HTTPAddr); err != nil {
 		return nil, err
+	}
+	var limiter *rateLimiter
+	if opts.RatePerMinute > 0 {
+		limiter = newRateLimiter(opts.RatePerMinute, time.Now)
 	}
 
 	grpcLis, err := net.Listen("tcp", opts.GRPCAddr)
@@ -154,13 +174,36 @@ func NewApp(opts Options, eng *engine.Engine, sessions session.SessionStore) (*A
 		return nil, fmt.Errorf("listen http %s: %w", opts.HTTPAddr, err)
 	}
 
-	grpcServer, healthServer := newGRPCServer(eng, sessions, auth)
+	// TLS:证书加载失败在这里直接拒绝启动,而不是两个端口各自静默退回明文(fail closed)。
+	var grpcCreds credentials.TransportCredentials
+	if opts.TLSCertFile != "" || opts.TLSKeyFile != "" {
+		if opts.TLSCertFile == "" || opts.TLSKeyFile == "" {
+			_ = grpcLis.Close()
+			_ = httpLis.Close()
+			return nil, errors.New("KITE_SERVER_TLS_CERT 与 KITE_SERVER_TLS_KEY 必须同时设置")
+		}
+		cert, err := tls.LoadX509KeyPair(opts.TLSCertFile, opts.TLSKeyFile)
+		if err != nil {
+			_ = grpcLis.Close()
+			_ = httpLis.Close()
+			return nil, fmt.Errorf("加载 TLS 证书: %w", err)
+		}
+		grpcCreds = credentials.NewServerTLSFromCert(&cert)
+		httpLis = tls.NewListener(httpLis, &tls.Config{Certificates: []tls.Certificate{cert}})
+	}
+
+	grpcServer, healthServer := newGRPCServer(eng, sessions, auth, limiter, grpcCreds)
 
 	// gateway runtime mux：通过 dial 连本地 gRPC server。Authorization 头由 gateway 原样转成
 	// gRPC metadata,鉴权统一在 gRPC 侧完成,REST 与 gRPC 不会出现两套规则。
+	// gRPC 启用 TLS 后 gateway 同样走 TLS:目标是本进程的回环地址,证书域名不必匹配,跳过验证。
 	gwCtx, stopGateway := context.WithCancel(context.Background())
 	gwMux := runtime.NewServeMux()
-	muxOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	dialCreds := insecure.NewCredentials()
+	if grpcCreds != nil {
+		dialCreds = credentials.NewTLS(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec // 仅本进程回环自拨,证书签给外部域名属正常部署
+	}
+	muxOpts := []grpc.DialOption{grpc.WithTransportCredentials(dialCreds)}
 	target := dialTarget(grpcLis.Addr())
 	for _, h := range gatewayHandlers {
 		if err := h(gwCtx, gwMux, target, muxOpts); err != nil {
@@ -183,14 +226,14 @@ func NewApp(opts Options, eng *engine.Engine, sessions session.SessionStore) (*A
 
 	go func() {
 		slog.InfoContext(context.Background(), "grpc server starting",
-			slog.String("addr", grpcLis.Addr().String()), slog.Bool("auth", auth.Enabled()))
+			slog.String("addr", grpcLis.Addr().String()), slog.Bool("auth", auth.Enabled()), slog.Bool("tls", grpcCreds != nil))
 		if err := grpcServer.Serve(grpcLis); err != nil {
 			slog.ErrorContext(context.Background(), "grpc server failed", slog.String("error", err.Error()))
 		}
 	}()
 	go func() {
 		slog.InfoContext(context.Background(), "gateway server starting",
-			slog.String("addr", httpLis.Addr().String()), slog.Bool("auth", auth.Enabled()))
+			slog.String("addr", httpLis.Addr().String()), slog.Bool("auth", auth.Enabled()), slog.Bool("tls", grpcCreds != nil))
 		if err := httpServer.Serve(httpLis); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.ErrorContext(context.Background(), "gateway server failed", slog.String("error", err.Error()))
 		}

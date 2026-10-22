@@ -43,7 +43,7 @@ func startApp(t *testing.T, token string) (app *App, upstreamHits *atomic.Int32)
 	t.Cleanup(up.Close)
 
 	eng := engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(up.URL))
-	app, err := NewApp(Options{GRPCAddr: "127.0.0.1:0", HTTPAddr: "127.0.0.1:0", AuthToken: token}, eng, session.NoopStore{})
+	app, err := NewApp(Options{GRPCAddr: "127.0.0.1:0", HTTPAddr: "127.0.0.1:0", AuthTokens: single(token)}, eng, session.NoopStore{})
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

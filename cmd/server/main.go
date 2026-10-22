@@ -53,16 +53,23 @@ func main() {
 	sessions := session.NoopStore{}
 
 	cfg := config.Load()
-	token, err := cfg.Server.ResolveAuthToken()
+	tokens, err := cfg.Server.ResolveAuthTokens()
 	if err != nil {
-		slog.ErrorContext(startupCtx, "load auth token failed", slog.String("error", err.Error()))
+		slog.ErrorContext(startupCtx, "load auth tokens failed", slog.String("error", err.Error()))
 		os.Exit(1)
+	}
+	authTokens := make([]server.AuthToken, len(tokens))
+	for i, t := range tokens {
+		authTokens[i] = server.AuthToken{Name: t.Name, Value: t.Token}
 	}
 
 	app, err := server.NewApp(server.Options{
-		GRPCAddr:  cfg.Server.GRPCAddr,
-		HTTPAddr:  cfg.Server.HTTPAddr,
-		AuthToken: token,
+		GRPCAddr:      cfg.Server.GRPCAddr,
+		HTTPAddr:      cfg.Server.HTTPAddr,
+		AuthTokens:    authTokens,
+		RatePerMinute: cfg.Server.RatePerMinute,
+		TLSCertFile:   cfg.Server.TLSCertFile,
+		TLSKeyFile:    cfg.Server.TLSKeyFile,
 	}, eng, sessions)
 	if err != nil {
 		slog.ErrorContext(startupCtx, "init server failed", slog.String("error", err.Error()))
@@ -85,7 +92,8 @@ func main() {
 
 	slog.InfoContext(startupCtx, "server ready",
 		slog.String("grpc", app.GRPCAddr()), slog.String("http", app.HTTPAddr()),
-		slog.Bool("auth", token != ""))
+		slog.Bool("auth", len(authTokens) > 0), slog.Int("callers", len(authTokens)),
+		slog.Bool("tls", cfg.Server.TLSCertFile != ""), slog.Int("rate_per_minute", cfg.Server.RatePerMinute))
 
 	// 优雅关闭：监听信号，收到后给 5 秒处理残余请求。
 	quit := make(chan os.Signal, 1)
