@@ -2,7 +2,8 @@
 
 package service
 
-// 真实上游冒烟:对网易云真实接口逐个调用服务端实际使用的 service 方法。
+// 真实上游冒烟:对网易云真实接口逐个调用服务端实际使用的 service 方法
+// (评论域 #28 Phase A 尚无 service rpc,对应用例直连 endpoint 声明执行)。
 //
 // 为什么需要它:服务端 RPC 曾有 5 个对真实上游不可用(2 个 NOT_FOUND,3 个「成功但返回空」),
 // 而所有单元测试都是绿的——夹具是手写的,与解码器出自同一个假设,上游改了路径 / 字段名 / 字段类型
@@ -26,6 +27,7 @@ import (
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cache"
+	commentendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/comment"
 	mvendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/mv"
 	toplistendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/toplist"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
@@ -37,7 +39,12 @@ const (
 	artistID   = 6452     // 周杰伦
 	playlistID = 3778678  // 热歌榜
 	userID     = 32953014 // 网易云 API 作者的公开账号
-	mvID       = 5436712  // 莫文蔚《广岛之恋》MV
+	mvID       = 5436712  // 莫文蔚《广岛之恋》MV(MV 域 #32 冒烟)
+	// commentMvID 是公开 MV(评论区样例;评论域 #28 冒烟引入)。
+	// stablePlaylistID 是评论区稳定的普通歌单(榜单歌单的热评会随榜单更新清空,
+	// 不能拿来做热评冒烟;ID 与 endpoint/playlist 的 testdata 夹具同源)。
+	commentMvID      = 14514682
+	stablePlaylistID = 2219770152
 )
 
 type smokeCase struct {
@@ -214,6 +221,52 @@ func TestUpstreamSmoke(t *testing.T) {
 			return user.DetailByName(c, &mmpb.DetailByNameRequest{Nickname: "网易云音乐"})
 		}, nil},
 
+		// --- 评论(#28 Phase A:proto 只落消息、无 service rpc,直连 endpoint;
+		//     第二阶段建模 CommentService 后改走 service 方法) ---
+		{"Comment.List(song)", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, commentendpoint.List, &mmpb.CommentListRequest{
+				ResourceType: mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_SONG, ResourceId: songID, PageSize: 3,
+			})
+		}, func(t *testing.T, r proto.Message) {
+			require.NotEmpty(t, r.(*mmpb.CommentListResponse).GetComments())
+		}},
+		{"Comment.List(playlist)", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, commentendpoint.List, &mmpb.CommentListRequest{
+				ResourceType: mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_PLAYLIST, ResourceId: playlistID, PageSize: 3,
+			})
+		}, func(t *testing.T, r proto.Message) {
+			require.NotEmpty(t, r.(*mmpb.CommentListResponse).GetComments())
+		}},
+		{"Comment.List(album)", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, commentendpoint.List, &mmpb.CommentListRequest{
+				ResourceType: mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_ALBUM, ResourceId: albumID, PageSize: 3,
+			})
+		}, func(t *testing.T, r proto.Message) {
+			require.NotEmpty(t, r.(*mmpb.CommentListResponse).GetComments())
+		}},
+		{"Comment.List(mv)", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, commentendpoint.List, &mmpb.CommentListRequest{
+				ResourceType: mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_MV, ResourceId: commentMvID, PageSize: 3,
+			})
+		}, func(t *testing.T, r proto.Message) {
+			require.NotEmpty(t, r.(*mmpb.CommentListResponse).GetComments())
+		}},
+		{"Comment.Hot(song)", func(c context.Context) (proto.Message, error) {
+			return engine.Execute(eng, c, commentendpoint.Hot, &mmpb.HotCommentsRequest{
+				ResourceType: mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_SONG, ResourceId: songID, Limit: 3,
+			})
+		}, func(t *testing.T, r proto.Message) {
+			require.NotEmpty(t, r.(*mmpb.HotCommentsResponse).GetHotComments())
+		}},
+		{"Comment.Hot(playlist)", func(c context.Context) (proto.Message, error) {
+			// 不用热歌榜(3778678):榜单歌单的热评随榜单更新清空(total 归零),
+			// 2026-10 实测同日先有 1450 条后清空;用稳定的普通歌单(仓库夹具同款)。
+			return engine.Execute(eng, c, commentendpoint.Hot, &mmpb.HotCommentsRequest{
+				ResourceType: mmpb.CommentResourceType_COMMENT_RESOURCE_TYPE_PLAYLIST, ResourceId: stablePlaylistID, Limit: 3,
+			})
+		}, func(t *testing.T, r proto.Message) {
+			require.NotEmpty(t, r.(*mmpb.HotCommentsResponse).GetHotComments())
+		}},
 		// --- MV(#32 第一阶段)---
 		// 只有 endpoint 声明、无 service 方法,直接经 engine.Execute 冒烟
 		// (第二阶段 MvService 落地后换回 server 方法,与本文件其余用例一致)。

@@ -1,0 +1,66 @@
+{
+  "topComments": [],
+  "hasMore": true,
+  "hotComments": [
+    {
+      "user": {
+        "anonym": 0,
+        "highlight": false,
+        "thanked": null,
+        "userType": 0,
+        "avatarUrl": "https://p1.music.126.net/synthetic.jpg",
+        "followed": false,
+        "mutual": false,
+        "nickname": "合成昵称0498",
+        "authStatus": 0,
+        "vipType": 11,
+        "userId": 9080498
+      },
+      "beReplied": [],
+      "showFloorComment": null,
+      "status": 0,
+      "commentId": 5031795,
+      "content": "有些人死了，他还活着",
+      "time": 1413809782401,
+      "timeStr": "2014-10-20",
+      "needDisplayTime": true,
+      "likedCount": 224976,
+      "commentLocationType": 0,
+      "parentCommentId": 0,
+      "repliedMark": null,
+      "favorited": false,
+      "liked": false
+    },
+    {
+      "user": {
+        "anonym": 0,
+        "highlight": false,
+        "thanked": null,
+        "userType": 0,
+        "avatarUrl": "https://p1.music.126.net/synthetic.jpg",
+        "followed": false,
+        "mutual": false,
+        "nickname": "合成昵称5400",
+        "authStatus": 0,
+        "vipType": 0,
+        "userId": 1075400
+      },
+      "beReplied": [],
+      "showFloorComment": null,
+      "status": 0,
+      "commentId": 10827931,
+      "content": "有一条路，叫做《灰色轨迹》；有一种奉献，叫做《光辉岁月》； 有一种感恩，叫做《真的爱你》；有一种不眠，叫做《冷雨夜》。 有一种思念，叫做《遥望》。有一种迷惘，叫做《谁伴我闯荡》。 有一种无奈，叫做《情人》。有一种境界，叫做《海阔天空》。——————————————永远的黄家驹！",
+      "time": 1423994913970,
+      "timeStr": "2015-02-15",
+      "needDisplayTime": true,
+      "likedCount": 130181,
+      "commentLocationType": 0,
+      "parentCommentId": 0,
+      "repliedMark": null,
+      "favorited": false,
+      "liked": false
+    }
+  ],
+  "total": 1450,
+  "code": 200
+}
