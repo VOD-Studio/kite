@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -37,8 +38,7 @@ const refreshInterval = 24 * time.Hour
 // statInterval 是检查登录态文件是否被改写的最短间隔(public-login 在另一个进程里写文件)。
 const statInterval = 30 * time.Second
 
-// ownerSession 持有可选的服务账号登录态。所有听众的 VIP 播放都用这一个账号,
-// 所以只用于给白名单内容生成播放链接,不用于任何别的接口。
+// ownerSession 独立维护一个服务账号的登录态,只用于给白名单内容生成播放链接。
 type ownerSession struct {
 	path string
 	now  func() time.Time
@@ -46,7 +46,8 @@ type ownerSession struct {
 	mu       sync.Mutex
 	file     SessionFile
 	status   string
-	modTime  time.Time
+	info     os.FileInfo
+	revision uint64
 	lastStat time.Time
 }
 
@@ -60,13 +61,7 @@ func newOwnerSession(path string, now func() time.Time) *ownerSession {
 
 // cookie 返回当前可用的 cookie;未配置或已失效时返回空串(按匿名播放)。
 func (o *ownerSession) cookie() string {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	o.reloadLocked(false)
-	if o.status != loginActive {
-		return ""
-	}
-	return o.file.Cookie
+	return o.snapshot().cookie
 }
 
 func (o *ownerSession) state() string {
@@ -74,6 +69,30 @@ func (o *ownerSession) state() string {
 	defer o.mu.Unlock()
 	o.reloadLocked(false)
 	return o.status
+}
+
+func (o *ownerSession) snapshot() ownerCredential {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.reloadLocked(false)
+	if o.status != loginActive {
+		return ownerCredential{}
+	}
+	return ownerCredential{cookie: o.file.Cookie, session: o, revision: o.revision}
+}
+
+func (o *ownerSession) expire(revision uint64) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	// 播放或续期的响应可能晚于部署者重新登录,必须先检查磁盘上的新会话。
+	o.reloadLocked(true)
+	if o.revision != revision || o.status != loginActive {
+		return
+	}
+	o.status = loginExpired
+	o.revision++
+	slog.Warn("服务账号的网易云登录态已失效,VIP 歌曲暂停播放;请重新执行 server public-login",
+		slog.String("path", o.path))
 }
 
 func (o *ownerSession) reload(force bool) {
@@ -97,58 +116,71 @@ func (o *ownerSession) reloadLocked(force bool) {
 		if o.status != loginNone {
 			slog.Warn("服务账号登录态文件不可读,改为匿名播放", slog.String("path", o.path), slog.String("error", err.Error()))
 		}
-		o.file, o.status = SessionFile{}, loginNone
+		if o.info != nil || o.status != loginNone {
+			o.revision++
+		}
+		o.file, o.status, o.info = SessionFile{}, loginNone, nil
 		return
 	}
-	if !force && info.ModTime().Equal(o.modTime) {
+	// force 只绕过检查间隔,不能把同一份已失效文件重新激活。
+	// public-login 原子替换文件,即使 mtime 相同也要通过文件身份识别新登录。
+	if o.info != nil && os.SameFile(info, o.info) &&
+		info.ModTime().Equal(o.info.ModTime()) && info.Size() == o.info.Size() {
 		return
 	}
-	f, err := ReadSessionFile(o.path)
+	f, info, err := readSessionFile(o.path)
+	o.revision++
+	o.info = info
 	if err != nil || f.Cookie == "" {
 		slog.Warn("服务账号登录态文件无效,改为匿名播放", slog.String("path", o.path))
 		o.file, o.status = SessionFile{}, loginNone
 		return
 	}
-	o.file, o.status, o.modTime = f, loginActive, info.ModTime()
+	o.file, o.status = f, loginActive
 }
 
 // refresh 续期一次:成功时把上游下发的新 cookie 写回文件;cookie 失效时标记为 expired。
 func (o *ownerSession) refresh(ctx context.Context, eng *engine.Engine) error {
 	o.mu.Lock()
 	o.reloadLocked(true)
-	f, status := o.file, o.status
+	f, status, revision := o.file, o.status, o.revision
 	o.mu.Unlock()
-	if status == loginNone {
+	if status != loginActive {
 		return nil
 	}
 
 	cookie, renewed, err := authendpoint.Refresh(engine.WithCookie(ctx, f.Cookie), eng)
 	if err != nil {
 		if errors.Is(err, merrors.ErrUnauthorized) {
-			o.mu.Lock()
-			o.status = loginExpired
-			o.mu.Unlock()
-			slog.Warn("服务账号的网易云登录态已失效,VIP 歌曲暂停播放;请重新执行 server public-login")
+			o.expire(revision)
 		}
 		return err
 	}
 	if !renewed {
 		return nil
 	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	// 网络请求期间可能发生重新登录、其他续期或失效,旧响应不能覆盖新会话。
+	o.reloadLocked(true)
+	if o.revision != revision || o.status != loginActive {
+		return nil
+	}
 	f.Cookie, f.UpdatedAt = cookie, o.now()
 	if err := WriteSessionFile(o.path, f); err != nil {
 		return err
 	}
-	o.reload(true)
+	o.reloadLocked(true)
 	return nil
 }
 
 // runRefresh 在后台定期续期,直到 ctx 结束。启动时若距上次续期已超过间隔,先续一次。
 func (o *ownerSession) runRefresh(ctx context.Context, eng *engine.Engine) {
-	if o.path == "" {
+	if o.path == "" || ctx.Err() != nil {
 		return
 	}
 	o.mu.Lock()
+	o.reloadLocked(true)
 	stale := o.status == loginActive && o.now().Sub(o.file.UpdatedAt) >= refreshInterval
 	o.mu.Unlock()
 	if stale {
@@ -168,21 +200,37 @@ func (o *ownerSession) runRefresh(ctx context.Context, eng *engine.Engine) {
 
 func (o *ownerSession) logRefresh(err error) {
 	if err != nil && !errors.Is(err, merrors.ErrUnauthorized) {
-		slog.Warn("服务账号登录态续期失败,稍后重试", slog.String("error", err.Error()))
+		slog.Warn("服务账号登录态续期失败,稍后重试",
+			slog.String("path", o.path), slog.String("error", err.Error()))
 	}
 }
 
 // ReadSessionFile 读取登录态文件。
 func ReadSessionFile(path string) (SessionFile, error) {
-	b, err := os.ReadFile(path)
+	f, _, err := readSessionFile(path)
+	return f, err
+}
+
+// 从同一个打开的文件读取内容与身份,避免原子替换时把旧内容关联到新文件。
+func readSessionFile(path string) (SessionFile, os.FileInfo, error) {
+	file, err := os.Open(path)
 	if err != nil {
-		return SessionFile{}, err
+		return SessionFile{}, nil, err
+	}
+	defer func() { _ = file.Close() }()
+	info, err := file.Stat()
+	if err != nil {
+		return SessionFile{}, nil, err
+	}
+	b, err := io.ReadAll(file)
+	if err != nil {
+		return SessionFile{}, info, err
 	}
 	var f SessionFile
 	if err := json.Unmarshal(b, &f); err != nil {
-		return SessionFile{}, fmt.Errorf("解析登录态文件: %w", err)
+		return SessionFile{}, info, fmt.Errorf("解析登录态文件: %w", err)
 	}
-	return f, nil
+	return f, info, nil
 }
 
 // WriteSessionFile 原子地写入登录态文件(先写临时文件再改名),权限 0600。

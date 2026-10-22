@@ -26,7 +26,7 @@ type Server struct {
 	cat    catalog
 	signer signer
 	limit  *limiter
-	owner  *ownerSession
+	owners *ownerPool
 	auth   func(ctx context.Context) error // 服务账号登录态续期,nil 表示不续期(测试)
 	now    func() time.Time
 
@@ -42,19 +42,23 @@ type Server struct {
 func New(eng *engine.Engine, opts Options) *Server {
 	s := newServer(engineCatalog{eng: eng}, opts, time.Now)
 	s.auth = func(ctx context.Context) error {
-		s.owner.runRefresh(ctx, eng)
+		s.owners.runRefresh(ctx, eng)
 		return nil
 	}
 	return s
 }
 
 func newServer(cat catalog, opts Options, now func() time.Time) *Server {
+	accounts := opts.Accounts
+	if len(accounts) == 0 && opts.SessionFile != "" {
+		accounts = []ServiceAccount{{ID: "default", SessionFile: opts.SessionFile}}
+	}
 	s := &Server{
 		opts:           opts,
 		cat:            newCachedCatalog(cat, now),
 		signer:         signer{key: opts.SigningKey, ttl: opts.LinkTTL, now: now},
 		limit:          newLimiter(opts.RatePerMinute, now),
-		owner:          newOwnerSession(opts.SessionFile, now),
+		owners:         newOwnerPool(accounts, now),
 		now:            now,
 		allowPlaylists: map[int64]bool{},
 		allowSongs:     map[int64]bool{},
@@ -108,7 +112,7 @@ func (s *Server) Start() error {
 		slog.Info("public server starting",
 			slog.String("addr", lis.Addr().String()),
 			slog.Int("playlists", len(s.opts.Playlists)), slog.Int("songs", len(s.opts.Songs)),
-			slog.String("owner_login", s.owner.state()))
+			slog.String("owner_login", s.owners.state()))
 		if err := s.http.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("public server failed", slog.String("error", err.Error()))
 		}
@@ -142,7 +146,8 @@ func (s *Server) handleInfo(w http.ResponseWriter, _ *http.Request) {
 			quality = name
 		}
 	}
-	writeJSON(w, http.StatusOK, infoDTO{Version: protocolVersion, Login: s.owner.state(), Quality: quality})
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, infoDTO{Version: protocolVersion, Login: s.owners.state(), Quality: quality})
 }
 
 func (s *Server) handlePlaylist(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +164,7 @@ func (s *Server) handlePlaylist(w http.ResponseWriter, r *http.Request) {
 		writeUpstreamError(w, err)
 		return
 	}
-	active := s.owner.state() == loginActive
+	active := s.owners.state() == loginActive
 	out := playlistDTO{
 		ID:         strconv.FormatInt(pl.GetId(), 10),
 		Name:       pl.GetName(),
@@ -170,7 +175,7 @@ func (s *Server) handlePlaylist(w http.ResponseWriter, r *http.Request) {
 	for _, song := range pl.GetSongs() {
 		out.Tracks = append(out.Tracks, s.track(song, active))
 	}
-	w.Header().Set("Cache-Control", "public, max-age=60")
+	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -184,8 +189,8 @@ func (s *Server) handleTrack(w http.ResponseWriter, r *http.Request) {
 		writeUpstreamError(w, err)
 		return
 	}
-	w.Header().Set("Cache-Control", "public, max-age=60")
-	writeJSON(w, http.StatusOK, s.track(song, s.owner.state() == loginActive))
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, s.track(song, s.owners.state() == loginActive))
 }
 
 func (s *Server) handleLyrics(w http.ResponseWriter, r *http.Request) {
@@ -213,6 +218,8 @@ func (s *Server) handleLyrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
+	// 账号在每次有效播放请求时选择,不允许浏览器/CDN 复用别的账号的跳转或失效结果。
+	w.Header().Set("Cache-Control", "no-store")
 	id, ok := pathID(w, r)
 	if !ok {
 		return
@@ -226,8 +233,14 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "LINK_INVALID", "播放链接签名无效")
 		return
 	}
-	cookie := s.owner.cookie()
+	credential := s.owners.next()
+	cookie := credential.cookie
 	su, err := s.cat.StreamURL(r.Context(), id, s.opts.Level, cookie)
+	if errors.Is(err, merrors.ErrUnauthorized) {
+		credential.expire()
+		writeError(w, http.StatusNotFound, "UNPLAYABLE", "服务账号登录态已失效,请稍后重试")
+		return
+	}
 	if err != nil && !errors.Is(err, merrors.ErrNotFound) {
 		writeUpstreamError(w, err)
 		return
@@ -251,8 +264,7 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 		// (<audio> 不读响应头,自建后端按需消费),毫秒,完整版没有这个头。
 		w.Header().Set("X-Kite-Trial", fmt.Sprintf("start=%d; end=%d", su.GetTrialStartMs(), su.GetTrialEndMs()))
 	}
-	// 直链几十分钟后过期:只让浏览器短暂复用,过期后播放器会重新请求这里。
-	w.Header().Set("Cache-Control", "private, max-age=60")
+	// 上游直链可在进程内按凭据缓存,但公开跳转本身不能跨播放请求复用。
 	http.Redirect(w, r, target, http.StatusFound) //nolint:gosec // 目标来自上游并经 streamTarget 校验为网易云域名的 https 地址
 }
 

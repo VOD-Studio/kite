@@ -70,7 +70,7 @@ export interface Lyrics {
 
 export interface SourceInfo {
   version: string;
-  /** 服务端网易云账号的登录态:none 未配置、active 可播 VIP、expired 已失效。 */
+  /** 服务账号聚合状态:none 无可读凭据、active 至少一个可用(不保证歌曲权益)、expired 无可用且有失效账号。 */
   login: "none" | "active" | "expired";
   quality: string;
 }

@@ -7,9 +7,13 @@ package public
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +21,12 @@ import (
 	"github.com/VOD-Studio/kite/config"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
+
+// ServiceAccount 是部署者显式授权给公开播放器的服务账号。
+type ServiceAccount struct {
+	ID          string `json:"id"`
+	SessionFile string `json:"sessionFile"`
+}
 
 // Options 是公开模式的运行参数,由 ParseOptions 从 config.PublicConfig 解析。
 type Options struct {
@@ -30,8 +40,10 @@ type Options struct {
 	Origins []string
 	// AnyOrigin 表示 Origins 里出现了 *。
 	AnyOrigin bool
-	// SessionFile 是服务账号登录态文件路径,空表示只按匿名播放。
+	// SessionFile 是单账号登录态文件路径;与 Accounts 均空时只按匿名播放。
 	SessionFile string
+	// Accounts 是部署者配置的有序服务账号列表,与 SessionFile 互斥。
+	Accounts []ServiceAccount
 	// SigningKey 是播放链接签名密钥。
 	SigningKey []byte
 	// RatePerMinute 是每个来源 IP 每分钟允许的请求数。
@@ -68,6 +80,9 @@ func ParseOptions(c config.PublicConfig) (Options, error) {
 		LinkTTL:       defaultLinkTTL,
 	}
 	var err error
+	if opts.Accounts, err = ParseServiceAccounts(c); err != nil {
+		return Options{}, err
+	}
 	if opts.Playlists, err = parseIDs("KITE_PUBLIC_PLAYLISTS", c.Playlists); err != nil {
 		return Options{}, err
 	}
@@ -92,6 +107,77 @@ func ParseOptions(c config.PublicConfig) (Options, error) {
 		return Options{}, err
 	}
 	return opts, nil
+}
+
+var serviceAccountID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`)
+
+// ParseServiceAccounts 校验部署账号配置,不要求播放器白名单,供启动与 public-login 共用。
+// 未配置 Accounts 时保留旧 SessionFile 的语义,返回 nil。
+func ParseServiceAccounts(c config.PublicConfig) ([]ServiceAccount, error) {
+	if c.Accounts == "" {
+		return nil, nil
+	}
+	if strings.TrimSpace(c.SessionFile) != "" {
+		return nil, errors.New("KITE_PUBLIC_ACCOUNTS 与 KITE_PUBLIC_SESSION_FILE 不能同时设置")
+	}
+	dec := json.NewDecoder(strings.NewReader(c.Accounts))
+	dec.DisallowUnknownFields()
+	var accounts []ServiceAccount
+	if err := dec.Decode(&accounts); err != nil {
+		return nil, fmt.Errorf("KITE_PUBLIC_ACCOUNTS JSON 无效: %w", err)
+	}
+	if err := dec.Decode(new(any)); err != io.EOF {
+		return nil, errors.New("KITE_PUBLIC_ACCOUNTS 只能包含一个 JSON 数组")
+	}
+	if len(accounts) == 0 {
+		return nil, errors.New("KITE_PUBLIC_ACCOUNTS 不能为空列表")
+	}
+	ids := make(map[string]bool, len(accounts))
+	paths := make(map[string]bool, len(accounts))
+	for i := range accounts {
+		account := &accounts[i]
+		if !serviceAccountID.MatchString(account.ID) {
+			return nil, fmt.Errorf("KITE_PUBLIC_ACCOUNTS 第 %d 项 ID 无效: 需要 1–64 个字母、数字、下划线或连字符,并以字母或数字开头", i+1)
+		}
+		if ids[account.ID] {
+			return nil, fmt.Errorf("KITE_PUBLIC_ACCOUNTS ID 重复: %q", account.ID)
+		}
+		ids[account.ID] = true
+		if strings.TrimSpace(account.SessionFile) == "" || !filepath.IsAbs(account.SessionFile) {
+			return nil, fmt.Errorf("KITE_PUBLIC_ACCOUNTS 账号 %q 的 sessionFile 必须是非空绝对路径", account.ID)
+		}
+		path, err := canonicalSessionPath(account.SessionFile)
+		if err != nil {
+			return nil, fmt.Errorf("KITE_PUBLIC_ACCOUNTS 账号 %q 的 sessionFile 无效: %w", account.ID, err)
+		}
+		if paths[path] {
+			return nil, fmt.Errorf("KITE_PUBLIC_ACCOUNTS sessionFile 重复: %q", account.SessionFile)
+		}
+		paths[path] = true
+		account.SessionFile = path
+	}
+	return accounts, nil
+}
+
+// canonicalSessionPath 同时规范化已有文件和尚未登录创建的文件的符号链接父目录。
+func canonicalSessionPath(path string) (string, error) {
+	path = filepath.Clean(path)
+	resolved, err := filepath.EvalSymlinks(path)
+	if err == nil {
+		return resolved, nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+	parent := filepath.Dir(path)
+	if parent == path {
+		return "", err
+	}
+	resolved, err = canonicalSessionPath(parent)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(resolved, filepath.Base(path)), nil
 }
 
 func parseIDs(name, raw string) ([]int64, error) {

@@ -50,8 +50,11 @@ type PublicConfig struct {
 	// Origins 是允许跨域调用的站点(如 https://blog.example.com),逗号分隔;* 表示不限。
 	Origins string
 
-	// SessionFile 是服务账号的网易云登录态文件(server public-login 生成),空表示只按匿名播放。
+	// SessionFile 是单账号的网易云登录态文件(server public-login 生成),与 Accounts 互斥;两者均空时匿名播放。
 	SessionFile string
+
+	// Accounts 是按顺序配置的服务账号 JSON 数组,与 SessionFile 互斥。
+	Accounts string
 
 	// SigningKeyFile 是播放链接签名密钥文件,空表示每次启动随机生成(重启后旧链接失效)。
 	SigningKeyFile string
@@ -322,6 +325,7 @@ func Load() Config {
 	cfg.Public.Songs = envStr("KITE_PUBLIC_SONGS", cfg.Public.Songs)
 	cfg.Public.Origins = envStr("KITE_PUBLIC_ORIGINS", cfg.Public.Origins)
 	cfg.Public.SessionFile = envStr("KITE_PUBLIC_SESSION_FILE", cfg.Public.SessionFile)
+	cfg.Public.Accounts = envStr("KITE_PUBLIC_ACCOUNTS", cfg.Public.Accounts)
 	cfg.Public.SigningKeyFile = envStr("KITE_PUBLIC_SIGNING_KEY_FILE", cfg.Public.SigningKeyFile)
 	cfg.Public.RatePerMinute = envInt("KITE_PUBLIC_RATE_PER_MINUTE", cfg.Public.RatePerMinute)
 	cfg.Public.TrustProxy = envStr("KITE_PUBLIC_TRUST_PROXY", "") == "true"
