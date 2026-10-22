@@ -6,7 +6,7 @@ import type { Player } from "../core/player";
 import type { LyricLine, Lyrics, PlayerState, Track } from "../core/types";
 import { blob, eq, icons } from "./icons";
 import { cardSheet } from "./styles";
-import { artists, emit, emitFly, openEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow, type OpenDetail } from "./util";
+import { artists, canPlay, emit, emitFly, openEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow, type OpenDetail } from "./util";
 
 const sizes = ["s", "m", "l"] as const;
 type Size = (typeof sizes)[number];
@@ -123,21 +123,21 @@ export class KiteTrackElement extends LitElement {
     }
     const size = this.cardSize();
     const cur = this.s.current?.id === t.id;
-    const classes = classMap({ card: true, [size]: true, locked: !t.playable, cur, playing: cur && this.s.playing });
+    const classes = classMap({ card: true, [size]: true, locked: !canPlay(t), cur, playing: cur && this.s.playing });
     if (size === "s") return this.renderS(t, cur, classes);
     return size === "l" ? this.renderL(t, cur, classes) : this.renderM(t, cur, classes);
   }
 
   private renderS(t: Track, cur: boolean, classes: ReturnType<typeof classMap>): TemplateResult {
-    const locked = !t.playable;
+    const locked = !canPlay(t);
     const sub = locked
       ? html`${icons.lock}<span class="ell">${unplayableMessage(t)}</span>`
       : html`<span class="ell">${[artists(t), t.album.name, formatTime(t.durationMs / 1000)].filter(Boolean).join(" · ")}</span>`;
     return html`<div class=${classes} part="card">
       <div class="cover"><img alt="" src=${t.album.cover} /></div>
       <div class="main">
-        <div class="title">${eq}<span class="ell">${t.title}</span><span class="who ell">${artists(t)}</span></div>
-        <div class="sub" ?hidden=${cur && t.playable}>${sub}</div>
+        <div class="title">${eq}<span class="ell">${t.title}</span>${t.trial ? html`<span class="tg trial">仅试听</span>` : nothing}<span class="who ell">${artists(t)}</span></div>
+        <div class="sub" ?hidden=${cur && canPlay(t)}>${sub}</div>
         ${this.renderProgress(t, !cur)}
       </div>
       <div class="actions">
@@ -153,7 +153,7 @@ export class KiteTrackElement extends LitElement {
   }
 
   private renderM(t: Track, cur: boolean, classes: ReturnType<typeof classMap>): TemplateResult {
-    const locked = !t.playable;
+    const locked = !canPlay(t);
     const lv = this.lyricView(cur);
     return html`<div class=${classes} part="card">
       <div class="cover"><img alt="" src=${t.album.cover} /></div>
@@ -177,7 +177,7 @@ export class KiteTrackElement extends LitElement {
   }
 
   private renderL(t: Track, cur: boolean, classes: ReturnType<typeof classMap>): TemplateResult {
-    const locked = !t.playable;
+    const locked = !canPlay(t);
     const lv = this.lyricView(cur);
     return html`<div class=${classes} part="card">
       <div class="amb"><img alt="" src=${t.album.cover} /></div>
@@ -226,9 +226,11 @@ export class KiteTrackElement extends LitElement {
   }
 
   private tags(t: Track): unknown {
-    if (t.access === "vip") return html`<span class="tg vip">VIP</span>`;
-    if (t.access === "paid") return html`<span class="tg out">数字专辑</span>`;
-    return nothing;
+    return html`${t.trial ? html`<span class="tg trial">仅试听</span>` : nothing}${t.access === "vip"
+      ? html`<span class="tg vip">VIP</span>`
+      : t.access === "paid"
+        ? html`<span class="tg out">数字专辑</span>`
+        : nothing}`;
   }
 
   private playLabel(t: Track, cur: boolean): string {
@@ -292,7 +294,7 @@ export class KiteTrackElement extends LitElement {
   private async play(chorus: boolean): Promise<void> {
     const t = this.track;
     if (!t) return;
-    if (!t.playable) {
+    if (!canPlay(t)) {
       emit(toastEvent, unplayableMessage(t));
       return;
     }

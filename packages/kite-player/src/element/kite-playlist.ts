@@ -5,7 +5,7 @@ import type { Player } from "../core/player";
 import type { PlayerState, Playlist } from "../core/types";
 import { icons } from "./icons";
 import { cardSheet } from "./styles";
-import { artists, emit, emitFly, openQueueEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow } from "./util";
+import { artists, canPlay, emit, emitFly, openQueueEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow } from "./util";
 
 /** 标准卡片列出的歌曲数。 */
 const previewRows = 4;
@@ -115,11 +115,13 @@ export class KitePlaylistElement extends LitElement {
       </div>
       <div class="rows" role="list">
         ${rows.map(
-          (t, i) => html`<button class=${classMap({ row: true, locked: !t.playable, cur: inThis && t.id === cur })} role="listitem" data-i=${i} @click=${() => this.play(i)}>
+          (t, i) => html`<button class=${classMap({ row: true, locked: !canPlay(t), cur: inThis && t.id === cur })} role="listitem" data-i=${i} @click=${() => this.play(i)}>
             <span class="idx">${i + 1}</span>
-            <span class="t"><b>${t.title}</b><span>${artists(t)}</span></span>
+            <span class="t"
+              ><b>${t.title}</b>${t.trial ? html`<span class="tg trial">仅试听</span>` : nothing}<span>${artists(t)}</span></span
+            >
             <span class="d"
-              >${t.playable
+              >${canPlay(t)
                 ? formatTime(t.durationMs / 1000)
                 : t.access === "vip"
                   ? html`<span class="tg vip">VIP</span>`
@@ -142,7 +144,7 @@ export class KitePlaylistElement extends LitElement {
     const pl = this.list;
     if (!pl) return;
     const t = index === undefined ? undefined : pl.tracks[index];
-    if (t && !t.playable) {
+    if (t && !canPlay(t)) {
       emit(toastEvent, unplayableMessage(t));
       return;
     }
