@@ -628,7 +628,8 @@ img[data-err], img:not([src]) {
 .badge[data-show] {
   opacity: calc(1 - var(--pg) * 3);
 }
-.kp[data-view="cover"] .badge[data-show]:not([disabled]) .bq-label, .kp[data-immersive] .badge[data-show]:not([disabled]) .bq-label {
+/* 整个标签都能点(音质名与规格),不只左半边。 */
+.kp[data-view="cover"] .badge[data-show]:not([disabled]), .kp[data-immersive] .badge[data-show]:not([disabled]) {
   pointer-events: auto;
   cursor: pointer;
 }
