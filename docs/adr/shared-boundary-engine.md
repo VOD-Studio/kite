@@ -14,7 +14,7 @@
 
 共享边界是 **`internal/netease/engine` + `internal/netease/endpoint`**。
 
-- endpoint 是声明式的(Meta + MapRequest + MapResponse),engine 是唯一的执行语义定义处(`Execute` / `ExecuteWithCookie`)。
+- endpoint 是声明式的(Meta + MapRequest + MapResponse),engine 是唯一的执行语义定义处(`Execute` / `ExecuteWithCookie` / `ExecuteWithSetCookie`,登录类接口要 Set-Cookie)。
 - CLI、TUI、gRPC service 是三个平行的前端/适配器,都消费 endpoint 声明,谁也不拷贝执行逻辑。
 - `internal/service` 保持 gRPC adapter 的定位,不承载业务逻辑,不被 CLI/TUI 引用。
 - 与前端无关的本地能力(会话文件、配置、召回池)放在 `internal/localstate`、`internal/recall`,不放 `internal/cli/kit`。

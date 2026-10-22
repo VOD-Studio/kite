@@ -32,11 +32,11 @@ var SimilarSongs = &engine.Endpoint[*mmpb.SimilarSongsRequest, *mmpb.SimilarSong
 		return map[string]any{"songid": req.GetSongId(), "limit": limit, "offset": req.GetOffset()}, nil
 	},
 	MapResponse: func(_ *mmpb.SimilarSongsRequest, raw json.RawMessage) (*mmpb.SimilarSongsResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Songs []rawSimilarSong `json:"songs"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析相似音乐失败: %w", err)
+		}](raw, "相似音乐")
+		if err != nil {
+			return nil, err
 		}
 		out := make([]*mmpb.Song, 0, len(resp.Songs))
 		for _, s := range resp.Songs {

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -435,11 +436,24 @@ func TestOwnerRefresh(t *testing.T) {
 	o := newOwnerSession(path, c.now)
 	require.Equal(t, loginActive, o.state())
 
-	renew := func(ctx context.Context, _ engine.Meta, _ map[string]any) (json.RawMessage, string, error) {
-		require.Equal(t, "MUSIC_U=old; __csrf=x", engine.CookieFromContext(ctx))
-		return json.RawMessage(`{"code":200}`), "MUSIC_U=new", nil
-	}
-	require.NoError(t, o.refresh(context.Background(), renew))
+	var gotCookie atomic.Value
+	var expired atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/weapi/login/token/refresh", r.URL.Path)
+		gotCookie.Store(r.Header.Get("Cookie"))
+		w.Header().Set("Content-Type", "application/json")
+		if expired.Load() {
+			_, _ = w.Write([]byte(`{"code":301}`))
+			return
+		}
+		http.SetCookie(w, &http.Cookie{Name: "MUSIC_U", Value: "new", Path: "/"})
+		_, _ = w.Write([]byte(`{"code":200}`))
+	}))
+	t.Cleanup(srv.Close)
+	eng := engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(srv.URL))
+
+	require.NoError(t, o.refresh(context.Background(), eng))
+	require.Contains(t, gotCookie.Load(), "MUSIC_U=old; __csrf=x", "应带着会话文件里的 cookie 请求上游")
 	f, err := ReadSessionFile(path)
 	require.NoError(t, err)
 	require.Contains(t, f.Cookie, "MUSIC_U=new", "续期后写回新 cookie")
@@ -448,10 +462,8 @@ func TestOwnerRefresh(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, os.FileMode(0o600), info.Mode().Perm())
 
-	expire := func(context.Context, engine.Meta, map[string]any) (json.RawMessage, string, error) {
-		return nil, "", merrors.ErrUnauthorized
-	}
-	require.ErrorIs(t, o.refresh(context.Background(), expire), merrors.ErrUnauthorized)
+	expired.Store(true)
+	require.ErrorIs(t, o.refresh(context.Background(), eng), merrors.ErrUnauthorized)
 	require.Equal(t, loginExpired, o.state())
 	require.Empty(t, o.cookie(), "失效后按匿名播放")
 }

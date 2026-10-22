@@ -51,6 +51,7 @@ type smokeCase struct {
 // 显式登记而不是删掉用例——这样它不会悄悄被遗忘;问题修复后(不再为空)会提示移除登记。
 var knownEmpty = map[string]string{
 	"Playlist.RelatedPlaylistRecommend": "匿名调用时上游 /eapi/playlist/detail/rcmd/get 对所有歌单都返回 data=null(可能需要登录态或接口已变),见 #78",
+	"Auth.LoginStatus":                  "匿名调用时上游不返回账号信息,空响应即「未登录」语义,是预期行为",
 }
 
 func TestUpstreamSmoke(t *testing.T) {
@@ -58,8 +59,19 @@ func TestUpstreamSmoke(t *testing.T) {
 	song, album, artist := NewSongServer(eng), NewAlbumServer(eng), NewArtistServer(eng)
 	playlist, user := NewPlaylistServer(eng), NewUserServer(eng)
 	recommend, search := NewRecommendServer(eng), NewSearchServer(eng)
+	authsrv := NewAuthServer(eng, nil)
 
 	cases := []smokeCase{
+		// --- 登录(匿名可验证的子集:取二维码 key / 匿名登录态) ---
+		{"Auth.LoginQrcode", func(c context.Context) (proto.Message, error) {
+			return authsrv.LoginQrcode(c, &mmpb.LoginQrcodeRequest{})
+		}, func(t *testing.T, r proto.Message) {
+			require.NotEmpty(t, r.(*mmpb.LoginQrcodeResponse).GetQrcode().GetKey(), "二维码 key 非空")
+			require.NotEmpty(t, r.(*mmpb.LoginQrcodeResponse).GetQrcode().GetUrl(), "二维码 URL 非空")
+		}},
+		{"Auth.LoginStatus", func(c context.Context) (proto.Message, error) {
+			return authsrv.LoginStatus(c, &mmpb.LoginStatusRequest{})
+		}, nil},
 		// --- 歌曲 ---
 		{"Song.GetSongDetail", func(c context.Context) (proto.Message, error) {
 			return song.GetSongDetail(c, &mmpb.GetSongDetailRequest{SongId: songID})

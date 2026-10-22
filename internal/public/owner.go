@@ -113,7 +113,7 @@ func (o *ownerSession) reloadLocked(force bool) {
 }
 
 // refresh 续期一次:成功时把上游下发的新 cookie 写回文件;cookie 失效时标记为 expired。
-func (o *ownerSession) refresh(ctx context.Context, do authendpoint.RawDoer) error {
+func (o *ownerSession) refresh(ctx context.Context, eng *engine.Engine) error {
 	o.mu.Lock()
 	o.reloadLocked(true)
 	f, status := o.file, o.status
@@ -122,7 +122,7 @@ func (o *ownerSession) refresh(ctx context.Context, do authendpoint.RawDoer) err
 		return nil
 	}
 
-	cookie, renewed, err := authendpoint.Refresh(engine.WithCookie(ctx, f.Cookie), do)
+	cookie, renewed, err := authendpoint.Refresh(engine.WithCookie(ctx, f.Cookie), eng)
 	if err != nil {
 		if errors.Is(err, merrors.ErrUnauthorized) {
 			o.mu.Lock()
@@ -144,7 +144,7 @@ func (o *ownerSession) refresh(ctx context.Context, do authendpoint.RawDoer) err
 }
 
 // runRefresh 在后台定期续期,直到 ctx 结束。启动时若距上次续期已超过间隔,先续一次。
-func (o *ownerSession) runRefresh(ctx context.Context, do authendpoint.RawDoer) {
+func (o *ownerSession) runRefresh(ctx context.Context, eng *engine.Engine) {
 	if o.path == "" {
 		return
 	}
@@ -152,7 +152,7 @@ func (o *ownerSession) runRefresh(ctx context.Context, do authendpoint.RawDoer) 
 	stale := o.status == loginActive && o.now().Sub(o.file.UpdatedAt) >= refreshInterval
 	o.mu.Unlock()
 	if stale {
-		o.logRefresh(o.refresh(ctx, do))
+		o.logRefresh(o.refresh(ctx, eng))
 	}
 	t := time.NewTicker(refreshInterval)
 	defer t.Stop()
@@ -161,7 +161,7 @@ func (o *ownerSession) runRefresh(ctx context.Context, do authendpoint.RawDoer) 
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			o.logRefresh(o.refresh(ctx, do))
+			o.logRefresh(o.refresh(ctx, eng))
 		}
 	}
 }

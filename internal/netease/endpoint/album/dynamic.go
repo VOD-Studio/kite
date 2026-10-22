@@ -28,14 +28,14 @@ var AlbumDynamic = &engine.Endpoint[*mmpb.AlbumDynamicRequest, *mmpb.AlbumDynami
 		return map[string]any{"id": req.GetAlbumId()}, nil
 	},
 	MapResponse: func(_ *mmpb.AlbumDynamicRequest, raw json.RawMessage) (*mmpb.AlbumDynamicResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			SubCount     int64 `json:"subCount"`     // 收藏数
 			CommentCount int64 `json:"commentCount"` // 评论数
 			ShareCount   int64 `json:"shareCount"`   // 分享数
 			IsSub        bool  `json:"isSub"`        // 当前用户是否已收藏
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.AlbumDynamicResponse{}, fmt.Errorf("解析专辑动态信息失败: %w", err)
+		}](raw, "专辑动态信息")
+		if err != nil {
+			return nil, err
 		}
 		return &mmpb.AlbumDynamicResponse{
 			Info: &mmpb.AlbumDynamicInfo{

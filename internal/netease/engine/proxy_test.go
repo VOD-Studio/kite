@@ -34,7 +34,7 @@ func TestWithProxyURL_RoutesViaProxy(t *testing.T) {
 	)
 
 	meta := Meta{Path: "/api/test", Method: http.MethodGet, Crypto: CryptoNone}
-	raw, err := e.RawDo(context.Background(), meta, nil)
+	raw, _, err := e.RawDoWithCookieAndInput(context.Background(), meta, nil)
 	require.NoError(t, err)
 	require.Contains(t, string(raw), "200")
 

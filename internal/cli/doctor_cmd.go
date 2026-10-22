@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cli/doctor"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
 	"github.com/VOD-Studio/kite/internal/localstate"
@@ -43,7 +44,7 @@ func runDoctor(k *kit.Kit, cmd *cobra.Command) error {
 			// netProbe:把 cookie 注入 ctx,用 login-status rpc 验证有效性。
 			func(ctx context.Context, cookie string) error {
 				engCtx := engine.WithCookie(ctx, cookie)
-				_, _, err := k.RawDo(engCtx, mmauth.LoginStatus, nil)
+				_, err := kit.Exec(k, engCtx, mmauth.LoginStatus, &mmpb.LoginStatusRequest{})
 				return err
 			},
 		),

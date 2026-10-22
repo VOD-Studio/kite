@@ -3,9 +3,9 @@ package user
 
 import (
 	"encoding/json"
-	"fmt"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/engine"
 )
 
 // rawFollowItem 是网易云关注/粉丝列表的单个用户结构。
@@ -19,11 +19,11 @@ type rawFollowItem struct {
 
 // parseFollowList 解析关注列表。
 func parseFollowList(_ *mmpb.FollowsRequest, raw json.RawMessage) (*mmpb.FollowsResponse, error) {
-	var resp struct {
+	resp, err := engine.Decode[struct {
 		Follow []rawFollowItem `json:"follow"`
-	}
-	if err := json.Unmarshal(raw, &resp); err != nil {
-		return nil, fmt.Errorf("解析关注列表失败: %w", err)
+	}](raw, "关注列表")
+	if err != nil {
+		return nil, err
 	}
 	out := &mmpb.FollowsResponse{Total: int32(len(resp.Follow))}
 	for _, f := range resp.Follow {
@@ -34,12 +34,12 @@ func parseFollowList(_ *mmpb.FollowsRequest, raw json.RawMessage) (*mmpb.Follows
 
 // parseFollowedList 解析粉丝列表。
 func parseFollowedList(_ *mmpb.FollowedsRequest, raw json.RawMessage) (*mmpb.FollowedsResponse, error) {
-	var resp struct {
+	resp, err := engine.Decode[struct {
 		Followeds []rawFollowItem `json:"followeds"`
 		More      bool            `json:"more"`
-	}
-	if err := json.Unmarshal(raw, &resp); err != nil {
-		return nil, fmt.Errorf("解析粉丝列表失败: %w", err)
+	}](raw, "粉丝列表")
+	if err != nil {
+		return nil, err
 	}
 	out := &mmpb.FollowedsResponse{Total: int32(len(resp.Followeds))}
 	for _, f := range resp.Followeds {
@@ -62,7 +62,7 @@ func followItemToDetail(f rawFollowItem) *mmpb.UserDetail {
 // parsePlayRecord 解析播放记录。
 func parsePlayRecord(_ *mmpb.RecordRequest, raw json.RawMessage) (*mmpb.RecordResponse, error) {
 	// 网易云播放记录可能返回 weekData / allData 两个数组，按请求 type 决定。
-	var resp struct {
+	resp, err := engine.Decode[struct {
 		WeekData []struct {
 			PlayCount int `json:"playCount"` // 播放次数
 			Song      struct {
@@ -77,9 +77,9 @@ func parsePlayRecord(_ *mmpb.RecordRequest, raw json.RawMessage) (*mmpb.RecordRe
 				Name string `json:"name"`
 			} `json:"song"`
 		} `json:"allData"`
-	}
-	if err := json.Unmarshal(raw, &resp); err != nil {
-		return nil, fmt.Errorf("解析播放记录失败: %w", err)
+	}](raw, "播放记录")
+	if err != nil {
+		return nil, err
 	}
 	out := &mmpb.RecordResponse{}
 	for _, r := range resp.WeekData {

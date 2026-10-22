@@ -10,7 +10,6 @@ import (
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	authendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/auth"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
-	"github.com/VOD-Studio/kite/internal/netease/model"
 	"github.com/VOD-Studio/kite/internal/termqr"
 )
 
@@ -49,11 +48,11 @@ func Login(ctx context.Context, eng *engine.Engine, path string, out io.Writer) 
 }
 
 func qrcodeKey(ctx context.Context, eng *engine.Engine) (string, error) {
-	raw, _, err := eng.RawDoWithCookieAndInput(ctx, authendpoint.LoginQrcode, authendpoint.LoginQrcodeRequest(nil))
+	resp, _, err := engine.ExecuteWithSetCookie(eng, ctx, authendpoint.LoginQrcode, nil)
 	if err != nil {
 		return "", fmt.Errorf("获取二维码: %w", err)
 	}
-	return model.DecodeQrcodeKey(raw)
+	return resp.GetQrcode().GetKey(), nil
 }
 
 // waitQrcode 轮询直到确认登录(返回会话)或二维码过期(expired=true)。
@@ -67,16 +66,12 @@ func waitQrcode(ctx context.Context, eng *engine.Engine, key string, out io.Writ
 			return nil, false, ctx.Err()
 		case <-t.C:
 		}
-		raw, setCookie, err := eng.RawDoWithCookieAndInput(ctx, authendpoint.CheckQrcode,
-			authendpoint.CheckQrcodeRequest(&mmpb.CheckQrcodeRequest{Key: key}))
+		resp, setCookie, err := engine.ExecuteWithSetCookie(eng, ctx, authendpoint.CheckQrcode,
+			&mmpb.CheckQrcodeRequest{Key: key})
 		if err != nil {
 			return nil, false, fmt.Errorf("查询二维码状态: %w", err)
 		}
-		code, _, err := model.DecodeQrcodeStatus(raw)
-		if err != nil {
-			return nil, false, err
-		}
-		switch code {
+		switch resp.GetCode() {
 		case mmpb.QrcodeCode_QRCODE_CODE_EXPIRED:
 			return nil, true, nil
 		case mmpb.QrcodeCode_QRCODE_CODE_SCANNED:
@@ -88,8 +83,8 @@ func waitQrcode(ctx context.Context, eng *engine.Engine, key string, out io.Writ
 			if setCookie == "" {
 				return nil, false, errors.New("上游确认了登录,但没有下发 cookie")
 			}
-			sess, err := model.DecodeLoginResponse(raw)
-			if err != nil {
+			sess := resp.GetSession()
+			if sess == nil {
 				sess = &mmpb.Session{}
 			}
 			sess.Cookie = setCookie

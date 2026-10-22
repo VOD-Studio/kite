@@ -1,19 +1,17 @@
-// Package service 的 AuthService impl。
-//
-// auth 接口不走 Execute（需要 Set-Cookie 创建 session），直接调 engine.RawDoWithCookieAndInput，
-// 拿到 raw + setCookie 后调 model 解码 + Save session。
+// Package service 的 AuthServer:登录类 rpc 带 session 副作用,手写
+// (CheckQrcode 的确认-补查-落盘组合在 compose 层);纯转发
+// (SendCaptcha / LoginQrcode / Logout)由 auth_gen.go 生成。
 package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/netease/compose"
 	authendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/auth"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
-	"github.com/VOD-Studio/kite/internal/netease/model"
 	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
@@ -31,49 +29,23 @@ func NewAuthServer(eng *engine.Engine, sessions session.SessionStore) *AuthServe
 	return &AuthServer{eng: eng, sessions: sessions}
 }
 
-// SendCaptcha 发送验证码。
-func (s *AuthServer) SendCaptcha(ctx context.Context, req *mmpb.SendCaptchaRequest) (*mmpb.SendCaptchaResponse, error) {
-	_, _, err := s.eng.RawDoWithCookieAndInput(ctx, authendpoint.SendCaptcha, authendpoint.SendCaptchaRequest(req))
-	if err != nil {
-		return nil, err
-	}
-	return &mmpb.SendCaptchaResponse{}, nil
-}
-
 // LoginByCellphone 手机号登录，返回 Session 并存入 cookie 池。
 func (s *AuthServer) LoginByCellphone(ctx context.Context, req *mmpb.LoginByCellphoneRequest) (*mmpb.LoginByCellphoneResponse, error) {
-	raw, setCookie, err := s.eng.RawDoWithCookieAndInput(ctx, authendpoint.LoginCellphone, authendpoint.LoginCellphoneRequest(req))
+	resp, setCookie, err := engine.ExecuteWithSetCookie(s.eng, ctx, authendpoint.LoginCellphone, req)
 	if err != nil {
 		return nil, err
 	}
-
-	sess, err := model.DecodeLoginResponse(raw)
-	if err != nil {
-		return nil, err
+	// gRPC 契约与旧实现一致:登录响应里没有账号信息按未登录报错。
+	// MapResponse 是宽容解码(CLI 据此可落盘仅 cookie 的会话),严格性在这里补回。
+	if resp.GetSession().GetUserId() == 0 {
+		return nil, fmt.Errorf("未登录: %w", merrors.ErrUnauthorized)
 	}
-	sess.Cookie = setCookie
 
 	// 存入 session 池（UserID 用数字 ID 转字符串，Nickname 不唯一不能做 key）。
-	s.saveSession(ctx, sess.UserId, setCookie)
+	s.saveSession(ctx, resp.Session.UserId, setCookie)
+	resp.Session.Cookie = setCookie
 
-	return &mmpb.LoginByCellphoneResponse{Session: sess}, nil
-}
-
-// LoginQrcode 获取登录二维码。
-func (s *AuthServer) LoginQrcode(ctx context.Context, req *mmpb.LoginQrcodeRequest) (*mmpb.LoginQrcodeResponse, error) {
-	raw, _, err := s.eng.RawDoWithCookieAndInput(ctx, authendpoint.LoginQrcode, authendpoint.LoginQrcodeRequest(req))
-	if err != nil {
-		return nil, err
-	}
-
-	key, err := model.DecodeQrcodeKey(raw)
-	if err != nil {
-		return nil, err
-	}
-
-	return &mmpb.LoginQrcodeResponse{
-		Qrcode: &mmpb.Qrcode{Key: key, Url: authendpoint.QrcodeURL(key)},
-	}, nil
+	return resp, nil
 }
 
 // CheckQrcode 轮询二维码登录状态。
@@ -92,34 +64,21 @@ func (s *AuthServer) CheckQrcode(ctx context.Context, req *mmpb.CheckQrcodeReque
 
 // LoginStatus 查询当前登录态。
 func (s *AuthServer) LoginStatus(ctx context.Context, req *mmpb.LoginStatusRequest) (*mmpb.LoginStatusResponse, error) {
-	raw, _, err := s.eng.RawDoWithCookieAndInput(ctx, authendpoint.LoginStatus, authendpoint.LoginStatusRequest(req))
+	resp, err := engine.ExecuteWithCookie(s.eng, ctx, authendpoint.LoginStatus, req)
 	if err != nil {
 		return nil, err
 	}
-
-	sess, err := model.DecodeLoginResponse(raw)
-	if err != nil {
-		return &mmpb.LoginStatusResponse{}, nil //nolint:nilerr // 未登录不算错误,session 为空即表示未登录
+	if resp.GetSession() != nil {
+		resp.Session.Cookie = engine.CookieFromContext(ctx)
 	}
-	sess.Cookie = engine.CookieFromContext(ctx)
-
-	return &mmpb.LoginStatusResponse{Session: sess}, nil
-}
-
-// Logout 登出。
-func (s *AuthServer) Logout(ctx context.Context, req *mmpb.LogoutRequest) (*mmpb.LogoutResponse, error) {
-	_, _, err := s.eng.RawDoWithCookieAndInput(ctx, authendpoint.Logout, authendpoint.LogoutRequest(req))
-	if err != nil {
-		return nil, err
-	}
-	return &mmpb.LogoutResponse{}, nil
+	return resp, nil
 }
 
 // RefreshLogin 刷新登录态,返回合并了上游新下发值的完整 cookie。
 //
 // 响应体不含用户信息,拿不到 UserID,所以不写 session 池;cookie 由调用方保存(与登录接口一致)。
 func (s *AuthServer) RefreshLogin(ctx context.Context, _ *mmpb.RefreshLoginRequest) (*mmpb.RefreshLoginResponse, error) {
-	cookie, _, err := authendpoint.Refresh(ctx, s.eng.RawDoWithCookieAndInput)
+	cookie, _, err := authendpoint.Refresh(ctx, s.eng)
 	if err != nil {
 		return nil, err
 	}
@@ -133,6 +92,3 @@ func (s *AuthServer) saveSession(ctx context.Context, userID int64, cookie strin
 	}
 	_ = s.sessions.Save(ctx, &session.Session{UserID: fmt.Sprintf("%d", userID), Cookie: cookie})
 }
-
-// 确保 json import 被使用（model 解码函数的返回类型在编译期检查）。
-var _ = json.RawMessage(nil)

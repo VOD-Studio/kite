@@ -5,6 +5,7 @@
 package archtest
 
 import (
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"io/fs"
@@ -87,6 +88,62 @@ var rules = []rule{
 func under(path, prefix string) bool {
 	prefix = strings.TrimSuffix(prefix, "/")
 	return path == prefix || strings.HasPrefix(path, prefix+"/")
+}
+
+// rawEntryNames 是 engine 的原始入口(RawDo* 家族)。它们只作为引擎管线最底层的
+// seam 存在:engine 之外的调用方必须经声明式 endpoint(Execute / ExecuteWithCookie /
+// ExecuteWithSetCookie),否则「手拼 Meta + 参数」的裸式风格会重新长出来(issue #64)。
+var rawEntryNames = map[string]bool{
+	"RawDo":                   true,
+	"RawDoWithCookie":         true,
+	"RawDoWithCookieAndInput": true,
+}
+
+// TestRawEngineEntriesNotCalledOutsideEngine 守护:非测试源码里,engine 包之外
+// 不得出现对原始入口的选择器调用。
+func TestRawEngineEntriesNotCalledOutsideEngine(t *testing.T) {
+	root := filepath.Join("..", "..")
+
+	var violations []string
+	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			switch d.Name() {
+			case ".git", "gen", "node_modules", "tmp", "target":
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") {
+			return nil
+		}
+		rel, _ := filepath.Rel(root, filepath.Dir(p))
+		rel = filepath.ToSlash(rel)
+		if under(rel, "internal/netease/engine") {
+			return nil
+		}
+
+		f, perr := parser.ParseFile(token.NewFileSet(), p, nil, 0)
+		require.NoError(t, perr, p)
+		ast.Inspect(f, func(n ast.Node) bool {
+			sel, ok := n.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			if rawEntryNames[sel.Sel.Name] {
+				violations = append(violations, rel+" → "+sel.Sel.Name+"()")
+			}
+			return true
+		})
+		return nil
+	})
+	require.NoError(t, err)
+
+	sort.Strings(violations)
+	require.Empty(t, violations, "engine 之外不得调用原始入口(改为声明式 endpoint + Execute*):\n%s",
+		strings.Join(violations, "\n"))
 }
 
 func TestDependencyDirection(t *testing.T) {

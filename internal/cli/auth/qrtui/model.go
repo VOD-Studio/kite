@@ -11,7 +11,6 @@ package qrtui
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"time"
@@ -33,25 +32,25 @@ const (
 	minHeight = 20
 )
 
-// Result Run 的返回。Confirmed=true 时 Raw/SetCookie 有效,调用方据此持久化。
+// Result Run 的返回。Confirmed=true 时 Session/SetCookie 有效,调用方据此持久化。
 type Result struct {
 	Confirmed bool
-	Raw       json.RawMessage // CONFIRMED 响应,传给 persistLogin 提取 UserID
-	SetCookie string          // Set-Cookie 头,会话信件
+	Session   *mmpb.Session // CONFIRMED 时解出的账号信息(可能为 nil,UserID 是可选项)
+	SetCookie string        // Set-Cookie 头,会话信件
 }
 
-// Deps 注入依赖(测试 seam)。Check 是对 CheckQrcode 的封装,内部调 kit.RawDo
-// + model.DecodeQrcodeStatus;调用方负责 ctx 的 cookie 注入。
+// Deps 注入依赖(测试 seam)。Check 是对 CheckQrcode 声明式 endpoint 的封装
+// (kit.ExecWithSetCookie);调用方负责 ctx 的 cookie 注入。
 type Deps struct {
 	// QR termqr.Render 的输出(已含 quiet zone 与半高方块),固定不变。
 	QR string
 	// QRURL 二维码原始 URL(展示给无法识别二维码的终端用户)。
 	QRURL string
-	// Check 轮询一次扫码状态。返回 (code, raw, setCookie, err):
+	// Check 轮询一次扫码状态。返回 (code, session, setCookie, err):
 	//   - code=WAITING/SCANNED/CONFIRMED/EXPIRED
-	//   - raw/setCookie 仅 CONFIRMED 有效(持久化用)
+	//   - session/setCookie 仅 CONFIRMED 有效(持久化用)
 	//   - err 非空时进入 stateError,自动重试
-	Check func(ctx context.Context) (code mmpb.QrcodeCode, raw json.RawMessage, setCookie string, err error)
+	Check func(ctx context.Context) (code mmpb.QrcodeCode, session *mmpb.Session, setCookie string, err error)
 	// PollCtx 轮询上下文(注入 cookie)。默认 context.Background,生产由调用方传 CookieCtx。
 	PollCtx context.Context
 	// Now 时钟注入(测试「Xs 前检查」展示)。
@@ -67,7 +66,7 @@ const (
 	stateWaiting                // ⠋ 等待扫码
 	stateScanned                // ⠙ 已扫描,待 App 确认
 	stateError                  // ⚠ 轮询出错(非终态,自动重试)
-	stateConfirmed              // ✅ 登录成功(终态,已填充 raw/cookie)
+	stateConfirmed              // ✅ 登录成功(终态,已填充 session/cookie)
 	stateExpired                // ✗ 二维码已过期(终态)
 	stateTimeout                // ⏱ 轮询超时(终态)
 )
@@ -107,7 +106,7 @@ type model struct {
 	compiled compiledPalette
 
 	// CONFIRMED 时填充,Run 退出后回传调用方。
-	confirmedRaw    json.RawMessage
+	confirmedSess   *mmpb.Session
 	confirmedCookie string
 }
 
@@ -153,7 +152,7 @@ func Run(deps Deps, output io.Writer) (Result, error) {
 	}
 	return Result{
 		Confirmed: m.state == stateConfirmed,
-		Raw:       m.confirmedRaw,
+		Session:   m.confirmedSess,
 		SetCookie: m.confirmedCookie,
 	}, nil
 }

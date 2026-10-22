@@ -36,15 +36,15 @@ var DetailByName = &engine.Endpoint[*mmpb.DetailByNameRequest, *mmpb.DetailByNam
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.DetailByNameRequest, raw json.RawMessage) (*mmpb.DetailByNameResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Result struct {
 				Userprofiles []struct {
 					UserID int64 `json:"userId"` // 用户ID
 				} `json:"userprofiles"`
 			} `json:"result"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析昵称查询失败: %w", err)
+		}](raw, "昵称查询")
+		if err != nil {
+			return nil, err
 		}
 		if len(resp.Result.Userprofiles) == 0 {
 			return nil, fmt.Errorf("未找到该昵称对应的用户: %w", merrors.ErrNotFound)
@@ -74,13 +74,13 @@ var FollowEachOther = &engine.Endpoint[*mmpb.FollowEachOtherRequest, *mmpb.Follo
 	},
 	// 遍历响应的 follow 数组,判断是否包含 req.UserId。
 	MapResponse: func(req *mmpb.FollowEachOtherRequest, raw json.RawMessage) (*mmpb.FollowEachOtherResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Follow []struct {
 				UserID int64 `json:"userId"` // 被关注用户ID
 			} `json:"follow"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return nil, fmt.Errorf("解析关注列表失败: %w", err)
+		}](raw, "关注列表")
+		if err != nil {
+			return nil, err
 		}
 		for _, f := range resp.Follow {
 			if f.UserID == req.GetUserId() {

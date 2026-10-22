@@ -57,11 +57,11 @@ var Search = &engine.Endpoint[*mmpb.SearchRequest, *mmpb.SearchResponse]{
 // 网易云搜索响应外层是 {result: {...}, code: 200}，不同 type 的 result 内部字段不同。
 // type 只存在于请求里（响应不回传），因此按请求 type 确定地分发，不做字段嗅探。
 func mapSearchResponse(req *mmpb.SearchRequest, raw json.RawMessage) (*mmpb.SearchResponse, error) {
-	var r struct {
+	r, err := engine.Decode[struct {
 		Result json.RawMessage `json:"result"`
-	}
-	if err := json.Unmarshal(raw, &r); err != nil {
-		return &mmpb.SearchResponse{}, fmt.Errorf("解析搜索结果失败: %w", err)
+	}](raw, "搜索结果")
+	if err != nil {
+		return nil, err
 	}
 	if len(r.Result) == 0 {
 		return &mmpb.SearchResponse{}, nil

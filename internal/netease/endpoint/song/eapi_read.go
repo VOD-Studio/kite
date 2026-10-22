@@ -43,11 +43,11 @@ var LikedList = &engine.Endpoint[*mmpb.LikedListRequest, *mmpb.LikedListResponse
 		return map[string]any{"uid": req.GetUserId()}, nil
 	},
 	MapResponse: func(_ *mmpb.LikedListRequest, raw json.RawMessage) (*mmpb.LikedListResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			IDs []int64 `json:"ids"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.LikedListResponse{}, fmt.Errorf("解析喜欢列表失败: %w", err)
+		}](raw, "喜欢列表")
+		if err != nil {
+			return nil, err
 		}
 		return &mmpb.LikedListResponse{SongIds: resp.IDs}, nil
 	},
@@ -71,11 +71,11 @@ var QualityDetail = &engine.Endpoint[*mmpb.QualityDetailRequest, *mmpb.QualityDe
 		// 真实结构：data 下按音质等级动态 key（h/m/l/sq/hr/db/jm/sk/vi 等），
 		// 每个含 br(比特率)/size/sr(采样率)。songId(裸数字) 和 sks(数组) 不是音质项。
 		// data 的 value 类型不统一（对象/数字/数组），用 RawMessage 逐个尝试解析。
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Data map[string]json.RawMessage `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.QualityDetailResponse{}, fmt.Errorf("解析音质详情失败: %w", err)
+		}](raw, "音质详情")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.QualityDetailResponse{}
 		for level, raw := range resp.Data {
@@ -110,13 +110,13 @@ var LikeCount = &engine.Endpoint[*mmpb.LikeCountRequest, *mmpb.LikeCountResponse
 		return map[string]any{"songId": req.GetSongId()}, nil
 	},
 	MapResponse: func(_ *mmpb.LikeCountRequest, raw json.RawMessage) (*mmpb.LikeCountResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Data struct {
 				Count int64 `json:"count"`
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.LikeCountResponse{}, fmt.Errorf("解析红心数量失败: %w", err)
+		}](raw, "红心数量")
+		if err != nil {
+			return nil, err
 		}
 		return &mmpb.LikeCountResponse{Count: resp.Data.Count}, nil
 	},
@@ -135,14 +135,14 @@ var IsLike = &engine.Endpoint[*mmpb.IsLikeRequest, *mmpb.IsLikeResponse]{
 		return map[string]any{"trackIds": fmt.Sprintf("[%d]", req.GetSongId())}, nil
 	},
 	MapResponse: func(req *mmpb.IsLikeRequest, raw json.RawMessage) (*mmpb.IsLikeResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Songs []struct {
 				SongID int64 `json:"songId"`
 				Like   bool  `json:"like"`
 			} `json:"songs"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.IsLikeResponse{}, fmt.Errorf("解析是否喜爱失败: %w", err)
+		}](raw, "是否喜爱")
+		if err != nil {
+			return nil, err
 		}
 		for _, s := range resp.Songs {
 			if s.SongID == req.GetSongId() {
@@ -167,13 +167,13 @@ var DynamicCover = &engine.Endpoint[*mmpb.DynamicCoverRequest, *mmpb.DynamicCove
 		return map[string]any{"songId": req.GetSongId()}, nil
 	},
 	MapResponse: func(_ *mmpb.DynamicCoverRequest, raw json.RawMessage) (*mmpb.DynamicCoverResponse, error) {
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Data struct {
 				URL string `json:"url"`
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.DynamicCoverResponse{}, fmt.Errorf("解析动态封面失败: %w", err)
+		}](raw, "动态封面")
+		if err != nil {
+			return nil, err
 		}
 		return &mmpb.DynamicCoverResponse{Url: resp.Data.URL}, nil
 	},
@@ -195,14 +195,14 @@ var ChorusTime = &engine.Endpoint[*mmpb.ChorusTimeRequest, *mmpb.ChorusTimeRespo
 	},
 	MapResponse: func(_ *mmpb.ChorusTimeRequest, raw json.RawMessage) (*mmpb.ChorusTimeResponse, error) {
 		// 真实结构：data[].{startTime, endTime}（毫秒），字段名是 startTime/endTime 非 start/end。
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Data []struct {
 				StartTime int64 `json:"startTime"` // 副歌开始（毫秒）
 				EndTime   int64 `json:"endTime"`   // 副歌结束（毫秒）
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.ChorusTimeResponse{}, fmt.Errorf("解析副歌时间失败: %w", err)
+		}](raw, "副歌时间")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.ChorusTimeResponse{}
 		for _, seg := range resp.Data {
@@ -229,7 +229,7 @@ var CreatorInfo = &engine.Endpoint[*mmpb.CreatorInfoRequest, *mmpb.CreatorInfoRe
 	},
 	MapResponse: func(_ *mmpb.CreatorInfoRequest, raw json.RawMessage) (*mmpb.CreatorInfoResponse, error) {
 		// 真实结构：data.songCreatorsRoleVos[].{roleName, creatorMetaVOS[].{artistId, artistName}}
-		var resp struct {
+		resp, err := engine.Decode[struct {
 			Data struct {
 				Roles []struct {
 					RoleName string `json:"roleName"` // 角色（作词/作曲/编曲）
@@ -239,9 +239,9 @@ var CreatorInfo = &engine.Endpoint[*mmpb.CreatorInfoRequest, *mmpb.CreatorInfoRe
 					} `json:"creatorMetaVOS"`
 				} `json:"songCreatorsRoleVos"`
 			} `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil {
-			return &mmpb.CreatorInfoResponse{}, fmt.Errorf("解析创作者信息失败: %w", err)
+		}](raw, "创作者信息")
+		if err != nil {
+			return nil, err
 		}
 		out := &mmpb.CreatorInfoResponse{}
 		for _, role := range resp.Data.Roles {

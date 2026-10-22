@@ -67,171 +67,72 @@ func strToArea(s string) mmpb.AlbumArea {
 	}
 }
 
-// withID 注册 --id 专辑 ID flag(非必填,由位置参数补,#38)。
-// 命令 Args 须设为 cobra.MaximumNArgs(1),RunE 开头用 kit.ResolveID(id, args) 解析。
-func withID(c *cobra.Command, id *int64) {
-	c.Flags().Int64Var(id, "id", 0, "专辑 ID")
-}
-
 func newShelf(k *kit.Kit) *cobra.Command {
 	var area string
 	var limit int
-	c := &cobra.Command{
-		Use:   "shelf",
-		Short: "新碟上架",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, albumendpoint.NewAlbumShelf, &mmpb.NewAlbumShelfRequest{Area: strToArea(area), Limit: int32(limit)})
+	return kit.ReadCmd(k, "shelf", "新碟上架", "", albumendpoint.NewAlbumShelf,
+		func(int64) *mmpb.NewAlbumShelfRequest {
+			return &mmpb.NewAlbumShelfRequest{Area: strToArea(area), Limit: int32(limit)}
 		},
-	}
-	c.Flags().StringVar(&area, "area", "ALL", "地区: ALL/ZH/EA/KR/JP")
-	c.Flags().IntVar(&limit, "limit", 10, "返回数量")
-	return c
+		func(c *cobra.Command) {
+			c.Flags().StringVar(&area, "area", "ALL", "地区: ALL/ZH/EA/KR/JP")
+			c.Flags().IntVar(&limit, "limit", 10, "返回数量")
+		})
 }
 
 func newNewest(k *kit.Kit) *cobra.Command {
-	return &cobra.Command{
-		Use:   "newest",
-		Short: "最新专辑",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, albumendpoint.NewestAlbums, &mmpb.NewestAlbumsRequest{})
-		},
-	}
+	return kit.ReadCmd(k, "newest", "最新专辑", "", albumendpoint.NewestAlbums,
+		func(int64) *mmpb.NewestAlbumsRequest { return &mmpb.NewestAlbumsRequest{} })
 }
 
 func newAll(k *kit.Kit) *cobra.Command {
 	var area string
 	var limit, offset int
-	c := &cobra.Command{
-		Use:   "all",
-		Short: "全部新碟",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, albumendpoint.AllNewAlbums, &mmpb.AllNewAlbumsRequest{Area: strToArea(area), Limit: int32(limit), Offset: int32(offset)})
+	return kit.ReadCmd(k, "all", "全部新碟", "", albumendpoint.AllNewAlbums,
+		func(int64) *mmpb.AllNewAlbumsRequest {
+			return &mmpb.AllNewAlbumsRequest{Area: strToArea(area), Limit: int32(limit), Offset: int32(offset)}
 		},
-	}
-	c.Flags().StringVar(&area, "area", "ALL", "地区: ALL/ZH/EA/KR/JP")
-	c.Flags().IntVar(&limit, "limit", 10, "返回数量")
-	c.Flags().IntVar(&offset, "offset", 0, "偏移量")
-	return c
+		func(c *cobra.Command) {
+			c.Flags().StringVar(&area, "area", "ALL", "地区: ALL/ZH/EA/KR/JP")
+			c.Flags().IntVar(&limit, "limit", 10, "返回数量")
+			c.Flags().IntVar(&offset, "offset", 0, "偏移量")
+		})
 }
 
 func newDetail(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "detail",
-		Short: "专辑详情",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, albumendpoint.GetAlbum, &mmpb.GetAlbumRequest{AlbumId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.ReadCmd(k, "detail", "专辑详情", "专辑 ID", albumendpoint.GetAlbum,
+		func(id int64) *mmpb.GetAlbumRequest { return &mmpb.GetAlbumRequest{AlbumId: id} })
 }
 
 func newDynamic(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "dynamic",
-		Short: "专辑动态信息(收藏数等)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, albumendpoint.AlbumDynamic, &mmpb.AlbumDynamicRequest{AlbumId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.ReadCmd(k, "dynamic", "专辑动态信息(收藏数等)", "专辑 ID", albumendpoint.AlbumDynamic,
+		func(id int64) *mmpb.AlbumDynamicRequest { return &mmpb.AlbumDynamicRequest{AlbumId: id} })
 }
 
 func newSongQuality(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "song-quality",
-		Short: "专辑歌曲音质",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			return kit.RenderExec(k, albumendpoint.AlbumSongQuality, &mmpb.AlbumSongQualityRequest{AlbumId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.ReadCmd(k, "song-quality", "专辑歌曲音质", "专辑 ID", albumendpoint.AlbumSongQuality,
+		func(id int64) *mmpb.AlbumSongQualityRequest { return &mmpb.AlbumSongQualityRequest{AlbumId: id} })
 }
 
 func newSubscribe(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "subscribe",
-		Short: "收藏专辑(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("收藏专辑 %d", rid)); err != nil {
-				return err
-			}
-			return kit.RenderExec(k, albumendpoint.Subscribe, &mmpb.SubscribeAlbumRequest{AlbumId: rid})
-		},
-	}
-	withID(c, &id)
-	return c
+	return kit.WriteCmd(k, "subscribe", "收藏专辑(写操作,登录态)", "专辑 ID", "", albumendpoint.Subscribe,
+		func(req *mmpb.SubscribeAlbumRequest) string { return fmt.Sprintf("收藏专辑 %d", req.GetAlbumId()) },
+		func(id int64) *mmpb.SubscribeAlbumRequest { return &mmpb.SubscribeAlbumRequest{AlbumId: id} })
 }
 
 func newUnsubscribe(k *kit.Kit) *cobra.Command {
-	var id int64
-	c := &cobra.Command{
-		Use:   "unsubscribe",
-		Short: "取消收藏专辑(写操作,登录态)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			rid, err := kit.ResolveID(id, args)
-			if err != nil {
-				return err
-			}
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			if err := k.ConfirmFatal(fmt.Sprintf("取消收藏专辑 %d", rid)); err != nil {
-				return err
-			}
-			return kit.RenderExec(k, albumendpoint.Unsubscribe, &mmpb.UnsubscribeAlbumRequest{AlbumId: rid})
+	return kit.WriteCmd(k, "unsubscribe", "取消收藏专辑(写操作,登录态)", "专辑 ID", "", albumendpoint.Unsubscribe,
+		func(req *mmpb.UnsubscribeAlbumRequest) string {
+			return fmt.Sprintf("取消收藏专辑 %d", req.GetAlbumId())
 		},
-	}
-	withID(c, &id)
-	return c
+		func(id int64) *mmpb.UnsubscribeAlbumRequest { return &mmpb.UnsubscribeAlbumRequest{AlbumId: id} })
 }
 
 func newSubscribed(k *kit.Kit) *cobra.Command {
 	var limit int
-	c := &cobra.Command{
-		Use:   "subscribed",
-		Short: "已收藏专辑列表(登录态)",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := k.RequireLogin(); err != nil {
-				return err
-			}
-			return kit.RenderExec(k, albumendpoint.SubscribedAlbums, &mmpb.SubscribedAlbumsRequest{Limit: int32(limit)})
-		},
-	}
-	c.Flags().IntVar(&limit, "limit", 25, "返回数量")
-	return c
+	return kit.LoginReadCmd(k, "subscribed", "已收藏专辑列表(登录态)", "", albumendpoint.SubscribedAlbums,
+		func(int64) *mmpb.SubscribedAlbumsRequest { return &mmpb.SubscribedAlbumsRequest{Limit: int32(limit)} },
+		func(c *cobra.Command) {
+			c.Flags().IntVar(&limit, "limit", 25, "返回数量")
+		})
 }

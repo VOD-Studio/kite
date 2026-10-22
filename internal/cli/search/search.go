@@ -70,34 +70,16 @@ func newSuggest(k *kit.Kit) *cobra.Command {
 }
 
 func newHot(k *kit.Kit) *cobra.Command {
-	return &cobra.Command{
-		Use:   "hot",
-		Short: "热搜列表",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, searchendpoint.Hot, &mmpb.HotRequest{})
-		},
-	}
+	return kit.ReadCmd(k, "hot", "热搜列表", "", searchendpoint.Hot,
+		func(int64) *mmpb.HotRequest { return &mmpb.HotRequest{} })
 }
 
 func newHotDetail(k *kit.Kit) *cobra.Command {
-	return &cobra.Command{
-		Use:   "hot-detail",
-		Short: "热搜详情",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, searchendpoint.HotDetail, &mmpb.HotDetailRequest{})
-		},
-	}
+	return kit.ReadCmd(k, "hot-detail", "热搜详情", "", searchendpoint.HotDetail,
+		func(int64) *mmpb.HotDetailRequest { return &mmpb.HotDetailRequest{} })
 }
 
 func newDefaultKeyword(k *kit.Kit) *cobra.Command {
-	return &cobra.Command{
-		Use:   "default-keyword",
-		Short: "默认搜索关键词",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return kit.RenderExec(k, searchendpoint.DefaultKeyword, &mmpb.DefaultKeywordRequest{})
-		},
-	}
+	return kit.ReadCmd(k, "default-keyword", "默认搜索关键词", "", searchendpoint.DefaultKeyword,
+		func(int64) *mmpb.DefaultKeywordRequest { return &mmpb.DefaultKeywordRequest{} })
 }

@@ -24,10 +24,9 @@ var Subscribe = &engine.Endpoint[*mmpb.ArtistSubscribeRequest, *mmpb.ArtistSubsc
 		}, nil
 	},
 	MapResponse: func(_ *mmpb.ArtistSubscribeRequest, raw json.RawMessage) (*mmpb.ArtistSubscribeResponse, error) {
-		var resp struct {
+		resp := engine.DecodeLoose[struct {
 			Sub bool `json:"sub"` // 操作后是否已收藏
-		}
-		_ = json.Unmarshal(raw, &resp) // 写操作响应宽松解析:缺字段按零值
+		}](raw) // 写操作响应宽松解析:缺字段按零值
 		return &mmpb.ArtistSubscribeResponse{Subscribed: resp.Sub}, nil
 	},
 }

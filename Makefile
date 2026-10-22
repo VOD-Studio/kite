@@ -134,6 +134,12 @@ docs:
 	go run cmd/kite-docs/main.go docs/cmd
 	@echo "命令参考已刷新(若 docs/cmd/ 有变化记得提交)"
 
+## service-gen: 从 proto 生成 internal/service 的一行转发胶水(*_gen.go)
+## 新增/改名 rpc 或调整 internal/servicegen 映射表后跑此 target,否则 freshness 测试会红。
+service-gen:
+	go run ./cmd/kite-gen-service
+	@echo "service 转发已刷新(若 *_gen.go 有变化记得提交)"
+
 ## upstream-smoke: 真实上游冒烟(对网易云真实接口逐个调用服务端的 service 方法,断言响应非空)
 ## 手动运行,不进 make check / CI:外部依赖会让门禁「没改代码也变红」。改了 endpoint 或解码器后建议跑一次。
 ## djradio 第一阶段尚未 proto 建模,冒烟登记在 endpoint 包(#33);其余域走 internal/service。

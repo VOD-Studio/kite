@@ -3,7 +3,6 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -13,13 +12,13 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
+	merrors "github.com/VOD-Studio/kite/errors"
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cli/auth/qrtui"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
 	"github.com/VOD-Studio/kite/internal/localstate"
 	authendpoint "github.com/VOD-Studio/kite/internal/netease/endpoint/auth"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
-	"github.com/VOD-Studio/kite/internal/netease/model"
 	"github.com/VOD-Studio/kite/internal/termqr"
 )
 
@@ -43,8 +42,7 @@ func NewSendCaptchaCommand(k *kit.Kit) *cobra.Command {
 		Short: "发送短信验证码",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctx := k.CookieCtx()
-			_, _, err := k.RawDo(ctx, authendpoint.SendCaptcha, authendpoint.SendCaptchaRequest(&mmpb.SendCaptchaRequest{Phone: phone}))
+			_, err := kit.Exec(k, k.CookieCtx(), authendpoint.SendCaptcha, &mmpb.SendCaptchaRequest{Phone: phone})
 			if err != nil {
 				return err
 			}
@@ -65,12 +63,12 @@ func NewLoginCellphoneCommand(k *kit.Kit) *cobra.Command {
 		Short: "手机号验证码登录",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctx := k.CookieCtx()
-			raw, setCookie, err := k.RawDo(ctx, authendpoint.LoginCellphone, authendpoint.LoginCellphoneRequest(&mmpb.LoginByCellphoneRequest{Phone: phone, Captcha: captcha}))
+			resp, setCookie, err := kit.ExecWithSetCookie(k, k.CookieCtx(), authendpoint.LoginCellphone,
+				&mmpb.LoginByCellphoneRequest{Phone: phone, Captcha: captcha})
 			if err != nil {
 				return err
 			}
-			return persistLogin(k, raw, setCookie)
+			return persistLogin(k, resp.GetSession(), setCookie)
 		},
 	}
 	c.Flags().StringVar(&phone, "phone", "", "手机号(带区号,如 8613800138000)")
@@ -88,16 +86,16 @@ func NewLoginStatusCommand(k *kit.Kit) *cobra.Command {
 		Short: "查看当前登录态",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctx := k.CookieCtx()
-			raw, _, err := k.RawDo(ctx, authendpoint.LoginStatus, authendpoint.LoginStatusRequest(nil))
+			resp, err := kit.Exec(k, k.CookieCtx(), authendpoint.LoginStatus, &mmpb.LoginStatusRequest{})
 			if err != nil {
 				return err
 			}
-			sess, err := model.DecodeLoginResponse(raw)
-			if err != nil {
-				return err
+			// 响应里没有账号信息 = 未登录(与旧实现的解码失败分支一致,报错而非渲染空会话)。
+			sess := resp.GetSession()
+			if sess == nil {
+				return fmt.Errorf("未登录: %w", merrors.ErrUnauthorized)
 			}
-			sess.Cookie = engine.CookieFromContext(ctx)
+			sess.Cookie = k.CurrentCookie()
 			if k.HumanOutput() {
 				sess.Cookie = kit.MaskCookie(sess.Cookie)
 				fmt.Fprintln(os.Stderr, "(cookie 已脱敏,完整值用 --json 查看)")
@@ -116,8 +114,7 @@ func NewLogoutCommand(k *kit.Kit) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if cookie := k.CurrentCookie(); cookie != "" {
-				ctx := k.CookieCtx()
-				if _, _, err := k.RawDo(ctx, authendpoint.Logout, authendpoint.LogoutRequest(nil)); err != nil {
+				if _, err := kit.Exec(k, k.CookieCtx(), authendpoint.Logout, &mmpb.LogoutRequest{}); err != nil {
 					fmt.Fprintf(os.Stderr, "远端登出失败(继续清除本地会话): %v\n", err)
 				}
 			}
@@ -145,7 +142,7 @@ func NewLoginRefreshCommand(k *kit.Kit) *cobra.Command {
 			if sess.Cookie == "" {
 				return fmt.Errorf("没有本地会话:先运行 kite login")
 			}
-			cookie, renewed, err := authendpoint.Refresh(engine.WithCookie(context.Background(), sess.Cookie), k.RawDo)
+			cookie, renewed, err := authendpoint.Refresh(engine.WithCookie(context.Background(), sess.Cookie), k.Engine())
 			if err != nil {
 				return err
 			}
@@ -164,27 +161,26 @@ func NewLoginRefreshCommand(k *kit.Kit) *cobra.Command {
 	}
 }
 
-// persistLogin 登录成功后落盘会话并打印结果。raw 为登录接口响应(尽力提取用户 ID)。
-// 扫码登录和手机号登录共用。
-func persistLogin(k *kit.Kit, raw json.RawMessage, setCookie string) error {
+// persistLogin 登录成功后落盘会话并打印结果。sess 为登录接口解出的用户信息
+// (可能为 nil,账号信息是可选项)。扫码登录和手机号登录共用。
+func persistLogin(k *kit.Kit, sess *mmpb.Session, setCookie string) error {
 	if setCookie == "" {
 		return fmt.Errorf("登录成功但未拿到 cookie")
 	}
-	sess := localstate.Session{
+	local := localstate.Session{
 		Cookie:  setCookie,
 		SavedAt: time.Now().Format(time.RFC3339),
 	}
-	// 尝试提取用户信息(可选)。
-	if s, err := model.DecodeLoginResponse(raw); err == nil && s.UserId != 0 {
-		sess.UserID = s.UserId
+	if sess != nil {
+		local.UserID = sess.GetUserId()
 	}
-	if err := k.SaveSession(sess); err != nil {
+	if err := k.SaveSession(local); err != nil {
 		return fmt.Errorf("登录成功但保存会话失败: %w", err)
 	}
 	p, _ := localstate.SessionPath()
 	fmt.Println("已登录")
-	if sess.UserID != 0 {
-		fmt.Printf("用户 ID: %d\n", sess.UserID)
+	if local.UserID != 0 {
+		fmt.Printf("用户 ID: %d\n", local.UserID)
 	}
 	fmt.Printf("会话已保存到 %s\n", p)
 	fmt.Println("如需临时换号,设置 NETEASE_COOKIE 环境变量(优先级高于会话文件)")
@@ -216,14 +212,11 @@ func runLoginWith(k *kit.Kit, deps loginDeps) error {
 	ctx := k.CookieCtx()
 
 	// 1. 取二维码 key(同步,失败直接返回)。
-	raw, _, err := k.RawDo(ctx, authendpoint.LoginQrcode, authendpoint.LoginQrcodeRequest(&mmpb.LoginQrcodeRequest{}))
+	resp, err := kit.Exec(k, ctx, authendpoint.LoginQrcode, &mmpb.LoginQrcodeRequest{})
 	if err != nil {
 		return err
 	}
-	key, err := model.DecodeQrcodeKey(raw)
-	if err != nil {
-		return err
-	}
+	key := resp.GetQrcode().GetKey()
 	qrURL := authendpoint.QrcodeURL(key)
 
 	// 2. bubbletea 接管终端:QR 固定 + spinner 状态行原地刷新。
@@ -231,16 +224,12 @@ func runLoginWith(k *kit.Kit, deps loginDeps) error {
 		QR:      termqr.Render(qrURL),
 		QRURL:   qrURL,
 		PollCtx: ctx,
-		Check: func(ctx context.Context) (mmpb.QrcodeCode, json.RawMessage, string, error) {
-			raw, setCookie, err := k.RawDo(ctx, authendpoint.CheckQrcode, authendpoint.CheckQrcodeRequest(&mmpb.CheckQrcodeRequest{Key: key}))
+		Check: func(ctx context.Context) (mmpb.QrcodeCode, *mmpb.Session, string, error) {
+			resp, setCookie, err := kit.ExecWithSetCookie(k, ctx, authendpoint.CheckQrcode, &mmpb.CheckQrcodeRequest{Key: key})
 			if err != nil {
 				return 0, nil, "", err
 			}
-			code, _, err := model.DecodeQrcodeStatus(raw)
-			if err != nil {
-				return 0, nil, "", err
-			}
-			return code, raw, setCookie, nil
+			return resp.GetCode(), resp.GetSession(), setCookie, nil
 		},
 	}, os.Stdout)
 	if err != nil {
@@ -249,7 +238,7 @@ func runLoginWith(k *kit.Kit, deps loginDeps) error {
 
 	// 3. CONFIRMED 持久化(Program 退出后,终端已恢复,persistLogin 的 stdout 打印正常)。
 	if result.Confirmed {
-		return persistLogin(k, result.Raw, result.SetCookie)
+		return persistLogin(k, result.Session, result.SetCookie)
 	}
 	// 过期/超时:qrtui 已展示终态文案,这里不重复报错。
 	return nil

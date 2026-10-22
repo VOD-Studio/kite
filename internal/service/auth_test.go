@@ -203,3 +203,21 @@ func TestCheckQrcodeRejectsIncompleteSession(t *testing.T) {
 		})
 	}
 }
+
+// LoginByCellphone 的 gRPC 契约:上游 HTTP 200 + code=200 + Set-Cookie 但响应体
+// 解不出账号信息时,service 仍按未登录报错(endpoint 的 MapResponse 是宽容解码,
+// CLI 据此可落盘仅 cookie 的会话;严格性由 service 补回)。
+func TestLoginByCellphone_NoAccountIsUnauthorized(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		http.SetCookie(w, &http.Cookie{Name: "MUSIC_U", Value: "leaky", Path: "/"})
+		_, _ = w.Write([]byte(`{"code":200}`)) // 有 cookie、无 account
+	}))
+	t.Cleanup(srv.Close)
+
+	eng := engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(srv.URL))
+	auth := NewAuthServer(eng, nil)
+
+	_, err := auth.LoginByCellphone(context.Background(), &mmpb.LoginByCellphoneRequest{Phone: "8613800138000", Captcha: "1234"})
+	require.ErrorIs(t, err, merrors.ErrUnauthorized, "无账号信息的登录响应按未登录报错")
+}

@@ -1,10 +1,11 @@
 // Package engine 两条执行路径的特征化测试。
 //
 // engine 对外有两族入口:
-//   - 会话池路径:RawDo / RawDoWithCookie(Execute 走这条)——只有 AuthLoggedIn 的接口才带凭据,
-//     ctx 里的 cookie 优先,否则取会话池;匿名接口不带任何用户 cookie;池里取出的 session 失效时上报。
-//   - ctx cookie 路径:RawDoWithCookieAndInput(ExecuteWithCookie 走这条)——无条件使用 ctx 里的 cookie
-//     (哪怕是匿名接口),从不碰会话池,也不上报。
+//   - 会话池路径:Execute——只有 AuthLoggedIn 的接口才带凭据,ctx 里的 cookie 优先,
+//     否则取会话池;匿名接口不带任何用户 cookie;池里取出的 session 失效时上报。
+//   - ctx cookie 路径:ExecuteWithCookie / ExecuteWithSetCookie(原始 seam 为
+//     RawDoWithCookieAndInput)——无条件使用 ctx 里的 cookie(哪怕是匿名接口),
+//     从不碰会话池,也不上报。
 //
 // 两条路径共享「加密分发 / 熔断 / 重试 / 错误映射」,只在「凭据怎么来」上刻意不同。
 // 本文件把这些行为钉死:任何重构(合并重复实现)都必须让它保持绿——不允许悄悄抹掉差异,
@@ -111,23 +112,41 @@ func (u *wireUpstream) last(t *testing.T) wireReq {
 	return u.reqs[len(u.reqs)-1]
 }
 
-// entry 把三个原始入口统一成同一签名,便于对同一场景逐个入口断言。
+// entry 把三个公开入口统一成同一签名,便于对同一场景逐个入口断言。
 type entry struct {
 	name string
-	// ctxPolicy 为 true 表示 ctx cookie 路径(RawDoWithCookieAndInput),false 为会话池路径。
+	// ctxPolicy 为 true 表示 ctx cookie 路径,false 为会话池路径(Execute)。
 	ctxPolicy bool
-	do        func(e *engine.Engine, ctx context.Context, meta engine.Meta, params map[string]any) (json.RawMessage, string, error)
+	// exposesSetCookie 表示入口签名返回 Set-Cookie(Execute 不暴露,跳过回传断言)。
+	exposesSetCookie bool
+	do               func(e *engine.Engine, ctx context.Context, meta engine.Meta, params map[string]any) (json.RawMessage, string, error)
+}
+
+// wireReqT / wireRespT 是入口对照用的最小 endpoint 类型:
+// MapRequest 原样回传捕获的参数,让 Execute 系入口与原始入口打到同一上游。
+type wireReqT struct{}
+
+type wireRespT struct{}
+
+func wireEndpoint(m engine.Meta, params map[string]any) *engine.Endpoint[*wireReqT, *wireRespT] {
+	return &engine.Endpoint[*wireReqT, *wireRespT]{
+		Meta:        m,
+		NewResp:     func() *wireRespT { return &wireRespT{} },
+		MapRequest:  func(*wireReqT) (map[string]any, error) { return params, nil },
+		MapResponse: func(*wireReqT, json.RawMessage) (*wireRespT, error) { return &wireRespT{}, nil },
+	}
 }
 
 var entries = []entry{
-	{"RawDo", false, func(e *engine.Engine, ctx context.Context, m engine.Meta, p map[string]any) (json.RawMessage, string, error) {
-		raw, err := e.RawDo(ctx, m, p)
-		return raw, "", err
+	{"Execute", false, false, func(e *engine.Engine, ctx context.Context, m engine.Meta, p map[string]any) (json.RawMessage, string, error) {
+		_, err := engine.Execute(e, ctx, wireEndpoint(m, p), &wireReqT{})
+		return nil, "", err
 	}},
-	{"RawDoWithCookie", false, func(e *engine.Engine, ctx context.Context, m engine.Meta, p map[string]any) (json.RawMessage, string, error) {
-		return e.RawDoWithCookie(ctx, m, p)
+	{"ExecuteWithSetCookie", true, true, func(e *engine.Engine, ctx context.Context, m engine.Meta, p map[string]any) (json.RawMessage, string, error) {
+		_, sc, err := engine.ExecuteWithSetCookie(e, ctx, wireEndpoint(m, p), &wireReqT{})
+		return nil, sc, err
 	}},
-	{"RawDoWithCookieAndInput", true, func(e *engine.Engine, ctx context.Context, m engine.Meta, p map[string]any) (json.RawMessage, string, error) {
+	{"RawDoWithCookieAndInput", true, true, func(e *engine.Engine, ctx context.Context, m engine.Meta, p map[string]any) (json.RawMessage, string, error) {
 		return e.RawDoWithCookieAndInput(ctx, m, p)
 	}},
 }
@@ -271,7 +290,7 @@ func TestCredential_PolicyMatrix(t *testing.T) {
 }
 
 // Set-Cookie 回传:只有 weapi 响应的 Set-Cookie 会被带回(登录类接口靠它拿 session);
-// eapi 与无加密请求不回传。RawDo 不暴露 Set-Cookie。
+// eapi 与无加密请求不回传。Execute 不暴露 Set-Cookie。
 func TestSetCookie_Propagation(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -293,8 +312,8 @@ func TestSetCookie_Propagation(t *testing.T) {
 				eng := engine.New(engine.WithBaseURL(up.srv.URL))
 				_, sc, err := en.do(eng, context.Background(), tt.meta, map[string]any{"id": 1})
 				require.NoError(t, err, en.name)
-				if en.name == "RawDo" {
-					continue // RawDo 的签名里没有 Set-Cookie
+				if !en.exposesSetCookie {
+					continue // Execute 的签名里没有 Set-Cookie
 				}
 				require.Equal(t, tt.want, sc, en.name)
 			}
