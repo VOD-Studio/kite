@@ -4,9 +4,9 @@
 
 ## 开发环境
 
-- **Go 版本以 `go.mod` 为准**,Node 大版本以 `Makefile` 的 `NODE_VERSION` 为准。
+- **Go 版本以 `go.mod` 为准**,Node 大版本以 `Makefile` 的 `NODE_VERSION` 为准。不必为了本地检查安装宿主机 Go / Node,已有 Docker 时可用下方隔离入口。
 - **buf**:改 `proto/` 时需要(Makefile 自动探测 `$GOPATH/bin/buf`)。安装见 [buf.build](https://buf.build/docs/installation/)。
-- **脚本检查**需要 Python 3、PyYAML、jq 和 ShellCheck;PyYAML 版本由 `make ci-env` 给出。
+- **脚本检查**需要 Python 3、PyYAML、jq 和 ShellCheck;PyYAML 版本由 `make ci-env` 给出。Docker 环境已包含这些工具,不修改宿主机 Python。
 
 ## 常用命令
 
@@ -19,9 +19,23 @@ go test ./...             # 测试
 go vet ./...              # 检查
 ```
 
+### Docker 开发工具链
+
+```bash
+make docker-run                            # 进入隔离的 Go / Node 开发环境
+make docker-run CMD='go test ./...'         # 在同一工具链中执行指定命令
+make docker-check                          # Linux make check + player 源码与真实 tarball 验收
+```
+
+首次构建需要联网下载工具链和依赖;之后复用镜像层及每个工作区独立的 Go、npm、Chromium 缓存。源码仍是当前工作区,生成物按宿主机 UID/GID 写回;Linux `node_modules` 不复用 macOS 原生依赖。可以传入 `GOPROXY`,不挂载宿主机 HOME、Docker socket 或发布凭据。
+
+升级 `go.mod` 工具链或 Node 大版本时,同步 `Dockerfile.dev` 对应镜像摘要并运行 `make docker-check`;入口会拒绝实际编译器版本与声明不一致的镜像。
+
+这是开发检查环境,不是生产镜像;`Dockerfile` 和 `Dockerfile.release` 保持原用途。容器不替代 macOS / Windows runner、Rust 互操作、漏洞数据库扫描或正式签名发布;需要 Docker daemon 的镜像冒烟在宿主机或 CI 执行。
+
 ## CI 约定
 
-- **本地自检**:`make check`(gofmt + go mod tidy + ShellCheck/脚本回归 + vet + test + lint + proto-lint)。部署事务和安装器回归需要 Linux,macOS 会明确打印 skip,由 Linux CI 补齐。`make vuln`、`make proto-breaking`、`make verify-gen` 依赖网络或 git 基线,按需单独跑。
+- **本地自检**:`make check`(gofmt + go mod tidy + ShellCheck/脚本回归 + vet + test + lint + proto-lint)。部署事务和安装器回归需要 Linux,macOS 会明确打印 skip;`make docker-check` 会在 Linux 执行它们。`make vuln`、`make proto-breaking`、`make verify-gen` 依赖网络或 git 基线,按需单独跑。
 - **先计划,再执行**:`scripts/ci-plan.py` 是任务注册表和选取规则的唯一来源。PR 按完整 base…head 差异选择检查,保留重命名前后的影响;main push 执行全部确定性检查。公开播放器协议变更同时覆盖 Go 和 player,可执行示例变更覆盖相应消费者,控制面变更和未知路径保守扩大检查。
 - **门禁只有一个**:`CI OK`。门禁重算计划并验证 SHA、run/attempt 和事件上下文,同时核对实际 workflow jobs 与 `needs`。只有计划明确授权的不适用任务可以跳过;失败、取消、缺失任务、必需任务跳过或未注册 job 都不能变绿。PR 标题编辑也不能绕过源码检查。
 - **工具版本的唯一来源**:Go 以 `go.mod` 为准;Node / golangci-lint / buf / govulncheck / cargo-audit / GoReleaser / Cosign / PyYAML 以 `Makefile` 顶部为准,Rust 以 `interop/rust/rust-toolchain.toml` 为准。第三方 Actions 固定完整 commit SHA,镜像 base 固定 digest;不要在 workflow 重复维护工具版本。

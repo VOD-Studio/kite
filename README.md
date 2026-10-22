@@ -95,7 +95,7 @@ go test ./...             # 测试
 go vet ./...              # 检查
 ```
 
-Go 版本以 `go.mod` 为准。若环境缺 Go,`make` 无提示直接失败。
+Go 版本以 `go.mod` 为准。没有宿主机 Go / Node 时,可用 `make docker-check` 在 Docker 内执行 Linux 检查和播放器成品验收;交互环境及缓存边界见 [Docker 开发工具链](CONTRIBUTING.md#docker-开发工具链)。
 
 ## 技术栈
 

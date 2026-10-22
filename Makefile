@@ -1,5 +1,5 @@
 .PHONY: all help install-tools install-cli fmt fmt-check tidy-check vet test lint vuln build build-server \
-        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust interop-go upstream-smoke player-check player-package-check player-demo check ci-env clean
+        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust interop-go upstream-smoke player-check player-package-check player-demo docker-run docker-check check ci-env clean
 
 # 工具探测:优先 PATH,回退 $GOPATH/bin(GOBIN 也在 PATH 时无所谓)
 BUF           ?= $(shell command -v buf 2>/dev/null           || echo $$(go env GOPATH)/bin/buf)
@@ -175,6 +175,16 @@ player-demo:
 	cd packages/kite-player && npm run build
 	@echo "demo: http://127.0.0.1:$(PLAYER_DEMO_PORT)/demo/  (Ctrl-C 停止)"
 	cd packages/kite-player && python3 -m http.server $(PLAYER_DEMO_PORT) --bind 127.0.0.1
+
+## docker-run: 在隔离的 Docker 工具链中运行 CMD,省略 CMD 则进入 shell(不要求宿主机安装 Go/Node)
+docker-run: export KITE_DOCKER_COMMAND = $(if $(CMD),$(CMD),exec bash)
+docker-run:
+	@scripts/docker-dev.sh
+
+## docker-check: 在 Docker 中执行 Go/脚本检查与 player 成品验收;依赖缓存与宿主机隔离
+docker-check: export KITE_DOCKER_COMMAND = make check && make player-package-check
+docker-check:
+	@scripts/docker-dev.sh
 
 ## scripts-check: scripts/*.sh 的 shellcheck 与单元测试(release PR 的 CI 保障逻辑等)
 scripts-check:
