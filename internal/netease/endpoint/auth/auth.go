@@ -2,8 +2,8 @@
 //
 // 与其它域一致,每个接口都是声明式 engine.Endpoint;区别只在执行入口:
 // 登录类接口需要响应的 Set-Cookie,走 engine.ExecuteWithSetCookie(同样不经
-// session 池、不缓存),service 与 CLI 各一行调用。session 池的写入是 service
-// 的装配职责,留在调用方。例外:Refresh 把「刷新 + 合并 cookie」收在这里,
+// session 池、不缓存),service 与 CLI 共用同一执行语义。托管账号由 server
+// 适配器维护,不写自动选号池。例外:Refresh 把「刷新 + 合并 cookie」收在这里,
 // gRPC service 与 CLI 共用,语义只定义一处。
 package auth
 
@@ -38,7 +38,7 @@ var SendCaptcha = &engine.Endpoint[*mmpb.SendCaptchaRequest, *mmpb.SendCaptchaRe
 
 // LoginCellphone 手机号登录。响应能解出账号信息时带 Session(Cookie 由调用方
 // 从 Set-Cookie 回填);解不出时宽容返回空 Session(CLI 仍可落盘仅 cookie 的会话,
-// service 按「无账号」报未登录)。存 session 池是 service 的职责。
+// service 按「无账号」报未登录)。托管账号由 server 适配器持久化。
 var LoginCellphone = &engine.Endpoint[*mmpb.LoginByCellphoneRequest, *mmpb.LoginByCellphoneResponse]{
 	Meta:    weapiMeta("/weapi/login/cellphone"),
 	NewResp: func() *mmpb.LoginByCellphoneResponse { return &mmpb.LoginByCellphoneResponse{} },

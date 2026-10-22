@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/VOD-Studio/kite/internal/netease/engine"
-	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 // memCache 是测试用的进程内缓存(cmd/server 线上用 cache.Noop,这里要验证按身份隔离)。
@@ -88,7 +87,7 @@ func TestGateway_CallerCookieReachesAccountReads(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	eng := engine.New(engine.WithCache(&memCache{m: map[string][]byte{}}), engine.WithBaseURL(up.URL))
-	app, err := NewApp(Options{GRPCAddr: "127.0.0.1:0", HTTPAddr: "127.0.0.1:0", AuthTokens: single(testToken)}, eng, session.NoopStore{})
+	app, err := NewApp(Options{GRPCAddr: "127.0.0.1:0", HTTPAddr: "127.0.0.1:0", AuthTokens: single(testToken)}, eng, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

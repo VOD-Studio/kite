@@ -40,6 +40,12 @@ const (
 	ReasonDeadlineExceeded        = "DEADLINE_EXCEEDED"         // 请求超时
 	ReasonServerAuthFailed        = "SERVER_AUTH_FAILED"        // 缺少或错误的服务访问令牌(与上游登录无关)
 	ReasonServerRateLimited       = "SERVER_RATE_LIMITED"       // 被本服务限流(与上游限流 RATE_LIMITED 无关)
+	ReasonInvalidCredentials      = "INVALID_CREDENTIALS"       // 账号 ID 与 Cookie 冲突或账号选择不唯一
+	ReasonAccountsDisabled        = "ACCOUNTS_DISABLED"         // 未配置托管账号存储
+	ReasonAccountNotFound         = "ACCOUNT_NOT_FOUND"         // 托管账号不存在或已退出
+	ReasonAccountForbidden        = "ACCOUNT_FORBIDDEN"         // 账号属于其他调用方
+	ReasonAccountExpired          = "ACCOUNT_EXPIRED"           // 指定账号的登录态已失效
+	ReasonAccountChanged          = "ACCOUNT_CHANGED"           // 凭据版本已改变,旧请求不可覆盖新登录
 )
 
 // 当前只有网易云一个 provider。多源改造(P2)后由 provider 注册信息提供。

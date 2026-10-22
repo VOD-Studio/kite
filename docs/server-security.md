@@ -19,6 +19,7 @@ kite 的 gRPC / REST 服务面向其它项目调用(Rust、Go、TypeScript……
 | `KITE_SERVER_AUTH_TOKENS_FILE` | 空 | 多令牌文件:每行「名称:令牌」,空行与 `#` 注释忽略;用于按调用方发放令牌 |
 | `KITE_SERVER_RATE_PER_MINUTE` | `0`(不限) | 每个令牌每分钟允许的请求数,超出返回 429(见下) |
 | `KITE_SERVER_TLS_CERT` / `KITE_SERVER_TLS_KEY` | 空 | TLS 证书与私钥文件,两者必须同时设置;设置后 gRPC 与 REST 都走 TLS |
+| `KITE_SERVER_ACCOUNTS_FILE` | 空(禁用托管) | 托管网易云账号 JSON 文件路径;启用后登录持久化并返回账号 ID,不返回 cookie |
 
 规则:
 
@@ -47,11 +48,33 @@ bot:3ad7…           # 机器人
 - **审计**:限流拒绝的日志(`server rate limited`)会带 `caller` 名称。
 - 单令牌部署(只有 `KITE_SERVER_AUTH_TOKEN`)行为不变:等价于一个未命名的调用方。
 
+## 托管账号存储与隔离
+
+设置 `KITE_SERVER_ACCOUNTS_FILE=/var/lib/kite/accounts.json` 可在一个服务进程中保存多个网易云账号。未设置时继续使用客户端保存/直传 cookie 的旧流程;显式选择账号会返回 `ACCOUNTS_DISABLED`。手机号登录与确认二维码登录在启用后先保存凭据,返回 `Session.account_id`(REST:`accountId`),清空 `Session.cookie`。gRPC 通过 `x-kite-account-id`,REST 通过 `Grpc-Metadata-X-Kite-Account-Id` 选择账号,不得同时发送 cookie 头;空或重复账号 ID 同样返回 `INVALID_CREDENTIALS`。无凭据仍匿名,绝不借用存储中的账号。
+
+所有者由服务鉴权的可信身份决定,不能由请求 metadata 伪造:
+
+- 多令牌文件中的名称映射为 `caller:<名称>`。同名轮换令牌保留账号归属;改名则成为另一调用方,不能再访问旧名称拥有的账号。删除令牌会撤销访问,不会自动删除已保存记录。
+- 单令牌(`KITE_SERVER_AUTH_TOKEN` 或 `_FILE`)的所有请求共用所有者 `single`;更换单令牌不改变归属。
+- 无鉴权回环部署的所有本机客户端共用 `local`,不是本机用户/进程级隔离。需要隔离本机项目时也应配置命名令牌。
+- 同一所有者登录同一网易云用户会更新原账号、保留随机不透明 ID;不同所有者即使登录同一用户也得到独立记录。账号 ID 不包含 cookie,不是可跨调用方使用的 bearer 凭据。跨所有者访问返回 `ACCOUNT_FORBIDDEN`,不存在返回 `ACCOUNT_NOT_FOUND`。
+
+显式刷新先持久化合并后的 cookie,仅返回 `RefreshLoginResponse.account_id`;显式登出成功表示记录已删除,过期记录可以仅在本地删除。`LoginStatus` 返回账号 ID 而不是 cookie。确定未登录或上游未授权仅使当前快照过期(`ACCOUNT_EXPIRED`),普通网络/权益错误不使其过期。直传 cookie 的刷新/退出若精确匹配调用方拥有的活跃记录,也同步更新/删除该记录。并发新登录后,旧刷新/过期/删除不能覆盖新记录,而返回 `ACCOUNT_CHANGED`。没有后台自动续期保证,接入方须显式调用刷新。
+
+### 文件运维要求
+
+- 文件存放**明文 cookie**,不是加密保险箱。目录按 `0700`、文件按 `0600` 保护;运行账号必须独占访问权限,不要放进仓库、公开挂载、日志或诊断附件。备份也按凭据保护。不要记录原始 cookie,错误消息、账号 ID、缓存键也不应包含它。
+- 文件不存在时可安全初始化;已有文件为空、损坏、重复或无效记录、权限/读取错误都拒绝启动,不会退回匿名/内存存储。运行时写入以原子替换完成,落盘成功后才发布状态;I/O 失败返回脱敏 `INTERNAL`,不会声称登录保存、刷新或删除成功。
+- 这是**单进程、单写者**文件存储,不支持多个服务副本共写一个路径(原子替换不等于跨进程事务)。不要在服务运行时手工编辑文件。迁移/恢复前停止服务,保持文件权限及调用方名称。
+- 重启后使用同一路径恢复账号 ID、归属、过期标记和凭据;容器必须把该路径所在目录挂到持久卷,不能只保留容器可写层。改变所有者配置或丢失文件不会自动重新分配账号,应按原所有者恢复或重新登录。
+
+完整客户端流程与原因码见 [integration.md](integration.md)、[grpc-errors.md](grpc-errors.md)。
+
 ## 限流
 
 `KITE_SERVER_RATE_PER_MINUTE` 是**每个令牌**(单令牌部署则是全部调用)每分钟的请求额度,令牌桶语义:额度内突发可用,用完后匀速回填(每 `60/额度` 秒回 1 个)。默认 `0` 表示不限流,与旧版行为一致。
 
-- 目的:服务端持有上游网易云的共享登录态,一个失控的调用方会把整个 session 池打进熔断 / 封禁——限流保护的是上游账号,按调用方隔离额度。
+- 目的:一个失控调用方会使上游账号被限流/封禁;按调用方隔离额度,不代表允许其借用其它调用方的托管账号。
 - 超出额度返回 `RESOURCE_EXHAUSTED`(REST 429),`ErrorInfo.reason = SERVER_RATE_LIMITED`(与上游限流的 `RATE_LIMITED` 区分,见 [错误契约](grpc-errors.md))。
 - 健康检查(`grpc.health.v1.Health`、`GET /healthz`)不限流:编排探活被限流会让 LB 误摘流。
 - 只限制 kite 服务本身;gRPC reflection 同样计入额度。
@@ -84,7 +107,7 @@ mTLS(要求每个调用方持客户端证书)能提供传输层的调用方身�
 
 ## 调用方式
 
-令牌**只决定谁能调用本服务**,与上游网易云的登录态(`x-netease-cookie`)无关,两者互不替代。
+令牌决定谁能调用本服务及托管账号的所有权,与选择上游网易云登录态的凭据(`x-netease-cookie` 或 `x-kite-account-id`)互不替代。
 
 | 协议 | 携带方式 |
 |---|---|

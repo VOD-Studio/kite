@@ -19,7 +19,6 @@ import (
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 	"github.com/VOD-Studio/kite/internal/cache"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
-	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 // startE2E 用真实的 newGRPCServer(含拦截器链与全部 service)在 bufconn 上起服务,
@@ -34,7 +33,7 @@ func startE2E(t *testing.T, upstreamBody string) (mmpb.SongServiceClient, *runti
 	t.Cleanup(up.Close)
 
 	eng := engine.New(engine.WithCache(cache.Noop{}), engine.WithBaseURL(up.URL))
-	srv, _ := newGRPCServer(eng, session.NoopStore{}, nil, nil, nil)
+	srv, _ := newGRPCServer(eng, nil, nil, nil, nil)
 
 	lis := bufconn.Listen(1 << 20)
 	go func() { _ = srv.Serve(lis) }()

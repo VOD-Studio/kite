@@ -94,6 +94,10 @@ type ServerConfig struct {
 	// 与 AuthToken / AuthTokenFile 互斥。
 	AuthTokensFile string
 
+	// AccountsFile 是托管网易云账号的持久化文件,空表示不启用账号托管。
+	// 文件只供一个服务进程使用,登录态按通过鉴权的调用方隔离。
+	AccountsFile string
+
 	// RatePerMinute 是每个调用方每分钟允许的请求数,0 表示不限流。
 	RatePerMinute int
 
@@ -295,6 +299,7 @@ func Load() Config {
 	cfg.Server.AuthToken = envStr("KITE_SERVER_AUTH_TOKEN", cfg.Server.AuthToken)
 	cfg.Server.AuthTokenFile = envStr("KITE_SERVER_AUTH_TOKEN_FILE", cfg.Server.AuthTokenFile)
 	cfg.Server.AuthTokensFile = envStr("KITE_SERVER_AUTH_TOKENS_FILE", cfg.Server.AuthTokensFile)
+	cfg.Server.AccountsFile = envStr("KITE_SERVER_ACCOUNTS_FILE", cfg.Server.AccountsFile)
 	cfg.Server.RatePerMinute = envInt("KITE_SERVER_RATE_PER_MINUTE", cfg.Server.RatePerMinute)
 	cfg.Server.TLSCertFile = envStr("KITE_SERVER_TLS_CERT", cfg.Server.TLSCertFile)
 	cfg.Server.TLSKeyFile = envStr("KITE_SERVER_TLS_KEY", cfg.Server.TLSKeyFile)

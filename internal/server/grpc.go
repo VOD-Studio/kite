@@ -26,8 +26,8 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
+	"github.com/VOD-Studio/kite/internal/netease/account"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
-	"github.com/VOD-Studio/kite/internal/netease/session"
 	"github.com/VOD-Studio/kite/internal/service"
 
 	runtime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -84,13 +84,11 @@ type App struct {
 // 不监听端口,便于测试。auth 为 nil 表示不鉴权;creds 为 nil 表示明文。
 //
 // 拦截器顺序:ErrorInterceptor 在最外层,保证任何内层(含其它拦截器)返回的错误都被统一映射为
-// gRPC status;其后 Auth 先于限流、限流先于 Cookie(约定:未通过鉴权的请求不进入后续任何逻辑,
-// 也不会消耗限流配额,目前 Cookie 拦截器无副作用,这个顺序没有测试守护);
-// CookieInterceptor 把 metadata 里的上游 cookie 注入 context。
-// 链式为未来 recovery/trace/log interceptor 留位。
-func newGRPCServer(eng *engine.Engine, sessions session.SessionStore, auth *Auth, limiter *rateLimiter, creds credentials.TransportCredentials) (*grpc.Server, *health.Server) {
+// gRPC status;其后 Auth 先于限流与账号解析,未通过鉴权的请求不会读取托管凭据。
+// accountInterceptor 解析显式账号或请求级 cookie,并同步登录态生命周期。
+func newGRPCServer(eng *engine.Engine, accounts *account.Store, auth *Auth, limiter *rateLimiter, creds credentials.TransportCredentials) (*grpc.Server, *health.Server) {
 	opts := []grpc.ServerOption{
-		grpc.ChainUnaryInterceptor(ErrorInterceptor, auth.UnaryInterceptor, limiter.UnaryInterceptor, CookieInterceptor),
+		grpc.ChainUnaryInterceptor(ErrorInterceptor, auth.UnaryInterceptor, limiter.UnaryInterceptor, accountInterceptor(accounts)),
 		grpc.ChainStreamInterceptor(auth.StreamInterceptor, limiter.StreamInterceptor),
 	}
 	if creds != nil {
@@ -101,7 +99,7 @@ func newGRPCServer(eng *engine.Engine, sessions session.SessionStore, auth *Auth
 	// 注册全部领域 service（真实 impl，持有 *engine.Engine）。
 	mmpb.RegisterSongServiceServer(grpcServer, service.NewSongServer(eng))
 	mmpb.RegisterPlaylistServiceServer(grpcServer, service.NewPlaylistServer(eng))
-	mmpb.RegisterAuthServiceServer(grpcServer, service.NewAuthServer(eng, sessions))
+	mmpb.RegisterAuthServiceServer(grpcServer, service.NewAuthServer(eng))
 	mmpb.RegisterSearchServiceServer(grpcServer, service.NewSearchServer(eng))
 	mmpb.RegisterAlbumServiceServer(grpcServer, service.NewAlbumServer(eng))
 	mmpb.RegisterArtistServiceServer(grpcServer, service.NewArtistServer(eng))
@@ -151,10 +149,10 @@ func healthzHandler(h *health.Server) http.HandlerFunc {
 	}
 }
 
-// NewApp 创建双 server 应用，注入 engine 和 session 池装配真实 service impl。
+// NewApp 创建双 server 应用,注入 engine 与可选的托管账号存储。
 //
 // 两个端口都在返回前完成监听:端口被占用等错误直接从这里返回,而不是启动后只写一行日志。
-func NewApp(opts Options, eng *engine.Engine, sessions session.SessionStore) (*App, error) {
+func NewApp(opts Options, eng *engine.Engine, accounts *account.Store) (*App, error) {
 	auth := NewAuth(opts.AuthTokens)
 	if err := checkExposure(auth, opts.GRPCAddr, opts.HTTPAddr); err != nil {
 		return nil, err
@@ -192,7 +190,7 @@ func NewApp(opts Options, eng *engine.Engine, sessions session.SessionStore) (*A
 		httpLis = tls.NewListener(httpLis, &tls.Config{Certificates: []tls.Certificate{cert}})
 	}
 
-	grpcServer, healthServer := newGRPCServer(eng, sessions, auth, limiter, grpcCreds)
+	grpcServer, healthServer := newGRPCServer(eng, accounts, auth, limiter, grpcCreds)
 
 	// gateway runtime mux：通过 dial 连本地 gRPC server。Authorization 头由 gateway 原样转成
 	// gRPC metadata,鉴权统一在 gRPC 侧完成,REST 与 gRPC 不会出现两套规则。

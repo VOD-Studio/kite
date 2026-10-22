@@ -932,7 +932,7 @@
     },
     "/api/v1/auth/refresh": {
       "post": {
-        "summary": "RefreshLogin 刷新登录态,延长 cookie 的有效期。\ncookie 已失效时返回 LOGIN_REQUIRED,调用方应引导重新登录。",
+        "summary": "RefreshLogin 刷新登录态；托管账号持久化新凭据，直传模式返回完整 cookie。\n托管凭据失效时返回 ACCOUNT_EXPIRED，直传凭据失效时返回 LOGIN_REQUIRED。",
         "operationId": "AuthService_RefreshLogin",
         "responses": {
           "200": {
@@ -3968,14 +3968,14 @@
       "properties": {
         "session": {
           "$ref": "#/definitions/v1Session",
-          "title": "登录态信息（未登录时 session 为空）。"
+          "title": "登录态信息（直传模式未登录时为空；托管模式返回 account_id，不返回 cookie）。"
         }
       },
       "title": "LoginStatus 响应。"
     },
     "v1LogoutRequest": {
       "type": "object",
-      "title": "Logout 请求（cookie 经 metadata \"x-netease-cookie\" 传入，不在此 message）。"
+      "title": "Logout 请求：通过 metadata \"x-netease-cookie\" 或 \"x-kite-account-id\" 二选一传凭据。\n托管账号成功登出后删除持久化记录；过期账号仅执行本地删除。"
     },
     "v1LogoutResponse": {
       "type": "object",
@@ -4208,14 +4208,18 @@
     },
     "v1RefreshLoginRequest": {
       "type": "object",
-      "title": "RefreshLogin 请求(cookie 经 metadata \"x-netease-cookie\" 传入,不在此 message)。"
+      "title": "RefreshLogin 请求：通过 metadata \"x-netease-cookie\" 或 \"x-kite-account-id\" 二选一传凭据。"
     },
     "v1RefreshLoginResponse": {
       "type": "object",
       "properties": {
         "cookie": {
           "type": "string",
-          "title": "刷新后的完整 cookie:传入的 cookie 中被上游重新下发的项已替换为新值。\n调用方应用它替换保存的旧 cookie;上游没有下发新值时与传入的相同。"
+          "title": "直传模式刷新后的完整 cookie：传入的 cookie 中被上游重新下发的项已替换为新值。\n调用方应用它替换保存的旧 cookie；上游没有下发新值时与传入的相同。托管模式为空。"
+        },
+        "accountId": {
+          "type": "string",
+          "title": "托管模式持久化刷新结果后返回的账号 ID；直传模式为空。"
         }
       },
       "title": "RefreshLogin 响应。"
@@ -4411,7 +4415,7 @@
         },
         "cookie": {
           "type": "string",
-          "title": "Cookie 字符串（后续请求的登录态凭证）。"
+          "title": "直传模式的 Cookie 字符串；托管模式为空。不得与 account_id 同时传入请求。"
         },
         "nickname": {
           "type": "string",
@@ -4420,9 +4424,13 @@
         "avatarUrl": {
           "type": "string",
           "title": "头像 URL。"
+        },
+        "accountId": {
+          "type": "string",
+          "title": "当前调用方拥有的托管账号 ID；后续通过 metadata \"x-kite-account-id\" 选择。"
         }
       },
-      "title": "登录会话凭证。"
+      "title": "登录会话凭证。启用托管存储的登录返回 account_id，不暴露 cookie。"
     },
     "v1SimilarPlaylistsResponse": {
       "type": "object",
