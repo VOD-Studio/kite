@@ -18,6 +18,7 @@ import (
 	"github.com/VOD-Studio/kite/internal/cli/fm"
 	"github.com/VOD-Studio/kite/internal/cli/kit"
 	"github.com/VOD-Studio/kite/internal/cli/mcp"
+	mv "github.com/VOD-Studio/kite/internal/cli/mv"
 	"github.com/VOD-Studio/kite/internal/cli/playlist"
 	"github.com/VOD-Studio/kite/internal/cli/recent"
 	"github.com/VOD-Studio/kite/internal/cli/recommend"
@@ -157,6 +158,7 @@ func NewRootCommand() *cobra.Command {
 		album.NewCommand(k),
 		artist.NewCommand(k),
 		playlist.NewCommand(k),
+		mv.NewCommand(k),
 	} {
 		c.GroupID = "music"
 		root.AddCommand(c)
