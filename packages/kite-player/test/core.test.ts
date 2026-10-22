@@ -235,11 +235,18 @@ describe("Player", () => {
     expect(player.canSwitchQuality()).toBe(true);
     await player.playPlaylist("100", 0);
     audio.currentTime = 42;
+    audio.emit("timeupdate");
     player.setHighQuality(false);
     expect(audio.src).toContain("quality=standard");
     expect(player.state.playing).toBe(true);
+    // 新地址还没加载好时音频从 0 秒报进度:不更新,进度和歌词不会先跳回开头。
+    audio.currentTime = 0;
+    audio.emit("timeupdate");
+    expect(player.state.time).toBe(42);
     audio.emit("loadedmetadata");
     expect(audio.currentTime).toBe(42);
+    audio.emit("timeupdate");
+    expect(player.state.time).toBe(42);
     player.next();
     expect(audio.src).toContain("/tracks/2/");
     expect(audio.src).toContain("quality=standard");

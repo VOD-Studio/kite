@@ -76,6 +76,11 @@ export class Player {
   private pendingSeek: number | null = null;
   /** 音频当前加载的是哪首歌、哪种音质(歌曲 ID + 音质),换歌或切换音质时才重新设置 src。 */
   private srcFor = "";
+  /**
+   * 切换音质时换了 src,音频会先从 0 秒报进度,等元数据加载完才回到原位置。这期间不更新进度,
+   * 否则进度条、歌词会先跳回开头再跳回来。
+   */
+  private holdTime = false;
   private lastSave = 0;
   private readonly unbind: (() => void)[] = [];
 
@@ -304,6 +309,7 @@ export class Player {
     if (!track || !this.audio || !this.srcFor.startsWith(track.id + ":") || !this.canSwitchQuality()) return;
     const wasPlaying = this.state.playing;
     this.pendingSeek = this.audio.currentTime || this.state.time;
+    this.holdTime = this.pendingSeek > 0;
     this.ensureSrc(track, true);
     if (wasPlaying) void this.play();
   }
@@ -330,6 +336,7 @@ export class Player {
   private jump(index: number, autoplay: boolean): void {
     const track = this.state.queue[index] ?? null;
     this.retried = false;
+    this.holdTime = false;
     this.pendingSeek = null;
     this.store.set({
       index: track ? index : -1,
@@ -399,6 +406,7 @@ export class Player {
       const onMeta = () => {
         this.audio?.removeEventListener("loadedmetadata", onMeta);
         if (this.audio) this.audio.currentTime = t;
+        this.holdTime = false;
       };
       this.audio.addEventListener("loadedmetadata", onMeta);
     }
@@ -437,6 +445,7 @@ export class Player {
     on("playing", () => this.store.set({ loading: false, error: null }));
     on("canplay", () => this.store.set({ loading: false }));
     on("timeupdate", () => {
+      if (this.holdTime) return;
       const t = audio.currentTime;
       this.store.set({ time: t, lyricIndex: this.lyricIndexAt(t) });
       if (!this.frame) this.emitTime(t);
@@ -463,6 +472,7 @@ export class Player {
    */
   private async onError(): Promise<void> {
     const track = this.state.current;
+    this.holdTime = false;
     if (!track || !this.audio || !this.srcFor.startsWith(track.id + ":")) return;
     if (this.retried) {
       this.store.set({
@@ -498,6 +508,10 @@ export class Player {
     const tick = () => {
       if (!this.state.playing || !this.audio) {
         this.frame = 0;
+        return;
+      }
+      if (this.holdTime) {
+        this.frame = requestAnimationFrame(tick);
         return;
       }
       const t = this.audio.currentTime;
