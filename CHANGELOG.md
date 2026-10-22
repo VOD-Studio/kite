@@ -7,6 +7,22 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## 0.6.0 (2026-10-22)
+
+## What's Changed
+* chore(deps): 升级 Go toolchain 至 go1.26.10 修复 GO-2026-6809 by @xunrua in https://github.com/VOD-Studio/kite/pull/111
+* fix(netease): SongURL 保留上游试听信息与逐条状态 by @xunrua in https://github.com/VOD-Studio/kite/pull/112
+* feat(player): Track 支持试听标记与「仅试听」徽标 by @xunrua in https://github.com/VOD-Studio/kite/pull/113
+* feat(server): 服务内置 TLS、按调用方限流与多令牌 by @xunrua in https://github.com/VOD-Studio/kite/pull/115
+* feat(toplist): 官方榜单列表与详情接入 by @xunrua in https://github.com/VOD-Studio/kite/pull/106
+* feat(netease): MV 域接口接入(endpoint 声明 + CLI 直连) by @xunrua in https://github.com/VOD-Studio/kite/pull/107
+* feat(netease): 电台域接口接入(endpoint 声明 + CLI 直连) by @xunrua in https://github.com/VOD-Studio/kite/pull/108
+* refactor(netease): P1 去重——收敛 engine 入口与各层胶水 by @xunrua in https://github.com/VOD-Studio/kite/pull/116
+* feat(netease): 评论域 Phase A:endpoint 声明 + CLI 直连 by @xunrua in https://github.com/VOD-Studio/kite/pull/114
+
+
+**Full Changelog**: https://github.com/VOD-Studio/kite/compare/v0.5.3...v0.6.0
+
 ## 0.5.3 (2026-10-21)
 
 ## What's Changed
