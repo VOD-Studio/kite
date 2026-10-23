@@ -90,8 +90,9 @@ flowchart TD
 
 - **发布队列来源**:release-please 读取实时 main,较早运行可能代后续提交建立 draft。每个运行仍只接管自己的 `GITHUB_SHA`,不依赖 action 当次是否返回“创建成功”。普通业务提交不能接管其它源码的发布。
 - **player 首次发布失败**:完整重跑原 release PR 合并 SHA 对应的 `Release Please` 运行,不要只重跑失败 jobs;其发布分支之前可能被跳过。不要在较新的 main 上手动派发来冒充旧源码的 provenance。
-- **CI 产物过期 / 缺失**:重跑原源码的 main push CI,产生新的成功 attempt 和已验证产物,再重跑原发布编排。发布端没有“重新 pack 凑一个包”的兜底。
+- **CI 产物过期 / 缺失**:在原运行仍可重跑时,重跑原源码的 main push CI,产生新的成功 attempt 和已验证产物,再重跑原发布编排。发布端没有“重新 pack 凑一个包”的兜底。
 - **npm 已存在且字节一致**:可在 main 手动派发 `npm.yml`,指定 player tag,仅完成一致性校验及 GitHub Release 收尾。
+- **恢复时限**:GitHub [仅允许在首次运行后 30 天内重跑,每个运行最多重跑 50 次](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)。产物缺失且原运行已不可重跑,或无法恢复原 SHA 的首次发布上下文时,须通过新的 release PR / 版本重新交付;不能移动旧 tag、伪造 provenance 或覆盖已发布字节。npm 已存在的版本也必须取得原 CI 成品才能比较,不能只凭 registry 存在就补标发布成功。
 - **Go 已公开**:可重跑 `release.yml` 验证原产物并恢复适用浮动标签;BSR 或部署失败分别在 main 派发 `bsr.yml` / `deploy.yml`,指定已公开 Go tag。不重发、不覆盖公开产物。
 
 ## 工作流(分支与提交)
