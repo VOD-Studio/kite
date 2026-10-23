@@ -665,22 +665,53 @@ img[data-err], img:not([src]) {
   transition: transform .38s var(--ease), border-radius .38s var(--ease);
 }
 /*
- * 音质标签(参考网易云):封面左下角,跟着封面的位置插值,翻到歌词页时淡出。
+ * 有音质标签时封面底部压暗一点,浅色封面上标签也看得清;翻到歌词页时跟标签一起淡出。
+ * --kite-pg 不继承,这里显式继承封面上的值。
+ */
+.cover-shade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 32%;
+  --kite-pg: inherit;
+  background: linear-gradient(0deg, rgba(0,0,0,.34), rgba(0,0,0,.12) 45%, rgba(0,0,0,0));
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+}
+.cover[data-badge] .cover-shade {
+  opacity: calc(1 - var(--kite-pg) * 3);
+}
+/* 开启高音质时封面描边亮一下,靠近标签的左下角更亮(由 lightUp 播放)。 */
+.cover-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1.5px rgba(255,238,210,.95), inset 0 0 20px rgba(255,214,150,.35);
+  background: radial-gradient(80% 45% at 0% 100%, rgba(255,214,150,.22), rgba(255,214,150,0) 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+/*
+ * 音质标签:封面左下角,跟着封面的位置插值,翻到歌词页时淡出。
  * 开启:金色渐变的音质名,右边斜切,露出后面深色半透明的规格,整体金色细边;
- * 关闭:只剩描边的音质名,规格缩回音质名后面。开关时金色底 120ms 淡入,规格延迟 60ms 用 260ms 滑出;关闭更快。
+ * 关闭:只剩描边的音质名,规格收在音质名后面。
+ * 打开:金色 100ms 淡入,规格 80ms 后用 300ms 连同文字滑出;收起:规格先变成 --,趁音质名还是金色时滑回它后面,
+ * 金色再褪掉(先褪色的话,半透明的音质名底下会透出正在收回的规格)。
  */
 .badge {
   position: absolute;
   z-index: 2;
   left: calc(var(--cx) + 12px);
-  top: calc(var(--cy) + var(--cs) - 34px);
+  top: calc(var(--cy) + var(--cs) - 36px);
   transform-origin: 0 0;
   transform: translate(calc((var(--sx) - var(--cx)) * var(--kite-pg)), calc((var(--sy) - var(--cy) + var(--ss) - var(--cs)) * var(--kite-pg)));
   display: flex;
   align-items: stretch;
-  height: 22px;
-  font-size: 11.5px;
-  line-height: 20px;
+  height: 24px;
+  font-size: 12px;
+  line-height: 22px;
   white-space: nowrap;
   /* 规格滑到音质名后面时比音质名宽,超出左边的部分裁掉。 */
   overflow: hidden;
@@ -704,26 +735,23 @@ img[data-err], img:not([src]) {
   position: relative;
   z-index: 1;
   overflow: hidden;
-  padding: 0 7px;
-  border: 1px solid rgba(255,255,255,.45);
+  padding: 0 8px;
+  border: 1px solid rgba(255,255,255,.5);
   border-radius: 6px;
-  background: rgba(16,16,22,.24);
+  background: rgba(0,0,0,.12);
   color: rgba(255,255,255,.8);
   font-weight: 600;
-  transition: border-color .12s .12s, border-radius .12s .12s, color .12s .12s, background-color .12s .12s;
-}
-.badge[data-on] .bq-label {
-  transition: border-color .12s, border-radius .12s, color .12s, background-color .12s;
+  letter-spacing: .02em;
+  transition: border-color .16s .2s, border-radius .16s .2s, color .16s .2s, background-color .16s .2s;
 }
 .bq-gold {
   position: absolute;
   inset: -1px;
-  background: linear-gradient(100deg, #FCEBC8 0%, #F1CD8E 45%, #DDA968 100%);
+  background: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 55%), linear-gradient(100deg, #FCEBC8 0%, #F2CF92 48%, #DFAA66 100%);
   /* 右边斜切:顶边比底边长 6px,露出后面的规格。 */
   clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
   opacity: 0;
-  /* 关闭:等规格收回去再褪色;开启:立刻变金(见下)。 */
-  transition: opacity .12s ease-out .12s;
+  transition: opacity .18s ease-in .2s;
 }
 .bq-text {
   position: relative;
@@ -733,41 +761,56 @@ img[data-err], img:not([src]) {
   top: -2px;
   bottom: -2px;
   left: 0;
-  width: 40%;
-  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.75), rgba(255,255,255,0));
+  width: 45%;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.8), rgba(255,255,255,0));
   transform: translateX(-120%) skewX(-20deg);
   pointer-events: none;
 }
 .bq-detail {
   position: relative;
   margin-left: -7px;
-  padding: 0 8px 0 13px;
-  border: 1px solid rgba(240,201,138,.8);
+  padding: 0 9px 0 14px;
+  border: 1px solid rgba(240,201,138,.85);
   border-left: 0;
   border-radius: 0 6px 6px 0;
-  background: rgba(40,30,22,.66);
-  color: rgba(255,240,218,.95);
+  background: rgba(46,32,18,.72);
+  color: rgba(255,240,218,.96);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   /* 规格像抽屉一样藏在音质名后面:关闭时整块左移到音质名底下,开启时连同文字一起滑出来。 */
   transform: translateX(-100%);
   opacity: 0;
-  transition: transform .16s cubic-bezier(.4,0,1,1), opacity .08s linear .1s;
+  transition: transform .18s cubic-bezier(.4,0,1,1) .06s, opacity .1s linear .16s;
+}
+/* 标签底边跑过的一道光(lightUp)。 */
+.bq-streak {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  bottom: 0;
+  width: 44px;
+  height: 1.5px;
+  background: linear-gradient(90deg, rgba(255,240,210,0), #FFF6E4, rgba(255,240,210,0));
+  box-shadow: 0 0 6px 1px rgba(255,214,150,.7);
+  opacity: 0;
+  pointer-events: none;
 }
 .badge[data-on] .bq-label {
   border-color: rgba(240,201,138,.9) transparent rgba(240,201,138,.9) rgba(240,201,138,.9);
   border-radius: 6px 0 0 6px;
   background-color: transparent;
   color: #4A3216;
+  /* 字先等金色铺上一点再变深,否则有一帧是深色字压在深色底上。 */
+  transition: border-color .12s, border-radius .12s, color .12s .04s, background-color .12s;
 }
 .badge[data-on] .bq-gold {
   opacity: 1;
-  transition: opacity .12s ease-out;
+  transition: opacity .1s ease-out;
 }
 .badge[data-on] .bq-detail {
   transform: none;
   opacity: 1;
-  transition: transform .3s var(--ease) .06s, opacity .08s linear .06s;
+  transition: transform .3s cubic-bezier(.2,.8,.2,1) .08s, opacity .06s linear .08s;
 }
 
 .pages {

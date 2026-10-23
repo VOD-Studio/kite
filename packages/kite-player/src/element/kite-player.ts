@@ -582,8 +582,8 @@ export class KitePlayerElement extends LitElement {
             <button class="ib trans-btn lyr-trans" aria-label="显示翻译" aria-pressed=${String(ui.trans)} @click=${this.toggleTrans}>${icons.lyric}</button>
           </section>
         </div>
-        <button class="cover" aria-label=${ui.view === "cover" ? "查看歌词" : "返回封面"} @click=${this.onCoverClick}>
-          ${coverPh}<img alt="" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} />
+        <button class="cover" aria-label=${ui.view === "cover" ? "查看歌词" : "返回封面"} ?data-badge=${!!badge} @click=${this.onCoverClick}>
+          ${coverPh}<img alt="" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} /><span class="cover-shade"></span><span class="cover-rim"></span>
         </button>
         ${this.renderBadge(s, badge)}
         <div class="mini" aria-hidden="true">
@@ -675,7 +675,8 @@ export class KitePlayerElement extends LitElement {
 
   /**
    * renderBadge 封面左下角的音质标签。数据来源能按较低音质给地址时可以点按切换高音质(参考网易云),
-   * 否则只做展示。开关的动画由 CSS 按 data-on 过渡:金色底淡入,规格从音质名后面滑出。
+   * 否则只做展示。开关的动画由 CSS 按 data-on 过渡:金色底淡入,规格从音质名后面滑出;
+   * 关闭时规格里的数字先变成「-」再收回去。
    */
   private renderBadge(s: PlayerState, badge: [string, string] | null): TemplateResult {
     if (badge) this.ui.lastBadge = badge;
@@ -693,7 +694,7 @@ export class KitePlayerElement extends LitElement {
       @click=${this.onBadgeClick}
     >
       <span class="bq-label"><span class="bq-gold"></span><span class="bq-text">${label}</span><span class="bq-sheen"></span></span
-      ><span class="bq-detail">${detail}</span>
+      ><span class="bq-detail">${on ? detail : detail.replace(/\d/g, "-")}</span><span class="bq-streak"></span>
     </button>`;
   }
 
@@ -704,16 +705,38 @@ export class KitePlayerElement extends LitElement {
     const on = !this.player.state.highQuality;
     this.player.setHighQuality(on);
     this.toast(on ? `已开启${badge[0]}` : `已关闭${badge[0]},改用标准音质`);
-    if (on) void this.updateComplete.then(() => this.sheen());
+    if (on) void this.updateComplete.then(() => this.lightUp());
   };
+
+  /** lightUp 开启高音质时:封面描边亮一下,音质名上扫过高光,标签底边跑过一道光。 */
+  private lightUp(): void {
+    const rim = this.renderRoot.querySelector<HTMLElement>(".cover-rim");
+    const streak = this.renderRoot.querySelector<HTMLElement>(".bq-streak");
+    const badge = this.renderRoot.querySelector<HTMLElement>(".badge");
+    if (rim && canAnimate(rim)) {
+      rim.animate([{ opacity: 0 }, { opacity: 1, offset: 0.16 }, { opacity: 1, offset: 0.36 }, { opacity: 0 }], { duration: 680, easing: "ease-out" });
+    }
+    this.sheen();
+    if (streak && badge && canAnimate(streak)) {
+      streak.animate(
+        [
+          { transform: "translateX(-100%)", opacity: 0 },
+          { opacity: 1, offset: 0.2 },
+          { opacity: 1, offset: 0.75 },
+          { transform: `translateX(${badge.offsetWidth}px)`, opacity: 0 },
+        ],
+        { duration: 460, delay: 200, easing: "cubic-bezier(.4,0,.2,1)" },
+      );
+    }
+  }
 
   /** sheen 音质标签开启时金色上扫过一道高光。 */
   private sheen(): void {
     const el = this.renderRoot.querySelector<HTMLElement>(".bq-sheen");
     if (!el || !canAnimate(el)) return;
     el.animate([{ transform: "translateX(-120%) skewX(-20deg)" }, { transform: "translateX(260%) skewX(-20deg)" }], {
-      duration: 700,
-      delay: 140,
+      duration: 560,
+      delay: 160,
       easing: "cubic-bezier(.4,0,.2,1)",
     });
   }
