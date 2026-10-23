@@ -1,12 +1,14 @@
-import { createKiteSource } from "../core/source";
 import { getPlayer, type Player } from "../core/player";
+import { createKiteSource } from "../core/source";
+
 export { canPlay, unplayableMessage } from "../core/player";
+
 import type { Track } from "../core/types";
 
 /** $ 取 root 下必定存在的元素,找不到时抛错(说明模板与代码不一致)。 */
 export function $<T extends Element = HTMLElement>(root: ParentNode, sel: string): T {
   const el = root.querySelector<T>(sel);
-  if (!el) throw new Error("kite-player: 缺少元素 " + sel);
+  if (!el) throw new Error(`kite-player: 缺少元素 ${sel}`);
   return el;
 }
 
@@ -21,6 +23,17 @@ export function prefersReducedMotion(): boolean {
 /** canAnimate:系统没开「减少动态效果」且浏览器支持 Web Animations 时才做形变动画。 */
 export function canAnimate(el: Element): boolean {
   return typeof (el as HTMLElement).animate === "function" && !prefersReducedMotion();
+}
+
+/** hideBroken:加载失败时显示容器占位,同一图片下次加载成功后恢复显示。 */
+export function hideBroken(e: Event): void {
+  const image = e.currentTarget as HTMLImageElement;
+  image.hidden = true;
+  image.addEventListener("load", showLoaded, { once: true });
+}
+
+function showLoaded(e: Event): void {
+  (e.currentTarget as HTMLImageElement).hidden = false;
 }
 
 /**

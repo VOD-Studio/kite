@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import "../src/element";
 import { Player } from "../src/core/player";
+import type { Playlist } from "../src/core/types";
 import { KitePlayerElement } from "../src/element";
 import { withDark } from "../src/element/styles";
-import type { Playlist } from "../src/core/types";
 import { FakeAudio, fakeSource, flush, track } from "./helpers";
 
 const playlist: Playlist = {
@@ -11,7 +11,11 @@ const playlist: Playlist = {
   name: "写作时听",
   cover: "https://p1.music.126.net/a.jpg",
   trackCount: 3,
-  tracks: [track("1", { title: "纸飞机" }), track("2", { title: "慢车" }), track("3", { title: "雨季来信", access: "vip", playable: false })],
+  tracks: [
+    track("1", { title: "纸飞机" }),
+    track("2", { title: "慢车" }),
+    track("3", { title: "雨季来信", access: "vip", playable: false }),
+  ],
 };
 
 let player: Player;
@@ -125,6 +129,45 @@ describe("<kite-player>", () => {
     expect(btn?.getAttribute("aria-label")).toContain("单曲循环");
   });
 
+  it("面板封面缺失时隐藏碎图,由占位样式兜底", async () => {
+    const bare = track("9", { title: "无封面", album: { id: "al", name: "晴朗的周三", cover: "" } });
+    player.setSource(fakeSource({ ...playlist, tracks: [bare, track("2", { title: "慢车" })] }));
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar .toggle")?.click();
+    await settle(el);
+    for (const sel of [".cover img", ".amb img", ".disc-img img"]) {
+      const img = root.querySelector<HTMLImageElement>(sel);
+      expect(img?.hasAttribute("src"), sel).toBe(false);
+      img?.dispatchEvent(new Event("error"));
+      expect(img?.hidden, sel).toBe(true);
+    }
+  });
+
+  it("封面加载失败后切歌,成功加载的新封面恢复显示", async () => {
+    const broken = track("9", { album: { id: "al", name: "损坏封面", cover: "https://example.com/broken.jpg" } });
+    const next = track("2", { title: "慢车" });
+    player.setSource(fakeSource({ ...playlist, tracks: [broken, next] }));
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    const selectors = [".cover img", ".amb img", ".disc-img img"];
+    for (const sel of selectors) {
+      const img = root.querySelector<HTMLImageElement>(sel);
+      img?.dispatchEvent(new Event("error"));
+      expect(img?.hidden, sel).toBe(true);
+    }
+
+    player.next();
+    await settle(el);
+    expect(player.state.current?.id).toBe("2");
+    for (const sel of selectors) {
+      const img = root.querySelector<HTMLImageElement>(sel);
+      expect(img?.getAttribute("src"), sel).toBe(next.album.cover);
+      img?.dispatchEvent(new Event("load"));
+      expect(img?.hidden, sel).toBe(false);
+    }
+  });
+
   it("播放列表抽屉:列出歌曲,VIP 歌不能播并给出提示", async () => {
     const el = await mount(`<kite-player playlists="100"></kite-player>`);
     const root = shadow(el);
@@ -178,6 +221,21 @@ describe("<kite-player>", () => {
 });
 
 describe("<kite-track>", () => {
+  it("封面缺失或加载失败时隐藏碎图,由占位样式兜底", async () => {
+    const bare = track("9", { title: "无封面", album: { id: "al", name: "晴朗的周三", cover: "" } });
+    player.setSource(fakeSource({ ...playlist, tracks: [bare] }));
+    for (const size of ["s", "m", "l"]) {
+      const el = await mount(`<kite-track song="9" size="${size}"></kite-track>`);
+      const imgs = [...shadow(el).querySelectorAll<HTMLImageElement>(".cover img, .amb img")];
+      expect(imgs.length, size).toBeGreaterThan(0);
+      for (const img of imgs) {
+        expect(img.hasAttribute("src"), size).toBe(false);
+        img.dispatchEvent(new Event("error"));
+        expect(img.hidden, size).toBe(true);
+      }
+    }
+  });
+
   it("三种尺寸都能渲染,点播放与播放器同步", async () => {
     for (const size of ["s", "m", "l"]) {
       const el = await mount(`<kite-track song="2" size="${size}"></kite-track>`);
@@ -284,7 +342,9 @@ describe("紧凑布局", () => {
     globalThis.ResizeObserver = class {
       constructor(private cb: ResizeObserverCallback) {}
       observe(): void {
-        observers.push((width) => this.cb([{ contentRect: { width } } as ResizeObserverEntry], this as unknown as ResizeObserver));
+        observers.push((width) =>
+          this.cb([{ contentRect: { width } } as ResizeObserverEntry], this as unknown as ResizeObserver),
+        );
       }
       unobserve(): void {}
       disconnect(): void {}

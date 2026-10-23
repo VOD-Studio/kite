@@ -13,9 +13,12 @@ import { playerSheet } from "./styles";
 import {
   $,
   artists,
-  canPlay,
   canAnimate,
+  canPlay,
+  type FlyDetail,
   flyEvent,
+  hideBroken,
+  type OpenDetail,
   openEvent,
   openQueueEvent,
   playerFor,
@@ -23,8 +26,6 @@ import {
   toastEvent,
   unplayableMessage,
   writeFlag,
-  type FlyDetail,
-  type OpenDetail,
 } from "./util";
 
 type Mode = "bar" | "orb" | "open";
@@ -185,18 +186,27 @@ export class KitePlayerElement extends LitElement {
     if (canAnimate(stage)) {
       const to = stage.getBoundingClientRect();
       const radius = parseFloat(getComputedStyle(stage).borderTopLeftRadius) || 0;
-      stage.animate([{ clipPath: insetFrom(bar, to, bar.height / 2) }, { clipPath: `inset(0px 0px 0px 0px round ${radius}px)` }], {
-        duration: 450,
-        easing: "cubic-bezier(.2,.85,.25,1)",
-      });
+      stage.animate(
+        [{ clipPath: insetFrom(bar, to, bar.height / 2) }, { clipPath: `inset(0px 0px 0px 0px round ${radius}px)` }],
+        {
+          duration: 450,
+          easing: "cubic-bezier(.2,.85,.25,1)",
+        },
+      );
       this.flipCover(disc, 430);
       this.renderRoot.querySelectorAll<HTMLElement>(".stage .enter, .page-lyrics .head").forEach((el, i) => {
-        el.animate([{ opacity: 0, transform: "translateY(24px)" }, { opacity: 1, transform: "none" }], {
-          duration: 380,
-          delay: 100 + i * 60,
-          easing: "cubic-bezier(.2,.85,.25,1)",
-          fill: "backwards",
-        });
+        el.animate(
+          [
+            { opacity: 0, transform: "translateY(24px)" },
+            { opacity: 1, transform: "none" },
+          ],
+          {
+            duration: 380,
+            delay: 100 + i * 60,
+            easing: "cubic-bezier(.2,.85,.25,1)",
+            fill: "backwards",
+          },
+        );
       });
     }
     this.resetIdle();
@@ -223,19 +233,28 @@ export class KitePlayerElement extends LitElement {
     const bar = this.q(".bar").getBoundingClientRect();
     const radius = parseFloat(getComputedStyle(stage).borderTopLeftRadius) || 0;
     stage
-      .animate([{ clipPath: `inset(0px 0px 0px 0px round ${radius}px)` }, { clipPath: insetFrom(bar, from, bar.height / 2) }], {
-        duration: 400,
-        easing: "cubic-bezier(.5,0,.25,1)",
-      })
+      .animate(
+        [{ clipPath: `inset(0px 0px 0px 0px round ${radius}px)` }, { clipPath: insetFrom(bar, from, bar.height / 2) }],
+        {
+          duration: 400,
+          easing: "cubic-bezier(.5,0,.25,1)",
+        },
+      )
       .finished.then(finish, finish);
     // 动画被打断或环境不派发 finished 时也要收起。
     setTimeout(finish, 450);
-    stage.querySelectorAll<HTMLElement>(".pages, .cover, .ctl, .top").forEach((el) =>
-      el.animate([{ transform: "none", filter: "blur(0px)" }, { transform: "translateY(40px) scale(.72)", filter: "blur(10px)" }], {
-        duration: 400,
-        easing: "cubic-bezier(.5,0,.25,1)",
-      }),
-    );
+    stage.querySelectorAll<HTMLElement>(".pages, .cover, .ctl, .top").forEach((el) => {
+      el.animate(
+        [
+          { transform: "none", filter: "blur(0px)" },
+          { transform: "translateY(40px) scale(.72)", filter: "blur(10px)" },
+        ],
+        {
+          duration: 400,
+          easing: "cubic-bezier(.5,0,.25,1)",
+        },
+      );
+    });
   }
 
   // ---- 渲染 ----
@@ -269,7 +288,7 @@ export class KitePlayerElement extends LitElement {
     const ticker = this.tickerText(s);
     return html`<div class="bar" part="bar">
       <button class="disc expand" aria-label="展开播放器" @click=${this.onExpand}>
-        <span class="ring" style=${styleMap({ "--pct": String(pct) })}></span><span class="disc-img"><img alt="" src=${ifDefined(t?.album.cover || undefined)} /></span>
+        <span class="ring" style=${styleMap({ "--pct": String(pct) })}></span><span class="disc-img"><img alt="" src=${ifDefined(t?.album.cover || undefined)} @error=${hideBroken} /></span>
       </button>
       <button class="bar-text expand" aria-label="展开播放器" @click=${this.onExpand}>
         <span class="bar-line"
@@ -290,13 +309,19 @@ export class KitePlayerElement extends LitElement {
     const ui = this.ui;
     const cover = t?.album.cover || undefined;
     const who = artists(t);
-    const tag = [t?.trial ? "仅试听" : "", t?.access === "vip" ? "VIP" : t?.access === "paid" ? "数字专辑" : ""].filter(Boolean).join(" · ");
+    const tag = [t?.trial ? "仅试听" : "", t?.access === "vip" ? "VIP" : t?.access === "paid" ? "数字专辑" : ""]
+      .filter(Boolean)
+      .join(" · ");
     const lyr = s.lyrics;
     const empty = !lyr || lyr.instrumental || lyr.lines.length === 0;
     const chorus = lyr?.chorus[0];
-    const chorusStyle = chorus && s.duration > 0
-      ? { left: `${(chorus.start / 1000 / s.duration) * 100}%`, width: `${((chorus.end - chorus.start) / 1000 / s.duration) * 100}%` }
-      : null;
+    const chorusStyle =
+      chorus && s.duration > 0
+        ? {
+            left: `${(chorus.start / 1000 / s.duration) * 100}%`,
+            width: `${((chorus.end - chorus.start) / 1000 / s.duration) * 100}%`,
+          }
+        : null;
     return html`<div
       class="stage"
       part="panel"
@@ -308,7 +333,7 @@ export class KitePlayerElement extends LitElement {
       @pointerdown=${this.resetIdle}
       @wheel=${{ handleEvent: () => this.resetIdle(), passive: true }}
     >
-      <div class="amb"><img alt="" src=${ifDefined(cover)} /></div>
+      <div class="amb"><img alt="" src=${ifDefined(cover)} @error=${hideBroken} /></div>
       <div class="scrim"></div>
       <div class="pages" @pointerdown=${this.onSwipeStart} @pointerup=${this.onSwipeEnd}>
         <section class="page page-cover">
@@ -336,7 +361,7 @@ export class KitePlayerElement extends LitElement {
         </section>
       </div>
       <button class="cover" aria-label=${ui.view === "cover" ? "查看歌词" : "返回封面"} @click=${this.onCoverClick}>
-        <img alt="" src=${ifDefined(cover)} /><span class="badge" ?hidden=${!ui.badge}><b>${ui.badge?.[0] ?? ""}</b><span>${ui.badge?.[1] ?? ""}</span></span>
+        <img alt="" src=${ifDefined(cover)} @error=${hideBroken} /><span class="badge" ?hidden=${!ui.badge}><b>${ui.badge?.[0] ?? ""}</b><span>${ui.badge?.[1] ?? ""}</span></span>
       </button>
       <div class="top enter">
         <button class="ib close" aria-label="收起" @click=${this.close}>${icons.chevron}</button>
@@ -350,7 +375,7 @@ export class KitePlayerElement extends LitElement {
         </div>
         <div class="times"><span class="t-cur">${formatTime(ui.dragging ? ui.dragPct * s.duration : s.time)}</span><span class="t-dur">${formatTime(s.duration)}</span></div>
         <div class="buttons">
-          <button class="ib mode" aria-label=${"播放模式:" + modeLabels[s.mode]} @click=${this.onModeClick}>
+          <button class="ib mode" aria-label=${`播放模式:${modeLabels[s.mode]}`} @click=${this.onModeClick}>
             <span class="m m-sequence">${icons.sequence}</span><span class="m m-loop">${icons.loop}</span><span class="m m-one">${icons.one}</span><span class="m m-shuffle">${icons.shuffle}</span>
           </button>
           <button class="ib big prev" aria-label="上一首" @click=${this.prev}>${icons.prev}</button>
@@ -406,7 +431,11 @@ export class KitePlayerElement extends LitElement {
           const isCur = t.id === cur;
           const tag = [
             t.trial ? html`<span class="rtag trial">仅试听</span>` : nothing,
-            t.access === "vip" ? html`<span class="rtag vip">VIP</span>` : t.access === "paid" ? html`<span class="rtag paid">数字专辑</span>` : nothing,
+            t.access === "vip"
+              ? html`<span class="rtag vip">VIP</span>`
+              : t.access === "paid"
+                ? html`<span class="rtag paid">数字专辑</span>`
+                : nothing,
           ];
           const sub = [artists(t), t.album.name].filter(Boolean).join(" · ");
           return html`<button class=${classMap({ row: true, locked: !canPlay(t), cur: isCur })} role="listitem" data-i=${i} style="--i:${Math.min(i, 12)}" @click=${() => this.pickRow(i)}>
@@ -584,7 +613,11 @@ export class KitePlayerElement extends LitElement {
     this.scrollState.last = scrollY;
     listen(window, "scroll", () => this.onScroll(), { passive: true });
     listen(window, flyEvent, (e) => this.fly((e as CustomEvent<FlyDetail>).detail));
-    listen(window, openQueueEvent, (e) => void this.openSheet((e as CustomEvent<{ playlist?: string }>).detail?.playlist));
+    listen(
+      window,
+      openQueueEvent,
+      (e) => void this.openSheet((e as CustomEvent<{ playlist?: string }>).detail?.playlist),
+    );
     listen(window, toastEvent, (e) => this.toast(String((e as CustomEvent<string>).detail ?? "")));
     listen(window, openEvent, (e) => {
       const d = (e as CustomEvent<OpenDetail>).detail ?? {};
@@ -739,7 +772,9 @@ export class KitePlayerElement extends LitElement {
     });
     if (lyricIndex !== this.lastLine) {
       this.unitValues = [];
-      this.unitEls[this.lastLine]?.forEach((u) => u.style.removeProperty("--p"));
+      this.unitEls[this.lastLine]?.forEach((u) => {
+        u.style.removeProperty("--p");
+      });
     }
     this.lastLine = cur;
     if (this.manual.active) this.updateHint(base, anchor);
@@ -843,7 +878,14 @@ export class KitePlayerElement extends LitElement {
     const s = this.player.state;
     this.prefetchTabNames(ids);
     if (tab === "queue" || tab === s.playlist?.id) {
-      this.patch({ tab, sheetReady: true, sheetStatus: "ready", sheetTracks: s.queue, sheetName: s.playlist?.name ?? "", sheetKey: this.ui.sheetKey + 1 });
+      this.patch({
+        tab,
+        sheetReady: true,
+        sheetStatus: "ready",
+        sheetTracks: s.queue,
+        sheetName: s.playlist?.name ?? "",
+        sheetKey: this.ui.sheetKey + 1,
+      });
       return;
     }
     this.patch({ tab, sheetReady: true, sheetStatus: "loading", sheetName: "" });
@@ -917,7 +959,11 @@ export class KitePlayerElement extends LitElement {
     const radius = getComputedStyle(cover).borderTopLeftRadius;
     cover.animate(
       [
-        { transformOrigin: "0 0", transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${s})`, borderRadius: `${from.width / 2 / s}px` },
+        {
+          transformOrigin: "0 0",
+          transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${s})`,
+          borderRadius: `${from.width / 2 / s}px`,
+        },
         { transformOrigin: "0 0", transform: "none", borderRadius: radius },
       ],
       { duration, easing: "cubic-bezier(.2,.85,.25,1)" },
@@ -946,8 +992,14 @@ export class KitePlayerElement extends LitElement {
       ghost.append(y);
       kp.append(ghost);
       const opts = { duration: 600, fill: "forwards" as const };
-      ghost.animate([{ transform: `translateX(${d.rect.left}px)` }, { transform: `translateX(${target.left}px)` }], { ...opts, easing: "cubic-bezier(.25,.8,.35,1)" });
-      y.animate([{ transform: `translateY(${d.rect.top}px)` }, { transform: `translateY(${target.top}px)` }], { ...opts, easing: "cubic-bezier(.55,0,.85,.45)" });
+      ghost.animate([{ transform: `translateX(${d.rect.left}px)` }, { transform: `translateX(${target.left}px)` }], {
+        ...opts,
+        easing: "cubic-bezier(.25,.8,.35,1)",
+      });
+      y.animate([{ transform: `translateY(${d.rect.top}px)` }, { transform: `translateY(${target.top}px)` }], {
+        ...opts,
+        easing: "cubic-bezier(.55,0,.85,.45)",
+      });
       inner
         .animate(
           [
@@ -959,10 +1011,13 @@ export class KitePlayerElement extends LitElement {
         .finished.then(
           () => {
             ghost.remove();
-            this.q(this.ui.mode === "open" ? ".cover" : ".disc").animate([{ transform: "scale(1)" }, { transform: "scale(1.14)" }, { transform: "scale(1)" }], {
-              duration: 460,
-              easing: "cubic-bezier(.2,.85,.25,1)",
-            });
+            this.q(this.ui.mode === "open" ? ".cover" : ".disc").animate(
+              [{ transform: "scale(1)" }, { transform: "scale(1.14)" }, { transform: "scale(1)" }],
+              {
+                duration: 460,
+                easing: "cubic-bezier(.2,.85,.25,1)",
+              },
+            );
           },
           () => ghost.remove(),
         );
@@ -989,9 +1044,9 @@ function renderLines(lyr: Lyrics | null): unknown {
     lyr,
     lyr.lines.map(
       (line, i) =>
-        html`<button class="line" role="listitem" data-i=${i}><span class="lt">${lineUnits(line).map((u) => html`<span class="u">${u}</span>`)}</span>${line.translation
-            ? html`<span class="tr">${line.translation}</span>`
-            : nothing}</button>`,
+        html`<button class="line" role="listitem" data-i=${i}><span class="lt">${lineUnits(line).map((u) => html`<span class="u">${u}</span>`)}</span>${
+          line.translation ? html`<span class="tr">${line.translation}</span>` : nothing
+        }</button>`,
     ),
   );
 }

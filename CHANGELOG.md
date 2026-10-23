@@ -7,6 +7,18 @@
 
 `v0.x` 阶段 API 不保证稳定;`BREAKING CHANGE` 只 bump minor(semver 0.x 规则)。
 
+## Unreleased
+
+### 持续集成与交付
+
+- Go 与 player 独立生成版本、release PR 和变更记录;Go 发布、BSR 与部署不消费 player tag。
+- CI 以完整变更计划驱动检查,唯一 `CI OK` 门禁拒绝意外跳过、取消及未注册任务。
+- npm 发布复用准确 main CI 已验收的 tarball,校验来源、摘要和已有版本,不重新打包或覆盖公开产物。
+- 覆盖根 Go、Go SDK 消费者、npm 和 Rust 的依赖安全检查;扫描故障与可修复漏洞明确失败。
+- 升级 Go SDK 消费者的 gRPC / x/net 依赖,修复全模块扫描发现的六个可达漏洞。
+- 提供 `make docker-run` / `make docker-check` 隔离工具链入口,不要求宿主机安装 Go 或 Node。
+- 移除 AI Review 工作流及其专用配置。
+
 ## 0.7.0 (2026-10-22)
 
 ## What's Changed

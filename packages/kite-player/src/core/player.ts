@@ -1,7 +1,7 @@
 import { lineIndexAt } from "./lyrics";
 import { loadSnapshot, saveSnapshot } from "./persist";
 import { Store } from "./store";
-import type { DataSource, Lyrics, PlayMode, Playlist, PlayerState, SourceInfo, Track } from "./types";
+import type { DataSource, Lyrics, PlayerState, Playlist, PlayMode, SourceInfo, Track } from "./types";
 
 /** Player 用到的 <audio> 能力子集,测试时可以换成假实现。 */
 export interface AudioLike {
@@ -185,7 +185,12 @@ export class Player {
   }
 
   /** setQueue 替换队列。autoplay 为 false 时只切换不播放。 */
-  setQueue(tracks: Track[], index: number, playlist: { id: string; name: string } | null = null, autoplay = false): void {
+  setQueue(
+    tracks: Track[],
+    index: number,
+    playlist: { id: string; name: string } | null = null,
+    autoplay = false,
+  ): void {
     this.store.set({ queue: tracks, playlist });
     this.jump(index, autoplay);
   }
@@ -381,7 +386,11 @@ export class Player {
     try {
       const lyrics = await this.source.lyrics(track);
       if (this.state.current?.id !== track.id) return;
-      this.store.set({ lyrics, lyricsStatus: "ready", lyricIndex: lineIndexAt(lyrics.lines, this.currentTime() * 1000) });
+      this.store.set({
+        lyrics,
+        lyricsStatus: "ready",
+        lyricIndex: lineIndexAt(lyrics.lines, this.currentTime() * 1000),
+      });
     } catch {
       // 没有歌词不影响播放,界面显示加载失败。
       if (this.state.current?.id === track.id) this.store.set({ lyricsStatus: "failed" });

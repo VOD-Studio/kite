@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createKiteSource, KiteError } from "../src/core/source";
 import { firstSungIndex, formatTime, lineIndexAt, wordProgress } from "../src/core/lyrics";
 import { Player } from "../src/core/player";
+import { createKiteSource, KiteError } from "../src/core/source";
 import { Store } from "../src/core/store";
 import type { Playlist } from "../src/core/types";
 import { FakeAudio, fakeSource, flush, lyrics, track } from "./helpers";
@@ -33,7 +33,14 @@ describe("lyrics", () => {
   });
 
   it("逐字进度:有逐字时间按字,没有时按行时长均分", () => {
-    const words = { time: 0, text: "你好", words: [{ time: 0, duration: 100, text: "你" }, { time: 100, duration: 100, text: "好" }] };
+    const words = {
+      time: 0,
+      text: "你好",
+      words: [
+        { time: 0, duration: 100, text: "你" },
+        { time: 100, duration: 100, text: "好" },
+      ],
+    };
     expect(wordProgress(words, 150)).toEqual([1, 0.5]);
     expect(wordProgress({ time: 0, duration: 400, text: "四个字儿" }, 150)).toEqual([1, 0.5, 0, 0]);
   });
@@ -69,7 +76,12 @@ describe("createKiteSource", () => {
   it("把相对地址补成绝对地址,错误带 reason", async () => {
     const fetchMock = vi.fn(async (url: string) => {
       if (url.endsWith("/playlists/100")) {
-        return new Response(JSON.stringify({ ...playlist, tracks: [{ ...track("1"), stream: "/player/v1/tracks/1/stream?x", lyrics: "/player/v1/tracks/1/lyrics" }] }));
+        return new Response(
+          JSON.stringify({
+            ...playlist,
+            tracks: [{ ...track("1"), stream: "/player/v1/tracks/1/stream?x", lyrics: "/player/v1/tracks/1/lyrics" }],
+          }),
+        );
       }
       return new Response(JSON.stringify({ error: { reason: "NOT_ALLOWED", message: "不在白名单" } }), { status: 404 });
     });
@@ -84,7 +96,11 @@ describe("createKiteSource", () => {
   });
 
   it("网络错误转成 NETWORK", async () => {
-    const source = createKiteSource("https://x", { fetch: (async () => { throw new TypeError("fail"); }) as unknown as typeof fetch });
+    const source = createKiteSource("https://x", {
+      fetch: (async () => {
+        throw new TypeError("fail");
+      }) as unknown as typeof fetch,
+    });
     await expect(source.info?.()).rejects.toMatchObject({ reason: "NETWORK" });
   });
 });
@@ -147,7 +163,12 @@ describe("Player", () => {
   it("模式按 顺序 → 列表循环 → 单曲循环 → 随机 循环切换", () => {
     const { player } = newPlayer();
     player.setMode("sequence");
-    expect([player.cycleMode(), player.cycleMode(), player.cycleMode(), player.cycleMode()]).toEqual(["loop", "one", "shuffle", "sequence"]);
+    expect([player.cycleMode(), player.cycleMode(), player.cycleMode(), player.cycleMode()]).toEqual([
+      "loop",
+      "one",
+      "shuffle",
+      "sequence",
+    ]);
   });
 
   it("上一首:播放超过 3 秒先回到开头", async () => {
@@ -187,7 +208,10 @@ describe("Player", () => {
   it("随机模式把试听歌当候选", async () => {
     const pl: Playlist = {
       ...playlist,
-      tracks: [track("5", { access: "vip", playable: false, trial: true }), track("6", { access: "paid", playable: false, trial: true })],
+      tracks: [
+        track("5", { access: "vip", playable: false, trial: true }),
+        track("6", { access: "paid", playable: false, trial: true }),
+      ],
     };
     const p = new Player({ audio: new FakeAudio(), source: fakeSource(pl), storageKey: false, mediaSession: false });
     await p.playPlaylist("100");
@@ -202,11 +226,21 @@ describe("Player", () => {
   it("快照恢复保留试听标记", async () => {
     const trial = track("5", { access: "vip", playable: false, trial: true });
     const pl: Playlist = { ...playlist, tracks: [trial, track("1")] };
-    const first = new Player({ audio: new FakeAudio(), source: fakeSource(pl), storageKey: "kite-trial", mediaSession: false });
+    const first = new Player({
+      audio: new FakeAudio(),
+      source: fakeSource(pl),
+      storageKey: "kite-trial",
+      mediaSession: false,
+    });
     await first.playPlaylist("100", 0);
     first.pause();
 
-    const next = new Player({ audio: new FakeAudio(), source: fakeSource(pl), storageKey: "kite-trial", mediaSession: false });
+    const next = new Player({
+      audio: new FakeAudio(),
+      source: fakeSource(pl),
+      storageKey: "kite-trial",
+      mediaSession: false,
+    });
     expect(next.state.current?.id).toBe("5");
     expect(next.state.current?.trial).toBe(true);
     await next.play();

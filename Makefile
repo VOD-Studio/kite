@@ -1,5 +1,5 @@
 .PHONY: all help install-tools install-cli fmt fmt-check tidy-check vet test lint vuln build build-server \
-        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust interop-go upstream-smoke player-check check ci-env clean
+        build-cli run dev proto proto-lint proto-breaking proto-deps verify-gen docs scripts-check interop-rust interop-go upstream-smoke player-check player-package-check player-demo docker-run docker-check check ci-env clean
 
 # 工具探测:优先 PATH,回退 $GOPATH/bin(GOBIN 也在 PATH 时无所谓)
 BUF           ?= $(shell command -v buf 2>/dev/null           || echo $$(go env GOPATH)/bin/buf)
@@ -15,8 +15,12 @@ BUF_VERSION           := 1.71.0
 GOVULNCHECK_VERSION   := v1.6.0
 GORELEASER_VERSION    := 2.17.1
 COSIGN_VERSION        := v3.1.2
+CARGO_AUDIT_VERSION   := 0.22.2
+PYYAML_VERSION        := 6.0.3
 # packages/kite-player(npm 包 @violetjs/kite-player)用的 Node 大版本;CI 的 setup-node 读这里。
 NODE_VERSION          := 24
+# player-demo 的本地端口(demo 调试页)。
+PLAYER_DEMO_PORT      ?= 3847
 # 仅本地热重载用,不影响 CI。
 AIR_VERSION           := latest
 
@@ -160,6 +164,28 @@ interop-go:
 player-check:
 	cd packages/kite-player && npm ci --no-audit --no-fund && npm run check
 
+## player-package-check: 构建并验收实际 npm tarball(独立消费者 + Chromium);支持 CHROME 指定现有浏览器
+player-package-check: player-check
+	cd packages/kite-player && \
+		if [ -z "$${CHROME:-}$${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-}" ]; then npm exec -- playwright install chromium; fi && \
+		npm run package:check
+
+## player-demo: 构建 kite-player 并起 demo 调试页(默认 http://127.0.0.1:3847/demo/,换端口 make player-demo PLAYER_DEMO_PORT=xxxx;Ctrl-C 停止;需要 Node 与 python3)
+player-demo:
+	cd packages/kite-player && npm run build
+	@echo "demo: http://127.0.0.1:$(PLAYER_DEMO_PORT)/demo/  (Ctrl-C 停止)"
+	cd packages/kite-player && python3 -m http.server $(PLAYER_DEMO_PORT) --bind 127.0.0.1
+
+## docker-run: 在隔离的 Docker 工具链中运行 CMD,省略 CMD 则进入 shell(不要求宿主机安装 Go/Node)
+docker-run: export KITE_DOCKER_COMMAND = $(if $(CMD),$(CMD),exec bash)
+docker-run:
+	@scripts/docker-dev.sh
+
+## docker-check: 在 Docker 中执行 Go/脚本检查与 player 成品验收;依赖缓存与宿主机隔离
+docker-check: export KITE_DOCKER_COMMAND = make check && make player-package-check
+docker-check:
+	@scripts/docker-dev.sh
+
 ## scripts-check: scripts/*.sh 的 shellcheck 与单元测试(release PR 的 CI 保障逻辑等)
 scripts-check:
 	shellcheck scripts/*.sh
@@ -176,6 +202,8 @@ ci-env:
 	@echo "GOVULNCHECK_VERSION=$(GOVULNCHECK_VERSION)"
 	@echo "GORELEASER_VERSION=$(GORELEASER_VERSION)"
 	@echo "COSIGN_VERSION=$(COSIGN_VERSION)"
+	@echo "CARGO_AUDIT_VERSION=$(CARGO_AUDIT_VERSION)"
+	@echo "PYYAML_VERSION=$(PYYAML_VERSION)"
 	@echo "NODE_VERSION=$(NODE_VERSION)"
 
 ## clean: 清除本地构建产物(tmp/、bin/)。不清 gen/——已进版本控制。

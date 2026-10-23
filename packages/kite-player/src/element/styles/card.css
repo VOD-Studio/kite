@@ -44,7 +44,7 @@
   flex: none;
   overflow: hidden;
   border-radius: 14px;
-  background: #D9DCE2;
+  background: linear-gradient(145deg, #E8EAF0, #D6DAE3);
 }
 .locked .cover {
   filter: grayscale(.75);

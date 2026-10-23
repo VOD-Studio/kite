@@ -2,7 +2,19 @@
 
 All notable changes to `@violetjs/kite-player` are documented here. Versions follow [Semantic Versioning](https://semver.org/); before 1.0.0, a minor version may include breaking changes.
 
-## 0.1.0 - Unreleased
+## Unreleased
+
+### Fixed
+
+- Restore cover, disc and ambient images after a failed image request when the next track's artwork loads successfully.
+
+### Build and release
+
+- Validate a single packed tarball in an isolated consumer, covering TypeScript declarations, ESM, React SSR, bundling and Chromium interactions.
+- Publish the verified main-CI tarball through an independent player release PR and tag, without rebuilding during publication.
+- Upgrade Vitest, tsup and esbuild to remove the fixable vulnerabilities reported by the dependency audit.
+
+## 0.1.0
 
 First public release.
 

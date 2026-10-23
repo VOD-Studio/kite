@@ -35,7 +35,11 @@ export function usePlayerState<T>(selector?: (s: PlayerState) => T): T | PlayerS
   const select = selector ?? ((s: PlayerState) => s);
   const subscribe = useCallback((fn: () => void) => player.subscribe(fn), [player]);
   // 服务端渲染时没有播放状态,返回初始值,避免水合不一致。
-  return useSyncExternalStore(subscribe, () => select(player.state), () => select(player.state));
+  return useSyncExternalStore(
+    subscribe,
+    () => select(player.state),
+    () => select(player.state),
+  );
 }
 
 /** usePlaybackTime 在播放时每帧返回当前秒数(只在调用它的组件里触发重新渲染)。 */

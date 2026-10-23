@@ -10,6 +10,10 @@ on:
         description: 已发布的正式版本(如 v0.4.0)
         required: true
         type: string
+      automatic:
+        description: 自动发布只部署最新 Go 正式版本;旧版本须显式手动回滚
+        type: boolean
+        default: true
     secrets:
       KITE_PRODUCTION_SSH_KEY:
         required: true
@@ -42,6 +46,7 @@ jobs:
     outputs:
       source-sha: ${{ steps.release.outputs.sha }}
       deployer-version: ${{ steps.version.outputs.required }}
+      deploy: ${{ steps.release.outputs.deploy }}
     steps:
       - name: 限制工作流来源
         run: |
@@ -49,25 +54,17 @@ jobs:
             echo '::error::生产部署只能从 VOD-Studio/kite 的 main 工作流执行'
             exit 1
           fi
-      - name: 校验已公开版本与主干来源
-        id: release
-        env:
-          TAG: ${{ inputs.tag }}
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo '::error::tag 必须形如 v1.2.3'; exit 1; }
-          gh release view "$TAG" --json tagName,isDraft,isPrerelease |
-            jq -e --arg tag "$TAG" '.tagName == $tag and (.isDraft | not) and (.isPrerelease | not)' >/dev/null
-          sha=$(gh api "repos/$GH_REPO/commits/$TAG" --jq .sha)
-          ancestry=$(gh api "repos/$GH_REPO/compare/$sha...main" --jq .status)
-          [[ "$ancestry" == ahead || "$ancestry" == identical ]] || { echo '::error::版本提交不在 main 历史中'; exit 1; }
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: 校验已公开版本与主干来源
+        id: release
+        env:
+          TAG: ${{ inputs.tag }}
+          AUTOMATIC: ${{ inputs.automatic || false }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/deploy-target.py >> "$GITHUB_OUTPUT"
       - name: 读取最低部署器版本
         id: version
         run: |
@@ -78,6 +75,7 @@ jobs:
   deploy:
     name: 部署 ${{ inputs.tag }}
     needs: prepare
+    if: needs.prepare.outputs.deploy == 'true'
     runs-on: ubuntu-24.04
     environment: production
     timeout-minutes: 15
