@@ -82,6 +82,8 @@ flowchart TD
 
 `npm.yml` 校验本仓受信 player release PR、tag 指向及指定源码 SHA 的成功 main push CI,只下载该 run / attempt 的 `kite-player-package-*`。核对 manifest、包名、版本、SHA-256 / SHA-512 与 tgz 后,**发布已经验收的字节,不在发布端 build / pack**。需要 `npm` environment 中可发布 `@violetjs` scope 的 `NPM_TOKEN`;不要配置在仓库 / 组织级,迁移验证后由管理员移除同名旧项,避免环境缺项时回退。
 
+调用 `npm.yml` 的 job 必须逐项传递 `NPM_TOKEN`,callee 通过 `workflow_call.secrets` 声明 `required: true`;值只在真正 publish 的步骤注入。即使 token 只存在于 environment,也不能省略调用方绑定:[GitHub 明确说明省略会得到空字符串](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#using-inputs-and-secrets-in-a-reusable-workflow)。`required` 校验绑定是否存在,发布脚本仍负责拒绝空值。
+
 首次发布还要求当前 workflow 的源码 SHA 等于包的源码 SHA,保证 provenance 真实。正式版用 `latest`,预发布用 `next`;registry 校验成功后才公开 player Release,并始终设置 `make_latest: false`,不替换 GitHub 的 Go Latest,也不触发 BSR / server 部署。
 
 相同版本已经存在时,必须校验 registry 的 integrity 和实际字节;一致只恢复 GitHub 发布收尾,不再 publish,不一致立即失败。不存在的版本、网络故障和鉴权失败不能混为一谈。
@@ -90,13 +92,14 @@ flowchart TD
 
 1. 管理员先运行 `python3 scripts/github-settings.py --apply`,创建 `npm` environment 及 main 白名单。`gh secret set --env npm` 不会自动创建环境;环境不存在时,获取密钥公钥会返回 404。脚本应用保护配置后若只报告 secret 缺项,表示仍需完成下面的凭据步骤,不代表前面的配置已回滚。
 2. 在本机终端交互录入有效 token:`gh secret set NPM_TOKEN --repo VOD-Studio/kite --env npm`。GitHub 不提供旧 secret 的原值,需要使用自己保管的值或重新创建 token;不要将值写进命令参数、仓库文件或聊天。
-3. 保留仓库级旧 token,直到 `main` 上的 `npm.yml` 已切换到 `environment: npm`;切换前旧工作流仍依赖仓库级凭据。
+3. 保留仓库级旧 token,直到 `main` 上的 `npm.yml` 已切换到 `environment: npm`,且 `Release Please` 的调用 job 已显式绑定 `NPM_TOKEN`;切换前旧工作流仍依赖仓库级凭据。
 4. 确认环境中的 token 已设置、工作流已切换后,运行 `gh secret delete NPM_TOKEN --repo VOD-Studio/kite` 删除仓库级旧项,再运行 `python3 scripts/github-settings.py` 完成只读审计。不要用一次正式发布来试验凭据迁移。
 
 ### 恢复规则
 
 - **发布队列来源**:release-please 读取实时 main,较早运行可能代后续提交建立 draft。每个运行仍只接管自己的 `GITHUB_SHA`,不依赖 action 当次是否返回“创建成功”。普通业务提交不能接管其它源码的发布。
-- **player 首次发布失败**:完整重跑原 release PR 合并 SHA 对应的 `Release Please` 运行,不要只重跑失败 jobs;其发布分支之前可能被跳过。不要在较新的 main 上手动派发来冒充旧源码的 provenance。
+- **player 首次发布因临时故障或凭据缺项失败**:原工作流代码正确时,完整重跑原 release PR 合并 SHA 对应的 `Release Please` 运行,不要只重跑失败 jobs;其发布分支之前可能被跳过。不要在较新的 main 上手动派发来冒充旧源码的 provenance。
+- **原工作流代码有缺陷**:重跑沿用原 `GITHUB_SHA`;仓库内 `./.github/workflows/...` 的 callee 也来自调用方同一提交,不会自动采用新 main 的修复。若原 SHA 无法完成首次发布,必须通过包含修复的新 release PR / 版本重新交付,保留旧 tag,不移动 tag、不替换已验收 tgz。不要把“修复合并后重跑原运行”当成通用恢复方案。
 - **CI 产物过期 / 缺失**:在原运行仍可重跑时,重跑原源码的 main push CI,产生新的成功 attempt 和已验证产物,再重跑原发布编排。发布端没有“重新 pack 凑一个包”的兜底。
 - **npm 已存在且字节一致**:可在 main 手动派发 `npm.yml`,指定 player tag,仅完成一致性校验及 GitHub Release 收尾。
 - **恢复时限**:GitHub [仅允许在首次运行后 30 天内重跑,每个运行最多重跑 50 次](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)。产物缺失且原运行已不可重跑,或无法恢复原 SHA 的首次发布上下文时,须通过新的 release PR / 版本重新交付;不能移动旧 tag、伪造 provenance 或覆盖已发布字节。npm 已存在的版本也必须取得原 CI 成品才能比较,不能只凭 registry 存在就补标发布成功。
