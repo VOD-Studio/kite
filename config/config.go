@@ -50,8 +50,11 @@ type PublicConfig struct {
 	// Origins 是允许跨域调用的站点(如 https://blog.example.com),逗号分隔;* 表示不限。
 	Origins string
 
-	// SessionFile 是服务账号的网易云登录态文件(server public-login 生成),空表示只按匿名播放。
+	// SessionFile 是单账号的网易云登录态文件(server public-login 生成),与 Accounts 互斥;两者均空时匿名播放。
 	SessionFile string
+
+	// Accounts 是按顺序配置的服务账号 JSON 数组,与 SessionFile 互斥。
+	Accounts string
 
 	// SigningKeyFile 是播放链接签名密钥文件,空表示每次启动随机生成(重启后旧链接失效)。
 	SigningKeyFile string
@@ -93,6 +96,10 @@ type ServerConfig struct {
 	// 用于按调用方发放令牌(限流 / 审计 / 吊销的单位,见 docs/server-security.md)。
 	// 与 AuthToken / AuthTokenFile 互斥。
 	AuthTokensFile string
+
+	// AccountsFile 是托管网易云账号的持久化文件,空表示不启用账号托管。
+	// 文件只供一个服务进程使用,登录态按通过鉴权的调用方隔离。
+	AccountsFile string
 
 	// RatePerMinute 是每个调用方每分钟允许的请求数,0 表示不限流。
 	RatePerMinute int
@@ -295,6 +302,7 @@ func Load() Config {
 	cfg.Server.AuthToken = envStr("KITE_SERVER_AUTH_TOKEN", cfg.Server.AuthToken)
 	cfg.Server.AuthTokenFile = envStr("KITE_SERVER_AUTH_TOKEN_FILE", cfg.Server.AuthTokenFile)
 	cfg.Server.AuthTokensFile = envStr("KITE_SERVER_AUTH_TOKENS_FILE", cfg.Server.AuthTokensFile)
+	cfg.Server.AccountsFile = envStr("KITE_SERVER_ACCOUNTS_FILE", cfg.Server.AccountsFile)
 	cfg.Server.RatePerMinute = envInt("KITE_SERVER_RATE_PER_MINUTE", cfg.Server.RatePerMinute)
 	cfg.Server.TLSCertFile = envStr("KITE_SERVER_TLS_CERT", cfg.Server.TLSCertFile)
 	cfg.Server.TLSKeyFile = envStr("KITE_SERVER_TLS_KEY", cfg.Server.TLSKeyFile)
@@ -317,6 +325,7 @@ func Load() Config {
 	cfg.Public.Songs = envStr("KITE_PUBLIC_SONGS", cfg.Public.Songs)
 	cfg.Public.Origins = envStr("KITE_PUBLIC_ORIGINS", cfg.Public.Origins)
 	cfg.Public.SessionFile = envStr("KITE_PUBLIC_SESSION_FILE", cfg.Public.SessionFile)
+	cfg.Public.Accounts = envStr("KITE_PUBLIC_ACCOUNTS", cfg.Public.Accounts)
 	cfg.Public.SigningKeyFile = envStr("KITE_PUBLIC_SIGNING_KEY_FILE", cfg.Public.SigningKeyFile)
 	cfg.Public.RatePerMinute = envInt("KITE_PUBLIC_RATE_PER_MINUTE", cfg.Public.RatePerMinute)
 	cfg.Public.TrustProxy = envStr("KITE_PUBLIC_TRUST_PROXY", "") == "true"

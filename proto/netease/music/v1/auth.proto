@@ -53,8 +53,8 @@ service AuthService {
     };
   }
 
-  // RefreshLogin 刷新登录态,延长 cookie 的有效期。
-  // cookie 已失效时返回 LOGIN_REQUIRED,调用方应引导重新登录。
+  // RefreshLogin 刷新登录态；托管账号持久化新凭据，直传模式返回完整 cookie。
+  // 托管凭据失效时返回 ACCOUNT_EXPIRED，直传凭据失效时返回 LOGIN_REQUIRED。
   rpc RefreshLogin(RefreshLoginRequest) returns (RefreshLoginResponse) {
     option (google.api.http) = {
       post: "/api/v1/auth/refresh"
@@ -63,16 +63,18 @@ service AuthService {
   }
 }
 
-// 登录会话凭证。
+// 登录会话凭证。启用托管存储的登录返回 account_id，不暴露 cookie。
 message Session {
   // 用户 ID。
   int64 user_id = 1;
-  // Cookie 字符串（后续请求的登录态凭证）。
+  // 直传模式的 Cookie 字符串；托管模式为空。不得与 account_id 同时传入请求。
   string cookie = 2;
   // 昵称。
   string nickname = 3;
   // 头像 URL。
   string avatar_url = 4;
+  // 当前调用方拥有的托管账号 ID；后续通过 metadata "x-kite-account-id" 选择。
+  string account_id = 5;
 }
 
 // SendCaptcha 请求。
@@ -147,27 +149,30 @@ message CheckQrcodeResponse {
   Session session = 3;
 }
 
-// LoginStatus 请求（cookie 经 metadata "x-netease-cookie" 传入，不在此 message）。
+// LoginStatus 请求：通过 metadata "x-netease-cookie" 或 "x-kite-account-id" 二选一传凭据。
 message LoginStatusRequest {}
 
 // LoginStatus 响应。
 message LoginStatusResponse {
-  // 登录态信息（未登录时 session 为空）。
+  // 登录态信息（直传模式未登录时为空；托管模式返回 account_id，不返回 cookie）。
   Session session = 1;
 }
 
-// Logout 请求（cookie 经 metadata "x-netease-cookie" 传入，不在此 message）。
+// Logout 请求：通过 metadata "x-netease-cookie" 或 "x-kite-account-id" 二选一传凭据。
+// 托管账号成功登出后删除持久化记录；过期账号仅执行本地删除。
 message LogoutRequest {}
 
 // Logout 响应。
 message LogoutResponse {}
 
-// RefreshLogin 请求(cookie 经 metadata "x-netease-cookie" 传入,不在此 message)。
+// RefreshLogin 请求：通过 metadata "x-netease-cookie" 或 "x-kite-account-id" 二选一传凭据。
 message RefreshLoginRequest {}
 
 // RefreshLogin 响应。
 message RefreshLoginResponse {
-  // 刷新后的完整 cookie:传入的 cookie 中被上游重新下发的项已替换为新值。
-  // 调用方应用它替换保存的旧 cookie;上游没有下发新值时与传入的相同。
+  // 直传模式刷新后的完整 cookie：传入的 cookie 中被上游重新下发的项已替换为新值。
+  // 调用方应用它替换保存的旧 cookie；上游没有下发新值时与传入的相同。托管模式为空。
   string cookie = 1;
+  // 托管模式持久化刷新结果后返回的账号 ID；直传模式为空。
+  string account_id = 2;
 }

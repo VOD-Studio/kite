@@ -22,7 +22,6 @@ import (
 
 	"github.com/VOD-Studio/kite/internal/cache"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
-	"github.com/VOD-Studio/kite/internal/netease/session"
 	"github.com/VOD-Studio/kite/internal/server"
 )
 
@@ -74,7 +73,7 @@ func TestProbeTLS(t *testing.T) {
 		GRPCAddr: "127.0.0.1:0", HTTPAddr: "127.0.0.1:0",
 		AuthTokens:  []server.AuthToken{{Value: "correct"}},
 		TLSCertFile: certFile, TLSKeyFile: keyFile,
-	}, eng, session.NoopStore{})
+	}, eng, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -137,7 +136,7 @@ func TestProbeAuthenticationContract(t *testing.T) {
 			app, err := server.NewApp(server.Options{
 				GRPCAddr: "127.0.0.1:0", HTTPAddr: "127.0.0.1:0",
 				AuthTokens: []server.AuthToken{{Value: tc.serverToken}},
-			}, eng, session.NoopStore{})
+			}, eng, nil)
 			require.NoError(t, err)
 			t.Cleanup(func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

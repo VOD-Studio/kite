@@ -83,17 +83,19 @@ func (QrcodeCode) EnumDescriptor() ([]byte, []int) {
 	return file_netease_music_v1_auth_proto_rawDescGZIP(), []int{0}
 }
 
-// 登录会话凭证。
+// 登录会话凭证。启用托管存储的登录返回 account_id，不暴露 cookie。
 type Session struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 用户 ID。
 	UserId int64 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// Cookie 字符串（后续请求的登录态凭证）。
+	// 直传模式的 Cookie 字符串；托管模式为空。不得与 account_id 同时传入请求。
 	Cookie string `protobuf:"bytes,2,opt,name=cookie,proto3" json:"cookie,omitempty"`
 	// 昵称。
 	Nickname string `protobuf:"bytes,3,opt,name=nickname,proto3" json:"nickname,omitempty"`
 	// 头像 URL。
-	AvatarUrl     string `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	AvatarUrl string `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// 当前调用方拥有的托管账号 ID；后续通过 metadata "x-kite-account-id" 选择。
+	AccountId     string `protobuf:"bytes,5,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -152,6 +154,13 @@ func (x *Session) GetNickname() string {
 func (x *Session) GetAvatarUrl() string {
 	if x != nil {
 		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *Session) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
 	}
 	return ""
 }
@@ -597,7 +606,7 @@ func (x *CheckQrcodeResponse) GetSession() *Session {
 	return nil
 }
 
-// LoginStatus 请求（cookie 经 metadata "x-netease-cookie" 传入，不在此 message）。
+// LoginStatus 请求：通过 metadata "x-netease-cookie" 或 "x-kite-account-id" 二选一传凭据。
 type LoginStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -637,7 +646,7 @@ func (*LoginStatusRequest) Descriptor() ([]byte, []int) {
 // LoginStatus 响应。
 type LoginStatusResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// 登录态信息（未登录时 session 为空）。
+	// 登录态信息（直传模式未登录时为空；托管模式返回 account_id，不返回 cookie）。
 	Session       *Session `protobuf:"bytes,1,opt,name=session,proto3" json:"session,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -680,7 +689,8 @@ func (x *LoginStatusResponse) GetSession() *Session {
 	return nil
 }
 
-// Logout 请求（cookie 经 metadata "x-netease-cookie" 传入，不在此 message）。
+// Logout 请求：通过 metadata "x-netease-cookie" 或 "x-kite-account-id" 二选一传凭据。
+// 托管账号成功登出后删除持久化记录；过期账号仅执行本地删除。
 type LogoutRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -754,7 +764,7 @@ func (*LogoutResponse) Descriptor() ([]byte, []int) {
 	return file_netease_music_v1_auth_proto_rawDescGZIP(), []int{13}
 }
 
-// RefreshLogin 请求(cookie 经 metadata "x-netease-cookie" 传入,不在此 message)。
+// RefreshLogin 请求：通过 metadata "x-netease-cookie" 或 "x-kite-account-id" 二选一传凭据。
 type RefreshLoginRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -794,9 +804,11 @@ func (*RefreshLoginRequest) Descriptor() ([]byte, []int) {
 // RefreshLogin 响应。
 type RefreshLoginResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// 刷新后的完整 cookie:传入的 cookie 中被上游重新下发的项已替换为新值。
-	// 调用方应用它替换保存的旧 cookie;上游没有下发新值时与传入的相同。
-	Cookie        string `protobuf:"bytes,1,opt,name=cookie,proto3" json:"cookie,omitempty"`
+	// 直传模式刷新后的完整 cookie：传入的 cookie 中被上游重新下发的项已替换为新值。
+	// 调用方应用它替换保存的旧 cookie；上游没有下发新值时与传入的相同。托管模式为空。
+	Cookie string `protobuf:"bytes,1,opt,name=cookie,proto3" json:"cookie,omitempty"`
+	// 托管模式持久化刷新结果后返回的账号 ID；直传模式为空。
+	AccountId     string `protobuf:"bytes,2,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -838,17 +850,26 @@ func (x *RefreshLoginResponse) GetCookie() string {
 	return ""
 }
 
+func (x *RefreshLoginResponse) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
+	}
+	return ""
+}
+
 var File_netease_music_v1_auth_proto protoreflect.FileDescriptor
 
 const file_netease_music_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x1bnetease/music/v1/auth.proto\x12\x10netease.music.v1\x1a\x1cgoogle/api/annotations.proto\"u\n" +
+	"\x1bnetease/music/v1/auth.proto\x12\x10netease.music.v1\x1a\x1cgoogle/api/annotations.proto\"\x94\x01\n" +
 	"\aSession\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12\x16\n" +
 	"\x06cookie\x18\x02 \x01(\tR\x06cookie\x12\x1a\n" +
 	"\bnickname\x18\x03 \x01(\tR\bnickname\x12\x1d\n" +
 	"\n" +
-	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\"*\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x05 \x01(\tR\taccountId\"*\n" +
 	"\x12SendCaptchaRequest\x12\x14\n" +
 	"\x05phone\x18\x01 \x01(\tR\x05phone\"\x15\n" +
 	"\x13SendCaptchaResponse\"I\n" +
@@ -875,9 +896,11 @@ const file_netease_music_v1_auth_proto_rawDesc = "" +
 	"\asession\x18\x01 \x01(\v2\x19.netease.music.v1.SessionR\asession\"\x0f\n" +
 	"\rLogoutRequest\"\x10\n" +
 	"\x0eLogoutResponse\"\x15\n" +
-	"\x13RefreshLoginRequest\".\n" +
+	"\x13RefreshLoginRequest\"M\n" +
 	"\x14RefreshLoginResponse\x12\x16\n" +
-	"\x06cookie\x18\x01 \x01(\tR\x06cookie*\x93\x01\n" +
+	"\x06cookie\x18\x01 \x01(\tR\x06cookie\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x02 \x01(\tR\taccountId*\x93\x01\n" +
 	"\n" +
 	"QrcodeCode\x12\x1b\n" +
 	"\x17QRCODE_CODE_UNSPECIFIED\x10\x00\x12\x18\n" +

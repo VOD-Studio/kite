@@ -28,7 +28,6 @@ import (
 
 	"github.com/VOD-Studio/kite/internal/cache"
 	"github.com/VOD-Studio/kite/internal/netease/engine"
-	"github.com/VOD-Studio/kite/internal/netease/session"
 )
 
 // selfSignedCert 生成回环自签证书(测试专用),返回证书与私钥文件路径。
@@ -96,7 +95,7 @@ func TestNewApp_TLS(t *testing.T) {
 		GRPCAddr: "127.0.0.1:0", HTTPAddr: "127.0.0.1:0",
 		AuthTokens:  single(testToken),
 		TLSCertFile: certFile, TLSKeyFile: keyFile,
-	}, eng, session.NoopStore{})
+	}, eng, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -161,7 +160,7 @@ func TestNewApp_TLS_Misconfigured(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			app, err := NewApp(opts, eng, session.NoopStore{})
+			app, err := NewApp(opts, eng, nil)
 			require.Error(t, err)
 			require.Nil(t, app)
 		})
@@ -180,7 +179,7 @@ func TestNewApp_RateLimitPerCaller(t *testing.T) {
 			{Name: "bot", Value: "t-bot"},
 		},
 		RatePerMinute: 2,
-	}, eng, session.NoopStore{})
+	}, eng, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

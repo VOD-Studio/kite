@@ -19,6 +19,15 @@
 - 提供 `make docker-run` / `make docker-check` 隔离工具链入口,不要求宿主机安装 Go 或 Node。
 - 移除 AI Review 工作流及其专用配置。
 
+## 0.7.0 (2026-10-22)
+
+## What's Changed
+* feat(server): 支持按调用方隔离的持久化多账号 by @DefectingCat in https://github.com/VOD-Studio/kite/pull/120
+* feat(public): 支持多个服务账号轮询播放 by @DefectingCat in https://github.com/VOD-Studio/kite/pull/121
+
+
+**Full Changelog**: https://github.com/VOD-Studio/kite/compare/v0.6.0...v0.7.0
+
 ## 0.6.0 (2026-10-22)
 
 ## What's Changed
