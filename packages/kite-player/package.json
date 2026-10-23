@@ -81,7 +81,7 @@
     "@biomejs/biome": "^2.5.15",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.3.0",
-    "happy-dom": "^20.0.0",
+    "happy-dom": "^21.0.3",
     "playwright": "1.64.1",
     "react": "^19.2.0",
     "react-dom": "^19.3.1",
