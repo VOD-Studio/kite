@@ -87,7 +87,7 @@ class Boundary(unittest.TestCase):
     def release_dispatch(self, component="player"):
         pr = self.pr(["packages/kite-player/package.json"])
         pr["user"] = {"login": "github-actions[bot]", "type": "Bot"}
-        pr["title"] = "chore(main): release " + ("player " if component == "player" else "") + "1.2.3"
+        pr["title"] = f"chore({component}): release 1.2.3"
         pr["head"]["ref"] = "release-please--branches--main--components--" + component
         self.env.update(GITHUB_EVENT_NAME="workflow_dispatch", GITHUB_REF="refs/heads/" + pr["head"]["ref"])
         self.event = {"repository": {"full_name": REPO}}
@@ -204,10 +204,25 @@ class PlanTests(Boundary):
         self.release_dispatch()
         self.assertTrue(self.plan()["tasks"]["metadata"])
 
+    def test_trusted_kite_release_dispatch_requires_metadata(self):
+        self.release_dispatch("kite")
+        self.assertTrue(self.plan()["tasks"]["metadata"])
+
+    def test_release_dispatch_rejects_legacy_open_titles(self):
+        pr = self.release_dispatch()
+        for component, title in (("kite", "chore(main): release 1.2.3"),
+                                 ("player", "chore(main): release player 1.2.3")):
+            with self.subTest(component=component):
+                pr["head"]["ref"] = "release-please--branches--main--components--" + component
+                self.env["GITHUB_REF"] = "refs/heads/" + pr["head"]["ref"]
+                pr["title"] = title
+                self.api_path.write_text(json.dumps([pr]))
+                self.assertNotEqual(self.run_cli("plan").returncode, 0)
+
     def test_release_dispatch_rejects_identity_title_sha_and_duplicate_pr(self):
         pr = self.release_dispatch()
         variants = []
-        for field, value in (("title", "chore(main): release 1.2.3"), ("user", {"login": "attacker", "type": "User"})):
+        for field, value in (("title", "chore(kite): release 1.2.3"), ("user", {"login": "attacker", "type": "User"})):
             changed = copy.deepcopy(pr)
             changed[field] = value
             variants.append([changed])

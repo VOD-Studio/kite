@@ -38,6 +38,7 @@ make docker-check                          # Linux make check + player 源码与
 - **本地自检**:`make check`(gofmt + go mod tidy + ShellCheck/脚本回归 + vet + test + lint + proto-lint)。部署事务和安装器回归需要 Linux,macOS 会明确打印 skip;`make docker-check` 会在 Linux 执行它们。`make vuln`、`make proto-breaking`、`make verify-gen` 依赖网络或 git 基线,按需单独跑。
 - **先计划,再执行**:`scripts/ci-plan.py` 是任务注册表和选取规则的唯一来源。PR 按完整 base…head 差异选择检查,保留重命名前后的影响;main push 执行全部确定性检查。公开播放器协议变更同时覆盖 Go 和 player,可执行示例变更覆盖相应消费者,控制面变更和未知路径保守扩大检查。
 - **门禁只有一个**:`CI OK`。门禁重算计划并验证 SHA、run/attempt 和事件上下文,同时核对实际 workflow jobs 与 `needs`。只有计划明确授权的不适用任务可以跳过;失败、取消、缺失任务、必需任务跳过或未注册 job 都不能变绿。PR 标题编辑也不能绕过源码检查。
+- **版本状态随 PR 校验**:`PR Metadata` 以 CI plan 的 base/head SHA 计算真实三方合并结果,所有 PR 都不能回退或删除现有产品版本。release PR 必须仅提升本产品版本,与标题一致,另一产品保持 main 的值;普通 PR 和可信 release-PR dispatch 共用此检查。旧分支未修改的版本以合并结果为准,不把旧 head 快照误判为回退。解决 manifest 冲突时保留 main 中另一产品的版本,不要整段覆盖成旧分支内容。
 - **工具版本的唯一来源**:Go 以 `go.mod` 为准;Node / golangci-lint / buf / govulncheck / cargo-audit / GoReleaser / Cosign / PyYAML 以 `Makefile` 顶部为准,Rust 以 `interop/rust/rust-toolchain.toml` 为准。第三方 Actions 固定完整 commit SHA,镜像 base 固定 digest;不要在 workflow 重复维护工具版本。
 - **漏洞门禁**:依赖或安全控制面变化时扫描对应模块,`scheduled.yml` 每日扫描根 Go 模块、`interop/go`、player 的完整 npm 依赖树及 Rust。已知修复版本必须失败,不能因为它高于当前工具链就当成「尚未发布」;无修复版本保留 advisory 并更新 issue。安装、执行和解析故障显式失败,某个扫描器失败不阻断其它已选扫描。
 - **执行隔离与排队**:PR 只使用托管 runner;Go 测试覆盖 Linux / macOS,另做 Windows vet。PR 的旧 CI 可以取消;main 按 SHA 保留发布证据。发版、BSR、部署各自使用 [`queue: max`](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency),不替换队列内等待项;GitHub 上限为 100 个 pending,满队列后的新运行会取消。
@@ -52,7 +53,7 @@ make docker-check                          # Linux make check + player 源码与
 
 Go 产品(CLI + server)仍共用版本;player 是独立发布单元。版本和 CHANGELOG 由 release-please 从各自路径的 Conventional Commits 生成,**不再手改 player 版本号来发版**。根 CHANGELOG 只记 Go 产品,player 的记录位于包内;既有混合历史不改写。tag 分别为 `vX.Y.Z` 和 `player-vX.Y.Z`,GoReleaser 显式选择 Go current / previous tag,不会把 player tag 当作 Go 版本。
 
-纯 Go 变更不会触发 player 发版,纯 player 变更不会触发 Go 发版;共享协议变更可以产生两张 release PR,分别批准。普通业务 PR 合并只更新候选版本,不是发布批准。
+纯 Go 变更不会触发 player 发版,纯 player 变更不会触发 Go 发版;共享协议变更可以产生两张 release PR,分别批准。新标题分别为 `chore(kite): release X.Y.Z` 和 `chore(player): release X.Y.Z`,明确产品而非统一写 `main`。普通业务 PR 合并只更新候选版本,不是发布批准;已合并的历史标题仍可用于原发布验真,不回写历史记录。
 
 ```mermaid
 flowchart TD
@@ -82,6 +83,8 @@ flowchart TD
 
 `npm.yml` 校验本仓受信 player release PR、tag 指向及指定源码 SHA 的成功 main push CI,只下载该 run / attempt 的 `kite-player-package-*`。核对 manifest、包名、版本、SHA-256 / SHA-512 与 tgz 后,**发布已经验收的字节,不在发布端 build / pack**。需要 `npm` environment 中可发布 `@violetjs` scope 的 `NPM_TOKEN`;不要配置在仓库 / 组织级,迁移验证后由管理员移除同名旧项,避免环境缺项时回退。
 
+调用 `npm.yml` 的 job 必须逐项传递 `NPM_TOKEN`,callee 通过 `workflow_call.secrets` 声明 `required: true`;值只在真正 publish 的步骤注入。即使 token 只存在于 environment,也不能省略调用方绑定:[GitHub 明确说明省略会得到空字符串](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#using-inputs-and-secrets-in-a-reusable-workflow)。`required` 校验绑定是否存在,发布脚本仍负责拒绝空值。
+
 首次发布还要求当前 workflow 的源码 SHA 等于包的源码 SHA,保证 provenance 真实。正式版用 `latest`,预发布用 `next`;registry 校验成功后才公开 player Release,并始终设置 `make_latest: false`,不替换 GitHub 的 Go Latest,也不触发 BSR / server 部署。
 
 相同版本已经存在时,必须校验 registry 的 integrity 和实际字节;一致只恢复 GitHub 发布收尾,不再 publish,不一致立即失败。不存在的版本、网络故障和鉴权失败不能混为一谈。
@@ -90,13 +93,14 @@ flowchart TD
 
 1. 管理员先运行 `python3 scripts/github-settings.py --apply`,创建 `npm` environment 及 main 白名单。`gh secret set --env npm` 不会自动创建环境;环境不存在时,获取密钥公钥会返回 404。脚本应用保护配置后若只报告 secret 缺项,表示仍需完成下面的凭据步骤,不代表前面的配置已回滚。
 2. 在本机终端交互录入有效 token:`gh secret set NPM_TOKEN --repo VOD-Studio/kite --env npm`。GitHub 不提供旧 secret 的原值,需要使用自己保管的值或重新创建 token;不要将值写进命令参数、仓库文件或聊天。
-3. 保留仓库级旧 token,直到 `main` 上的 `npm.yml` 已切换到 `environment: npm`;切换前旧工作流仍依赖仓库级凭据。
+3. 保留仓库级旧 token,直到 `main` 上的 `npm.yml` 已切换到 `environment: npm`,且 `Release Please` 的调用 job 已显式绑定 `NPM_TOKEN`;切换前旧工作流仍依赖仓库级凭据。
 4. 确认环境中的 token 已设置、工作流已切换后,运行 `gh secret delete NPM_TOKEN --repo VOD-Studio/kite` 删除仓库级旧项,再运行 `python3 scripts/github-settings.py` 完成只读审计。不要用一次正式发布来试验凭据迁移。
 
 ### 恢复规则
 
 - **发布队列来源**:release-please 读取实时 main,较早运行可能代后续提交建立 draft。每个运行仍只接管自己的 `GITHUB_SHA`,不依赖 action 当次是否返回“创建成功”。普通业务提交不能接管其它源码的发布。
-- **player 首次发布失败**:完整重跑原 release PR 合并 SHA 对应的 `Release Please` 运行,不要只重跑失败 jobs;其发布分支之前可能被跳过。不要在较新的 main 上手动派发来冒充旧源码的 provenance。
+- **player 首次发布因临时故障或凭据缺项失败**:原工作流代码正确时,完整重跑原 release PR 合并 SHA 对应的 `Release Please` 运行,不要只重跑失败 jobs;其发布分支之前可能被跳过。不要在较新的 main 上手动派发来冒充旧源码的 provenance。
+- **原工作流代码有缺陷**:重跑沿用原 `GITHUB_SHA`;仓库内 `./.github/workflows/...` 的 callee 也来自调用方同一提交,不会自动采用新 main 的修复。若原 SHA 无法完成首次发布,必须通过包含修复的新 release PR / 版本重新交付,保留旧 tag,不移动 tag、不替换已验收 tgz。不要把“修复合并后重跑原运行”当成通用恢复方案。
 - **CI 产物过期 / 缺失**:在原运行仍可重跑时,重跑原源码的 main push CI,产生新的成功 attempt 和已验证产物,再重跑原发布编排。发布端没有“重新 pack 凑一个包”的兜底。
 - **npm 已存在且字节一致**:可在 main 手动派发 `npm.yml`,指定 player tag,仅完成一致性校验及 GitHub Release 收尾。
 - **恢复时限**:GitHub [仅允许在首次运行后 30 天内重跑,每个运行最多重跑 50 次](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)。产物缺失且原运行已不可重跑,或无法恢复原 SHA 的首次发布上下文时,须通过新的 release PR / 版本重新交付;不能移动旧 tag、伪造 provenance 或覆盖已发布字节。npm 已存在的版本也必须取得原 CI 成品才能比较,不能只凭 registry 存在就补标发布成功。
@@ -183,7 +187,7 @@ flowchart TD
 
 - **手动合并**,不启用 auto-merge。审批是协作约定,不是强制要求作者无法给自己完成的审批数量。
 - **业务 PR 自选 Merge / Squash / Rebase**:需要保留原子提交时选 Merge 或 Rebase;Squash 只在 main 留一个汇总提交。PR 标题和所有非 merge 原子提交都必须符合上面的 Conventional Commits,确保任意合并方式都能正确推导版本。
-- **release PR 使用 Squash**:这是版本 / changelog 的发布批准记录,不是业务提交归档。普通 PR 合 main 只累计待发布变化;合并 `chore(main): release ...` PR 才启动正式发版与自动部署,不混淆这两类合并。
+- **release PR 使用 Squash**:这是版本 / changelog 的发布批准记录,不是业务提交归档。普通 PR 合 main 只累计待发布变化;合并 `chore(kite): release ...` 或 `chore(player): release ...` 才启动对应产品的正式发布,只有 kite 正式版继续 BSR 与 server 部署。
 - **分支清理按需执行**:合并后确认无未交付修改再删除;Squash / Rebase 后不要仅凭 `git branch --merged` 判断是否已合入。仓库治理脚本不擅自改变自动删分支偏好。
 
 ## 报告安全问题

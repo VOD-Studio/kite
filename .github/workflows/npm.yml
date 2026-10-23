@@ -7,6 +7,10 @@ on:
         description: Player release tag whose exact main CI tarball will be published
         required: true
         type: string
+    secrets:
+      NPM_TOKEN:
+        description: Explicit binding required even when the value exists only in the npm environment
+        required: true
   workflow_dispatch:
     inputs:
       tag:

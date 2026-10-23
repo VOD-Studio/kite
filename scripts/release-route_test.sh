@@ -23,7 +23,7 @@ def release_pr(component='player', version='0.2.0', sha=B):
             'base': {'ref': 'main', 'repo': {'full_name': REPO}},
             'head': {'ref': 'release-please--branches--main--components--' + component,
                      'repo': {'full_name': REPO}},
-            'title': 'chore(main): release ' + ('player ' if component == 'player' else '') + version,
+            'title': f'chore({component}): release {version}',
             'labels': [{'name': 'autorelease: tagged'}]}
 
 
@@ -144,6 +144,20 @@ class ReleaseRoute(unittest.TestCase):
                 outputs, _ = self.route(A)
                 self.assertEqual(outputs, {'go_tag': '', 'player_tag': ''})
 
+    def test_historical_merged_titles_still_route_exact_product(self):
+        for component, tag, title in [('kite', 'v0.2.0', 'chore(main): release 0.2.0'),
+                                      ('player', 'player-v0.2.0', 'chore(main): release player 0.2.0')]:
+            with self.subTest(component=component):
+                pr = dict(release_pr(component), title=title)
+                self.state['prs'][B] = [pr]
+                self.state['tags'] = {tag: B}
+                self.state['releases'] = [{'id': 8, 'tag_name': tag, 'draft': True}]
+                outputs, _ = self.route()
+                self.assertEqual(outputs, {'go_tag': tag if component == 'kite' else '',
+                                           'player_tag': tag if component == 'player' else ''})
+                pr['state'] = 'open'
+                self.route(success=False)
+
     def test_duplicate_or_cross_product_release_prs_fail_closed(self):
         for second in [release_pr(), release_pr('kite')]:
             with self.subTest(second=second['title']):
@@ -164,8 +178,8 @@ class ReleaseRoute(unittest.TestCase):
             pr[section]['repo']['full_name'] = 'evil/kite'
             self.state['prs'][B] = [pr]
             with self.subTest(section=section): self.route(success=False)
-        for field, value in [('title', 'chore(main): release 0.2.0'),
-                             ('title', 'chore(main): release player 01.2.0'),
+        for field, value in [('title', 'chore(kite): release 0.2.0'),
+                             ('title', 'chore(player): release 01.2.0'),
                              ('merge_commit_sha', A), ('merged_at', None), ('state', 'open')]:
             self.state['prs'][B] = [dict(original, **{field: value})]
             with self.subTest(field=field, value=value): self.route(success=False)

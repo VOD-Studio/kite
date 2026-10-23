@@ -98,3 +98,6 @@ jobs:
     uses: ./.github/workflows/npm.yml
     with:
       tag: ${{ needs.release-please.outputs.player_tag }}
+    # Environment-only secrets still need a named binding in reusable workflows.
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
