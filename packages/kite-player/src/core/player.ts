@@ -74,6 +74,7 @@ export class Player {
   private frame = 0;
   private retried = false;
   private pendingSeek: number | null = null;
+  private seekOnMetadata: (() => void) | null = null;
   /** 音频当前加载的是哪首歌、哪种音质(歌曲 ID + 音质),换歌或切换音质时才重新设置 src。 */
   private srcFor = "";
   /**
@@ -322,6 +323,7 @@ export class Player {
 
   destroy(): void {
     this.pause();
+    this.clearSeekListener();
     if (typeof cancelAnimationFrame !== "undefined") cancelAnimationFrame(this.frame);
     for (const fn of this.unbind) fn();
   }
@@ -335,6 +337,7 @@ export class Player {
 
   private jump(index: number, autoplay: boolean): void {
     const track = this.state.queue[index] ?? null;
+    this.clearSeekListener();
     this.retried = false;
     this.holdTime = false;
     this.pendingSeek = null;
@@ -394,20 +397,28 @@ export class Player {
     return !this.state.highQuality && fn ? fn.call(this.source, track, "standard") : track.stream;
   }
 
+  private clearSeekListener(): void {
+    if (!this.seekOnMetadata) return;
+    this.audio?.removeEventListener("loadedmetadata", this.seekOnMetadata);
+    this.seekOnMetadata = null;
+  }
+
   private ensureSrc(track: Track, force = false): void {
     if (!this.audio) return;
     const key = `${track.id}:${this.state.highQuality ? "hq" : "sd"}`;
     if (!force && this.srcFor === key) return;
+    this.clearSeekListener();
     this.srcFor = key;
     this.audio.src = this.streamOf(track);
     if (this.pendingSeek !== null && this.pendingSeek > 0) {
       // 元数据加载完才能设置进度。
       const t = this.pendingSeek;
       const onMeta = () => {
-        this.audio?.removeEventListener("loadedmetadata", onMeta);
+        this.clearSeekListener();
         if (this.audio) this.audio.currentTime = t;
         this.holdTime = false;
       };
+      this.seekOnMetadata = onMeta;
       this.audio.addEventListener("loadedmetadata", onMeta);
     }
     this.pendingSeek = null;

@@ -257,6 +257,55 @@ describe("Player", () => {
     expect(new Player({ audio: new FakeAudio(), source, storageKey: "kite-hq", mediaSession: false }).state.highQuality).toBe(true);
   });
 
+  it.each([true, false])("音质切换尚未加载元数据时换歌,新歌不继承旧进度(autoplay=%s)", async (autoplay) => {
+    const audio = new FakeAudio();
+    const source = { ...fakeSource(playlist), streamUrl: (t: Track, q: string) => `${t.stream}&quality=${q}` };
+    const player = new Player({ audio, source, storageKey: false, mediaSession: false });
+    await player.playPlaylist("100", 0);
+    audio.currentTime = 42;
+    audio.emit("timeupdate");
+    player.setHighQuality(false);
+    if (autoplay) player.next();
+    else player.setQueue(playlist.tracks, 1);
+    // FakeAudio 不模拟更换 src 时归零,这里模拟浏览器加载新歌。
+    audio.currentTime = 0;
+    audio.emit("loadedmetadata");
+    audio.emit("timeupdate");
+    expect(player.state.current?.id).toBe("2");
+    expect(audio.currentTime).toBe(0);
+    expect(player.state.time).toBe(0);
+    player.destroy();
+  });
+
+  it("同一首歌再次替换音源时,取消上次尚未完成的进度恢复", async () => {
+    const audio = new FakeAudio();
+    const source = { ...fakeSource(playlist), streamUrl: (t: Track, q: string) => `${t.stream}&quality=${q}` };
+    const player = new Player({ audio, source, storageKey: false, mediaSession: false });
+    await player.playPlaylist("100", 0);
+    audio.currentTime = 42;
+    audio.emit("timeupdate");
+    player.setHighQuality(false);
+    player.seek(0);
+    player.setHighQuality(true);
+    audio.emit("loadedmetadata");
+    expect(player.state.current?.id).toBe("1");
+    expect(audio.currentTime).toBe(0);
+    player.destroy();
+  });
+
+  it("销毁播放器后,未完成的音质切换不再修改音频进度", async () => {
+    const audio = new FakeAudio();
+    const source = { ...fakeSource(playlist), streamUrl: (t: Track, q: string) => `${t.stream}&quality=${q}` };
+    const player = new Player({ audio, source, storageKey: false, mediaSession: false });
+    await player.playPlaylist("100", 0);
+    audio.currentTime = 42;
+    player.setHighQuality(false);
+    player.destroy();
+    audio.currentTime = 0;
+    audio.emit("loadedmetadata");
+    expect(audio.currentTime).toBe(0);
+  });
+
   it("数据来源不支持 streamUrl 时,关掉高音质不影响播放地址", async () => {
     const { player, audio } = newPlayer();
     expect(player.canSwitchQuality()).toBe(false);

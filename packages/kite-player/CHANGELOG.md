@@ -23,6 +23,10 @@ All notable changes to `@violetjs/kite-player` are documented here. Versions fol
 - Song tags (VIP, digital album, trial only) share one shape and differ only by color, in the queue and on the cards (`--kite-tag-*`).
 - Lower rendering cost: progress bars, the cover and the quality badge move with transforms, and per-frame text and word-progress writes are skipped when unchanged.
 
+### Fixed
+
+- Cancel pending position restoration when changing tracks, replacing the audio source or destroying the player, so switching quality cannot seek a different track to the previous track's position.
+
 ## 0.1.0 - 2026-10-21
 
 First public release.
