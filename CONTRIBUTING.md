@@ -86,6 +86,13 @@ flowchart TD
 
 相同版本已经存在时,必须校验 registry 的 integrity 和实际字节;一致只恢复 GitHub 发布收尾,不再 publish,不一致立即失败。不存在的版本、网络故障和鉴权失败不能混为一谈。
 
+从仓库级 `NPM_TOKEN` 迁移时,按以下顺序操作,不要先删除旧凭据:
+
+1. 管理员先运行 `python3 scripts/github-settings.py --apply`,创建 `npm` environment 及 main 白名单。`gh secret set --env npm` 不会自动创建环境;环境不存在时,获取密钥公钥会返回 404。脚本应用保护配置后若只报告 secret 缺项,表示仍需完成下面的凭据步骤,不代表前面的配置已回滚。
+2. 在本机终端交互录入有效 token:`gh secret set NPM_TOKEN --repo VOD-Studio/kite --env npm`。GitHub 不提供旧 secret 的原值,需要使用自己保管的值或重新创建 token;不要将值写进命令参数、仓库文件或聊天。
+3. 保留仓库级旧 token,直到 `main` 上的 `npm.yml` 已切换到 `environment: npm`;切换前旧工作流仍依赖仓库级凭据。
+4. 确认环境中的 token 已设置、工作流已切换后,运行 `gh secret delete NPM_TOKEN --repo VOD-Studio/kite` 删除仓库级旧项,再运行 `python3 scripts/github-settings.py` 完成只读审计。不要用一次正式发布来试验凭据迁移。
+
 ### 恢复规则
 
 - **发布队列来源**:release-please 读取实时 main,较早运行可能代后续提交建立 draft。每个运行仍只接管自己的 `GITHUB_SHA`,不依赖 action 当次是否返回“创建成功”。普通业务提交不能接管其它源码的发布。
