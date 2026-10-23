@@ -9,6 +9,7 @@
   --kite-glass-shadow: 0 16px 40px -12px rgba(0,0,0,.55);
   --kite-glass-filter: blur(24px) saturate(1.6);
   --kite-sheet-glass: rgba(28,30,36,.9);
+  --kite-panel-shadow: 0 0 0 .5px rgba(255,255,255,.08), 0 24px 56px -28px rgba(0,0,0,.6), 0 6px 18px -10px rgba(0,0,0,.3);
   --kite-ph-bg: linear-gradient(135deg, #2B2E36, #1E2026);
   --kite-ph-fg: #6B717D;
   --kite-amb-sat: 1.1;

@@ -307,19 +307,40 @@ export class KitePlayerElement extends LitElement {
   private measureMorph(): MorphGeo | null {
     this.cancelMorph();
     clearMorph(this.morphParts);
-    const lyricsView = this.ui.view === "lyrics" && !this.ui.immersive;
+    const immersive = this.ui.immersive;
+    const lyricsView = this.ui.view === "lyrics" && !immersive;
     const badge = this.q(".badge");
+    const shadow = this.q(".stage-shadow");
+    const late: [number, number] = [0.62, 0.33];
     const parts: MorphParts = {
       stage: this.q(".stage"),
+      shadow: getComputedStyle(shadow).display === "none" ? null : shadow,
       cover: this.q(".cover"),
       badge: badge.hasAttribute("data-show") && !lyricsView ? badge : null,
-      text: this.q<HTMLElement>(lyricsView ? ".head" : ".meta"),
+      miniText: this.q<HTMLElement>(".mini .bar-text"),
+      miniCtl: this.q<HTMLElement>(".mini .bar-ctl"),
       top: this.q(".top"),
-      ctl: this.q(".ctl"),
-      rest: [this.q(".lyrics"), this.q(".lyr-trans")],
+      below: lyricsView ? [] : [{ el: this.q(".meta"), fade: [0.55, 0.35] }, { el: this.q(".ctl"), fade: late }],
+      beside: lyricsView ? { el: this.q(".head"), fade: [0.3, 0.4] } : null,
+      rest: lyricsView
+        ? [{ el: this.q(".lyrics"), fade: [0.55, 0.35] }, { el: this.q(".lyr-trans"), fade: late }, { el: this.q(".ctl"), fade: late }]
+        : immersive
+          ? [{ el: this.q(".lyrics"), fade: [0.55, 0.35] }]
+          : [],
     };
     this.morphParts = parts;
-    return measure(parts, this.q(".bar"), this.q(".disc"), this.q(".bar-title"), this.q(".fg"));
+    // 唱片转到哪了:封面从唱片长出来时从这个角度转正。
+    const spin = this.q(".bar .disc-img").getAnimations?.()[0];
+    const turned = ((Number(spin?.currentTime ?? 0) % 9000) / 9000) * 360;
+    return measure(parts, {
+      bar: this.q(".bar"),
+      disc: this.q(".bar .disc"),
+      barText: this.q(".bar .bar-text"),
+      barCtl: this.q(".bar .bar-ctl"),
+      discAngle: turned > 180 ? turned - 360 : turned,
+      midRadius: this.ui.mobile ? 18 : 28,
+      anchor: immersive ? "cover" : "card",
+    });
   }
 
   /** runMorph 从进度 from 动到 to。返回卡片的动画,不能做动画时返回 null。 */
@@ -416,6 +437,7 @@ export class KitePlayerElement extends LitElement {
     if (opening) await this.showStage();
     if (!this.pull) return;
     this.pull.geo = this.measureMorph();
+    this.q(".stage").classList.add("morph");
     this.updatePull();
   }
 
@@ -444,6 +466,7 @@ export class KitePlayerElement extends LitElement {
     const pl = this.pull;
     this.pull = null;
     if (!pl) return;
+    this.q(".stage").classList.remove("morph");
     const fling = performance.now() - pl.lastT < 100 ? pl.vy : 0;
     const toOpen = !cancelled && (pl.opening ? pl.p > 1 / 3 || fling < -pullSpeed : !(pl.p < 0.75 || fling > pullSpeed));
     if (!pl.geo) {
@@ -479,7 +502,9 @@ export class KitePlayerElement extends LitElement {
       ?data-sheet=${ui.sheet}
       ?data-has-track=${!!t}
     >
-      ${this.renderBar(s, t)} ${this.renderStage(s, t)}
+      ${this.renderBar(s, t)}
+      <div class="stage-shadow" aria-hidden="true"></div>
+      ${this.renderStage(s, t)}
       <div class="backdrop" @click=${this.closeSheet}></div>
       ${this.renderSheet(s)}
       <div class=${classMap({ toast: true, on: ui.toastOn })} role="status" aria-live="polite">${ui.toastText}</div>
@@ -561,6 +586,15 @@ export class KitePlayerElement extends LitElement {
           ${coverPh}<img alt="" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} />
         </button>
         ${this.renderBadge(s, badge)}
+        <div class="mini" aria-hidden="true">
+          <span class="bar-text"
+            ><span class="bar-line"><span class="bar-title ell">${t?.title ?? ""}</span>${t?.trial ? html`<span class="rtag trial">仅试听</span>` : nothing}</span
+            ><span class="bar-sub"><span class="ell">${this.tickerText(s)}</span></span></span
+          ><span class="bar-ctl"
+            ><span class="ib desk">${icons.prev}</span><span class="blob">${blob}</span><span class="ib">${icons.next}</span><span class="bar-sep desk"></span
+            ><span class="ib">${icons.queue}</span></span
+          >
+        </div>
         <div class="top">
           <button class="ib close" aria-label="收起" @click=${this.close}>${icons.chevron}</button>
           <div class="dots"><button data-go="cover" aria-label="封面" @click=${this.toCover}></button><button data-go="lyrics" aria-label="歌词" @click=${this.toLyrics}></button></div>

@@ -13,6 +13,8 @@
   --kite-glass-shadow: 0 16px 40px -16px rgba(15,18,30,.28), 0 2px 8px rgba(21,23,28,.05);
   --kite-glass-filter: blur(24px) saturate(1.8);
   --kite-sheet-glass: rgba(255,255,255,.88);
+  /* 桌面面板的阴影:外圈一道极淡的描边 + 柔和的投影。 */
+  --kite-panel-shadow: 0 0 0 .5px rgba(22,24,29,.08), 0 24px 56px -28px rgba(15,18,40,.36), 0 6px 18px -10px rgba(15,18,40,.14);
   /* 面板的光感背景:封面铺底叠一层薄雾、两处光斑与颗粒,只在顶栏和控制区局部压暗。 */
   --kite-amb-sat: 1.15;
   --kite-amb-veil: rgba(255,255,255,.08);
@@ -133,13 +135,22 @@
 }
 
 /* ---------- 迷你播放条 / 圆形 ---------- */
+/* 播放条的尺寸:展开途中卡片里的播放条内容(.mini)用同一组值。 */
+.kp {
+  --bar-w: var(--kite-width);
+  --bar-h: 72px;
+}
+.kp[data-device="mobile"] {
+  --bar-w: calc(100vw - 20px);
+  --bar-h: 58px;
+}
 .bar {
   position: fixed;
   z-index: 2147482000;
   right: var(--kite-offset-x);
   bottom: var(--kite-offset-y);
-  width: var(--kite-width);
-  height: 72px;
+  width: var(--bar-w);
+  height: var(--bar-h);
   border-radius: 36px;
   overflow: hidden;
   color: var(--kite-fg);
@@ -323,11 +334,11 @@ img[data-err], img:not([src]) {
   display: none;
 }
 /* position:播放条、面板、抽屉贴同一侧;center 时水平居中,收成圆形也在正中。只影响桌面。 */
-.kp[data-pos="left"] .bar, .kp[data-pos="left"] .stage, .kp[data-pos="left"] .sheet {
+.kp[data-pos="left"] .bar, .kp[data-pos="left"] .stage, .kp[data-pos="left"] .stage-shadow, .kp[data-pos="left"] .sheet {
   left: var(--kite-offset-x);
   right: auto;
 }
-.kp[data-pos="center"] .bar, .kp[data-pos="center"] .stage, .kp[data-pos="center"] .sheet {
+.kp[data-pos="center"] .bar, .kp[data-pos="center"] .stage, .kp[data-pos="center"] .stage-shadow, .kp[data-pos="center"] .sheet {
   left: 50%;
   right: auto;
   margin-left: calc(var(--kite-width) / -2);
@@ -340,8 +351,6 @@ img[data-err], img:not([src]) {
   right: 10px;
   margin-left: 0;
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  width: calc(100vw - 20px);
-  height: 58px;
   border-radius: 29px;
   /* 上拉展开由脚本跟手,浏览器不要把这个手势当成滚动。 */
   touch-action: none;
@@ -404,7 +413,7 @@ img[data-err], img:not([src]) {
   overflow: hidden;
   color: #FFFFFF;
   background: #2B3350;
-  box-shadow: 0 40px 80px -30px rgba(10,12,30,.6), inset 0 0 0 1px rgba(255,255,255,.08);
+  box-shadow: var(--kite-panel-shadow);
   --pad: 32px;
   --h: min(712px, calc(100vh - 2 * var(--kite-offset-y)));
   --cs: clamp(160px, calc(var(--h) - 376px), 336px);
@@ -420,6 +429,33 @@ img[data-err], img:not([src]) {
   --safe-b: 0px;
   --safe-t: 0px;
   touch-action: none;
+}
+/*
+ * 面板的阴影另放一层:展开 / 收起时卡片被裁成播放条的形状,面板自己的阴影也会被裁掉,
+ * 由这一层跟着卡片缩放、随进度变深(morph.ts),到位后与面板的阴影重合。平时看不见。
+ */
+.stage-shadow {
+  position: fixed;
+  z-index: 2147482400;
+  right: var(--kite-offset-x);
+  bottom: var(--kite-offset-y);
+  width: var(--kite-width);
+  height: min(712px, calc(100vh - 2 * var(--kite-offset-y)));
+  border-radius: 28px;
+  box-shadow: var(--kite-panel-shadow);
+  transform-origin: 0 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.kp[data-device="mobile"] .stage-shadow, .kp[data-immersive] .stage-shadow {
+  display: none;
+}
+/* 展开 / 收起时移动的元素都以左上角为原点;跟手时去掉它们的过渡,样式逐帧写上(morph.ts)。 */
+.stage :is(.cover, .badge, .top, .meta, .head, .ctl, .lyrics, .lyr-trans) {
+  transform-origin: 0 0;
+}
+.stage.morph :is(.cover, .badge, .top, .meta, .head, .ctl, .lyrics, .lyr-trans) {
+  transition: none;
 }
 /*
  * 封面页 → 歌词页的进度 --kite-pg:0 封面,1 歌词。只写在用到它的元素上(脚本注册成不继承的属性),
@@ -547,6 +583,28 @@ img[data-err], img:not([src]) {
   inset: 0;
   background: linear-gradient(180deg, var(--kite-amb-scrim-top) 0, rgba(0,0,0,0) 120px), linear-gradient(0deg, var(--kite-amb-scrim-bottom) 0, rgba(0,0,0,0) 280px);
 }
+/* 展开 / 收起途中卡片里的播放条内容:排版与播放条相同,由 morph.ts 移到封面旁边并淡出;平时看不见。 */
+.mini {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--bar-w);
+  height: var(--bar-h);
+  pointer-events: none;
+}
+.mini .bar-text, .mini .bar-ctl {
+  opacity: 0;
+  transition: none;
+  transform-origin: 0 0;
+}
+.mini .bar-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.mini .bar-sub {
+  color: rgba(255,255,255,.72);
+}
 .top {
   position: absolute;
   z-index: 3;
@@ -603,7 +661,7 @@ img[data-err], img:not([src]) {
   border-radius: calc((16px - 8px * var(--kite-pg)) / var(--k));
   overflow: hidden;
   background: rgba(255,255,255,.08);
-  box-shadow: 0 30px 60px -24px rgba(8,10,30,.6);
+  box-shadow: 0 18px 40px -20px rgba(8,10,30,.42);
   transition: transform .38s var(--ease), border-radius .38s var(--ease);
 }
 /*
@@ -734,10 +792,6 @@ img[data-err], img:not([src]) {
 }
 .kp[data-immersive] .page-cover, .kp[data-immersive] .page-lyrics {
   transform: none;
-}
-/* 展开 / 收起时歌名区飞向播放条的歌名(morph.ts),以左上角为缩放原点。 */
-.meta, .head {
-  transform-origin: 0 0;
 }
 .meta {
   position: absolute;
