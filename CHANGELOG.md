@@ -20,6 +20,13 @@
 - 移除 AI Review 工作流及其专用配置。
 - 发布 PR 标题显式区分 kite / player;按真实合并结果阻止版本回退和跨产品覆盖,避免重复生成同一版本。
 
+## [0.8.0](https://github.com/VOD-Studio/kite/compare/v0.7.1...v0.8.0) (2026-10-23)
+
+
+### 新功能
+
+* **player:** 音质切换与 position 属性,修订展开收起、歌词滚动与光感背景 ([41386c2](https://github.com/VOD-Studio/kite/commit/41386c2a8a7bff8be53ab6b70e6e2ac05c45478e))
+
 ## [0.7.1](https://github.com/VOD-Studio/kite/compare/v0.7.0...v0.7.1) (2026-10-23)
 
 
