@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import "../src/element";
 import { Player } from "../src/core/player";
-import type { Playlist } from "../src/core/types";
+import type { Playlist, Track } from "../src/core/types";
 import { KitePlayerElement } from "../src/element";
 import { withDark } from "../src/element/styles";
 import { FakeAudio, fakeSource, flush, track } from "./helpers";
@@ -46,6 +46,13 @@ async function settle(el: Lit): Promise<void> {
 }
 
 const shadow = (el: Element) => el.shadowRoot as ShadowRoot;
+
+/** touch 在元素上派发一次触摸的指针事件(冒泡并穿出 shadow DOM,与真实触摸一样)。 */
+function touch(el: Element, type: string, clientX: number, clientY: number): void {
+  el.dispatchEvent(
+    new PointerEvent(type, { pointerId: 7, pointerType: "touch", clientX, clientY, bubbles: true, composed: true }),
+  );
+}
 
 describe("样式", () => {
   it("暗色变量展开成强制暗色与跟随系统两份", () => {
@@ -118,6 +125,148 @@ describe("<kite-player>", () => {
     expect(audio.currentTime).toBe(4);
   });
 
+  it("触摸点歌词切换播放控制,不跳到那一句", async () => {
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar-text")?.click();
+    await settle(el);
+    root.querySelector<HTMLButtonElement>(".dots [data-go='lyrics']")?.click();
+    await settle(el);
+    const line = root.querySelectorAll<HTMLButtonElement>(".lines .line")[1];
+    if (!line) throw new Error("没有歌词行");
+    const tap = async () => {
+      touch(line, "pointerdown", 100, 300);
+      touch(line, "pointerup", 100, 300);
+      line.click();
+      await settle(el);
+    };
+    await tap();
+    expect(root.querySelector(".kp")?.hasAttribute("data-idle")).toBe(true);
+    expect(player.state.time).toBe(0);
+    await tap();
+    expect(root.querySelector(".kp")?.hasAttribute("data-idle")).toBe(false);
+    expect(player.state.time).toBe(0);
+  });
+
+  it("横向拖动翻页:过半或甩出去才翻,否则弹回", async () => {
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar-text")?.click();
+    await settle(el);
+    const stage = root.querySelector<HTMLElement>(".stage");
+    const meta = root.querySelector<HTMLElement>(".meta");
+    if (!stage || !meta) throw new Error("没有面板");
+    Object.defineProperty(stage, "clientWidth", { value: 400 });
+    const drag = async (dx: number) => {
+      touch(meta, "pointerdown", 300, 400);
+      touch(meta, "pointermove", 300 + dx / 2, 400);
+      touch(meta, "pointermove", 300 + dx, 400);
+      // 停顿后松手:不算甩动,只看拖了多远。
+      await new Promise((r) => setTimeout(r, 120));
+      touch(meta, "pointerup", 300 + dx, 400);
+      await settle(el);
+    };
+    await drag(-100);
+    expect(root.querySelector(".kp")?.getAttribute("data-view")).toBe("cover");
+    expect(stage.classList.contains("paging")).toBe(false);
+    expect(stage.style.getPropertyValue("--pg")).toBe("");
+    await drag(-260);
+    expect(root.querySelector(".kp")?.getAttribute("data-view")).toBe("lyrics");
+  });
+
+  it("音质标签只在歌曲支持极高及以上时显示,试听片段不显示", async () => {
+    const tracks = [
+      track("1", { title: "高", quality: "lossless" }),
+      track("2", { title: "标准", quality: "standard" }),
+      track("3", { title: "没有信息" }),
+      track("4", { title: "试听", quality: "hires", trial: true, playable: false }),
+    ];
+    player.setSource(fakeSource({ ...playlist, tracks }));
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar-text")?.click();
+    await settle(el);
+    const badge = () => root.querySelector<HTMLButtonElement>(".badge");
+    expect(badge()?.hasAttribute("data-show")).toBe(true);
+    expect(badge()?.textContent?.replace(/\s+/g, "")).toBe("无损音质16bitFLAC");
+    expect(badge()?.disabled).toBe(true); // 数据来源不支持 streamUrl:只展示,不能切换
+    for (const i of [1, 2, 3]) {
+      player.setQueue(tracks, i, null, false);
+      await settle(el);
+      expect(badge()?.hasAttribute("data-show")).toBe(false);
+    }
+  });
+
+  it("点音质标签开关高音质:改用标准音质的地址并提示", async () => {
+    const source = {
+      ...fakeSource({ ...playlist, tracks: [track("1", { quality: "hires" })] }),
+      streamUrl: (t: Track, q: string) => `${t.stream}&quality=${q}`,
+    };
+    player.setSource(source);
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar-text")?.click();
+    await settle(el);
+    const badge = () => root.querySelector<HTMLButtonElement>(".badge");
+    expect(badge()?.disabled).toBe(false);
+    expect(badge()?.hasAttribute("data-on")).toBe(true);
+    await player.play();
+    badge()?.click();
+    await settle(el);
+    expect(player.state.highQuality).toBe(false);
+    expect(badge()?.hasAttribute("data-on")).toBe(false);
+    expect(badge()?.getAttribute("aria-pressed")).toBe("false");
+    expect(audio.src).toContain("quality=standard");
+    expect(root.querySelector(".toast")?.textContent).toContain("已关闭Hi-Res");
+    badge()?.click();
+    await settle(el);
+    expect(player.state.highQuality).toBe(true);
+    expect(audio.src).not.toContain("quality=");
+  });
+
+  it("没有封面时显示占位,不留空白图片", async () => {
+    player.setSource(
+      fakeSource({ ...playlist, tracks: [track("1", { album: { id: "al", name: "专辑", cover: "" } })] }),
+    );
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    expect(root.querySelector(".disc-img .ph")).not.toBeNull();
+    expect(root.querySelector(".disc-img img")?.hasAttribute("src")).toBe(false);
+    expect(root.querySelector(".disc")?.hasAttribute("data-empty")).toBe(true);
+  });
+
+  it("position 属性决定播放器贴哪一侧,默认右侧", async () => {
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const kp = () => shadow(el).querySelector(".kp");
+    expect(kp()?.getAttribute("data-pos")).toBe("right");
+    el.setAttribute("position", "left");
+    await settle(el);
+    expect(kp()?.getAttribute("data-pos")).toBe("left");
+    el.setAttribute("position", "nowhere");
+    await settle(el);
+    expect(kp()?.getAttribute("data-pos")).toBe("right");
+  });
+
+  it("拖歌词越过首句有阻力,最多拖出去 80px,松手弹回", async () => {
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar-text")?.click();
+    await settle(el);
+    root.querySelector<HTMLButtonElement>(".dots [data-go='lyrics']")?.click();
+    await settle(el);
+    const line = root.querySelectorAll<HTMLElement>(".lines .line")[0];
+    if (!line) throw new Error("没有歌词行");
+    const y = () => parseFloat(/translateY\(([-\d.]+)px\)/.exec(line.style.transform)?.[1] ?? "NaN");
+    const start = y();
+    touch(line, "pointerdown", 100, 100);
+    touch(line, "pointermove", 100, 400);
+    touch(line, "pointermove", 100, 1100);
+    expect(y() - start).toBe(80);
+    await new Promise((r) => setTimeout(r, 120));
+    touch(line, "pointerup", 100, 1100);
+    expect(y()).toBe(start);
+  });
+
   it("播放模式按钮循环切换", async () => {
     const el = await mount(`<kite-player playlists="100"></kite-player>`);
     const root = shadow(el);
@@ -136,11 +285,11 @@ describe("<kite-player>", () => {
     const root = shadow(el);
     root.querySelector<HTMLButtonElement>(".bar .toggle")?.click();
     await settle(el);
-    for (const sel of [".cover img", ".amb img", ".disc-img img"]) {
+    for (const sel of [".cover > img", ".disc-img > img"]) {
       const img = root.querySelector<HTMLImageElement>(sel);
-      expect(img?.hasAttribute("src"), sel).toBe(false);
-      img?.dispatchEvent(new Event("error"));
-      expect(img?.hidden, sel).toBe(true);
+      if (!img) throw new Error(`没有封面图片:${sel}`);
+      expect(img.hasAttribute("src"), sel).toBe(false);
+      expect(getComputedStyle(img).visibility, sel).toBe("hidden");
     }
   });
 
@@ -150,11 +299,12 @@ describe("<kite-player>", () => {
     player.setSource(fakeSource({ ...playlist, tracks: [broken, next] }));
     const el = await mount(`<kite-player playlists="100"></kite-player>`);
     const root = shadow(el);
-    const selectors = [".cover img", ".amb img", ".disc-img img"];
+    const selectors = [".cover > img", ".disc-img > img"];
     for (const sel of selectors) {
       const img = root.querySelector<HTMLImageElement>(sel);
-      img?.dispatchEvent(new Event("error"));
-      expect(img?.hidden, sel).toBe(true);
+      if (!img) throw new Error(`没有封面图片:${sel}`);
+      img.dispatchEvent(new Event("error"));
+      expect(getComputedStyle(img).visibility, sel).toBe("hidden");
     }
 
     player.next();
@@ -162,9 +312,10 @@ describe("<kite-player>", () => {
     expect(player.state.current?.id).toBe("2");
     for (const sel of selectors) {
       const img = root.querySelector<HTMLImageElement>(sel);
-      expect(img?.getAttribute("src"), sel).toBe(next.album.cover);
-      img?.dispatchEvent(new Event("load"));
-      expect(img?.hidden, sel).toBe(false);
+      if (!img) throw new Error(`没有封面图片:${sel}`);
+      expect(img.getAttribute("src"), sel).toBe(next.album.cover);
+      img.dispatchEvent(new Event("load"));
+      expect(getComputedStyle(img).visibility, sel).not.toBe("hidden");
     }
   });
 
@@ -230,8 +381,29 @@ describe("<kite-track>", () => {
       expect(imgs.length, size).toBeGreaterThan(0);
       for (const img of imgs) {
         expect(img.hasAttribute("src"), size).toBe(false);
+        expect(getComputedStyle(img).visibility, size).toBe("hidden");
+      }
+    }
+  });
+
+  it("封面加载失败后更换歌曲,正常封面和背景恢复显示", async () => {
+    const broken = track("9", { album: { id: "al", name: "损坏封面", cover: "https://example.com/broken.jpg" } });
+    player.setSource(fakeSource({ ...playlist, tracks: [broken, ...playlist.tracks] }));
+    for (const size of ["s", "m", "l"]) {
+      const el = await mount(`<kite-track song="9" size="${size}"></kite-track>`);
+      const root = shadow(el);
+      const images = [...root.querySelectorAll<HTMLImageElement>(".cover img, .amb img")];
+      expect(images.length, size).toBeGreaterThan(0);
+      for (const img of images) {
         img.dispatchEvent(new Event("error"));
-        expect(img.hidden, size).toBe(true);
+        expect(getComputedStyle(img).visibility, size).toBe("hidden");
+      }
+      el.setAttribute("song", "2");
+      await settle(el);
+      for (const img of root.querySelectorAll<HTMLImageElement>(".cover img, .amb img")) {
+        expect(img.getAttribute("src"), size).toBe(playlist.tracks[1]?.album.cover);
+        img.dispatchEvent(new Event("load"));
+        expect(getComputedStyle(img).visibility, size).not.toBe("hidden");
       }
     }
   });

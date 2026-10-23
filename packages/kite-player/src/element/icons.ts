@@ -37,7 +37,13 @@ export const icons = {
     svg`<path d="M18 14l4 4-4 4"></path><path d="M18 2l4 4-4 4"></path><path d="M2 18h1.97a4 4 0 0 0 3.3-1.7l5.45-7.6a4 4 0 0 1 3.3-1.7H22"></path><path d="M2 6h1.97a4 4 0 0 1 3.6 2.2"></path><path d="M22 18h-6.04a4 4 0 0 1-3.3-1.8l-.36-.45"></path>`,
   ),
   play: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.5v15l13-7.5z"></path></svg>`,
+  note: stroke(
+    svg`<path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>`,
+  ),
 };
+
+/** 没有封面(或加载失败、还没加载完)时露出的占位:中性渐变 + 音符。放在 <img> 下面。 */
+export const coverPh = html`<span class="ph" aria-hidden="true">${icons.note}</span>`;
 
 /** 正在播放的均衡条。 */
 export const eq = html`<span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>`;

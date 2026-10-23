@@ -55,7 +55,7 @@ All screenshots come from the offline demo in `demo/` (made-up songs and illustr
 
 ### Bar and disc
 
-The bar sits in the bottom-right corner (along the bottom on phones). It shows the current line of the lyrics and shrinks to a spinning disc with a progress ring as you scroll down.
+The bar sits in the bottom-right corner by default (`position` moves it to the bottom left or bottom center; it runs along the bottom on phones). It shows the current line of the lyrics and shrinks to a spinning disc with a progress ring as you scroll down.
 
 <p>
   <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/bar.webp" width="472" alt="The floating bar">
@@ -64,7 +64,7 @@ The bar sits in the bottom-right corner (along the bottom on phones). It shows t
 
 ### Panel
 
-Click the cover or the title to expand. Swipe or use the dots to switch between the cover and the lyrics; controls fade out on the lyrics page while music plays.
+Click the cover or the title to expand. Tap the quality badge on the cover to turn high quality on or off (off plays standard quality to save data, and the choice is remembered). Swipe or use the dots to switch between the cover and the lyrics; controls fade out on the lyrics page while music plays.
 
 <p>
   <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/panel-cover.webp" width="380" alt="Panel, cover page">
@@ -72,6 +72,8 @@ Click the cover or the title to expand. Swipe or use the dots to switch between 
 </p>
 
 ### Immersive mode
+
+Enter it from the panel's top-right button; the collapse button at the top left (or Esc) goes straight back to the bar.
 
 <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/immersive.webp" width="820" alt="Immersive mode">
 
@@ -82,6 +84,8 @@ Every playlist listed in `playlists` gets a tab. Locked tracks explain why when 
 <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/queue.webp" width="420" alt="The queue sheet">
 
 ### Phone
+
+Full screen, growing out of the bar and shrinking back into it; pull the bar up or the cover page down and the card follows your finger. Drag sideways to switch between the cover and the lyrics, with the cover following your finger into the lyrics header. Dragging the lyrics tucks the controls away and keeps gliding after you let go, stopping at the first or last line; the time of the line in focus shows on the right, and tapping it or that line jumps there. Tap the lyrics to show or hide the controls.
 
 <p>
   <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/mobile-cover.webp" width="260" alt="Full screen on a phone, cover page">
@@ -127,6 +131,7 @@ The floating player. Use one per page.
 | `playlists` | Playlist IDs shown as tabs in the queue, comma-separated. The first one becomes the initial queue (loaded, not played). |
 | `theme` | `auto` (default, follows the system), `light` or `dark`. |
 | `collapse` | `scroll` (default, shrink to a disc when scrolling down) or `none`. |
+| `position` | Which side on desktop: `right` (default), `left` or `center`. The bar, the panel and the queue all sit on that side and the panel only grows upward. Phones always use the bottom edge. |
 
 Methods: `open(view?: "cover" | "lyrics"): Promise<void>` expands the player; `close()` collapses it.
 
@@ -160,14 +165,15 @@ kite-player, kite-track, kite-playlist {
   --kite-font: "LXGW WenKai", sans-serif;
 }
 kite-player {
-  --kite-offset: 16px; /* distance from the viewport edges */
+  --kite-width: 420px; /* width of the bar and the panel on desktop, 400px by default */
+  --kite-offset: 16px; /* distance from the viewport edges; or set --kite-offset-x / --kite-offset-y */
 }
 kite-track::part(card) {
   border-radius: 12px;
 }
 ```
 
-Common properties: `--kite-accent`, `--kite-font`, `--kite-fg`, `--kite-muted`, `--kite-card`, `--kite-sheet`, `--kite-offset`. Parts: `root`, `bar`, `panel`, `lyrics`, `controls` and `queue` on `<kite-player>`; `card` on both cards. Internal class names are not part of the API.
+Common properties: `--kite-accent`, `--kite-font`, `--kite-fg`, `--kite-muted`, `--kite-card`, `--kite-sheet`, `--kite-width`, `--kite-offset` (or `--kite-offset-x` and `--kite-offset-y`). Tracks without a cover show a neutral placeholder with a note, colored by `--kite-ph-bg` and `--kite-ph-fg`. Parts: `root`, `bar`, `panel`, `lyrics`, `controls` and `queue` on `<kite-player>`; `card` on both cards. Internal class names are not part of the API.
 
 ## React
 
@@ -221,7 +227,7 @@ const source: DataSource = {
 getPlayer({ source });
 ```
 
-Responses use the same shapes as `/player/v1` (the `Playlist`, `Track` and `Lyrics` types). A track may set `trial: true` when its stream is only a trial clip: it still plays, and the bar, the queue rows and the cards label it 「仅试听」. How kite-server surfaces this on `/player/v1` is pending #103, so today the field is filled by custom backends that can tell. The demo's `demo/demo.js` is a complete offline example, including a simulated audio element.
+Responses use the same shapes as `/player/v1` (the `Playlist`, `Track` and `Lyrics` types). `quality` is the best quality the track can play at (`standard`, `exhigh`, `lossless` or `hires`) and may be left out; at `exhigh` and above the cover shows a quality badge. Also implement the optional `streamUrl(track, quality)` (a stream address at no more than that quality) and listeners can tap the badge to turn high quality off and save data; the kite-server public mode already supports it. A track may set `trial: true` when its stream is only a trial clip: it still plays, and the bar, the queue rows and the cards label it 「仅试听」. How kite-server surfaces this on `/player/v1` is pending #103, so today the field is filled by custom backends that can tell. The demo's `demo/demo.js` is a complete offline example, including a simulated audio element.
 
 ## Other frameworks
 

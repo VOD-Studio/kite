@@ -9,4 +9,12 @@
   --kite-track: rgba(255,255,255,.12);
   --kite-blob: #F2F3F5;
   --kite-blob-icon: #15171C;
+  --kite-ph-bg: linear-gradient(135deg, #2B2E36, #1E2026);
+  --kite-ph-fg: #6B717D;
+  --kite-tag-vip: #E2BD70;
+  --kite-tag-vip-bg: rgba(226,189,112,.12);
+  --kite-tag-vip-line: rgba(226,189,112,.4);
+  --kite-tag-paid: #9AB4E4;
+  --kite-tag-paid-bg: rgba(154,180,228,.1);
+  --kite-tag-paid-line: rgba(154,180,228,.36);
 }

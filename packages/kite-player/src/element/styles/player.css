@@ -1,10 +1,33 @@
 /* <kite-player>:迷你播放条、展开面板、手机全屏、沉浸模式、播放列表抽屉。内部类名不是公开接口。 */
 
 :host {
-  --kite-offset: 24px;
-  --kite-glass: linear-gradient(180deg, rgba(255,255,255,.66), rgba(255,255,255,.5));
-  --kite-glass-edge: rgba(255,255,255,.95);
-  --kite-glass-rim: rgba(255,255,255,.6);
+  /* 桌面上播放条与面板同宽、同侧对齐;边距可分别覆盖,--kite-offset 同时设两者。 */
+  --kite-width: 400px;
+  --kite-offset-x: var(--kite-offset, 24px);
+  --kite-offset-y: var(--kite-offset, 24px);
+  /* 毛玻璃(播放条、抽屉):浅色白底通透,深色见 player.dark.css。 */
+  --kite-glass: rgba(255,255,255,.72);
+  --kite-glass-edge: rgba(255,255,255,.9);
+  --kite-glass-rim: rgba(22,24,29,.1);
+  --kite-glass-sheen: rgba(255,255,255,.45);
+  --kite-glass-shadow: 0 16px 40px -16px rgba(15,18,30,.28), 0 2px 8px rgba(21,23,28,.05);
+  --kite-glass-filter: blur(24px) saturate(1.8);
+  --kite-sheet-glass: rgba(255,255,255,.88);
+  /* 桌面面板的阴影:外圈一道极淡的描边 + 柔和的投影。 */
+  --kite-panel-shadow: 0 0 0 .5px rgba(22,24,29,.08), 0 24px 56px -28px rgba(15,18,40,.36), 0 6px 18px -10px rgba(15,18,40,.14);
+  /* 面板的光感背景:封面铺底叠一层薄雾、两处光斑与颗粒,只在顶栏和控制区局部压暗。 */
+  --kite-amb-sat: 1.15;
+  --kite-amb-veil: rgba(255,255,255,.08);
+  /* 背景的目标平均亮度(相对亮度):按封面算出还要压暗多少;读不到封面像素时用 --kite-amb-dim。 */
+  --kite-amb-target: .12;
+  --kite-amb-dim: .32;
+  --kite-amb-spot: rgba(255,255,255,.3);
+  --kite-amb-tint: .45;
+  --kite-amb-scrim-top: rgba(20,22,40,.16);
+  --kite-amb-scrim-bottom: rgba(20,22,40,.26);
+  --kite-amb-grain: .03;
+  --kite-amb-empty: linear-gradient(180deg, #7D8798 0%, #5C6574 100%);
+  --kite-amb-empty-spot: .22;
   --kite-fg: #15171C;
   --kite-muted: #4A505C;
   --kite-line: rgba(21,23,28,.12);
@@ -12,7 +35,7 @@
   --kite-chip-strong: rgba(21,23,28,.12);
   --kite-sheet: #FFFFFF;
   --kite-ring-track: rgba(255,255,255,.96);
-  --ease-in: cubic-bezier(.5,0,.25,1);
+  --ease-in: cubic-bezier(.4,0,1,1);
   --lyric: cubic-bezier(.22,1,.36,1);
 }
 
@@ -29,8 +52,10 @@
   width: 22px;
   height: 22px;
 }
-.ib:hover {
-  background: var(--kite-chip);
+@media (hover: hover) {
+  .ib:hover {
+    background: var(--kite-chip);
+  }
 }
 .ib:active {
   transform: scale(.9);
@@ -110,32 +135,41 @@
 }
 
 /* ---------- 迷你播放条 / 圆形 ---------- */
+/* 播放条的尺寸:展开途中卡片里的播放条内容(.mini)用同一组值。 */
+.kp {
+  --bar-w: var(--kite-width);
+  --bar-h: 72px;
+}
+.kp[data-device="mobile"] {
+  --bar-w: calc(100vw - 20px);
+  --bar-h: 58px;
+}
 .bar {
   position: fixed;
   z-index: 2147482000;
-  right: var(--kite-offset);
-  bottom: var(--kite-offset);
-  width: 424px;
-  height: 72px;
+  right: var(--kite-offset-x);
+  bottom: var(--kite-offset-y);
+  width: var(--bar-w);
+  height: var(--bar-h);
   border-radius: 36px;
   overflow: hidden;
   color: var(--kite-fg);
   background: var(--kite-glass);
-  -webkit-backdrop-filter: blur(28px) saturate(1.9) brightness(1.05);
-  backdrop-filter: blur(28px) saturate(1.9) brightness(1.05);
-  box-shadow: inset 0 1px 0 var(--kite-glass-edge), inset 0 0 0 1px var(--kite-glass-rim), 0 0 0 .5px rgba(21,23,28,.12), 0 20px 46px -18px rgba(21,23,28,.34), 0 2px 8px rgba(21,23,28,.06);
-  transition: width .48s var(--spring), height .42s var(--ease), border-radius .42s var(--ease), opacity .2s, transform .2s, visibility 0s;
+  -webkit-backdrop-filter: var(--kite-glass-filter);
+  backdrop-filter: var(--kite-glass-filter);
+  box-shadow: inset 0 1px 0 var(--kite-glass-edge), 0 0 0 .5px var(--kite-glass-rim), var(--kite-glass-shadow);
+  transition: width .48s var(--spring), margin-left .48s var(--spring), height .42s var(--ease), border-radius .42s var(--ease), opacity .2s, transform .2s, visibility 0s;
 }
 .bar::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(120% 160% at 10% -30%, rgba(255,255,255,.55), rgba(255,255,255,0) 55%);
+  background: radial-gradient(120% 160% at 10% -30%, var(--kite-glass-sheen), rgba(255,255,255,0) 55%);
   pointer-events: none;
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .bar {
+  .bar, .sheet {
     background: var(--kite-sheet);
   }
 }
@@ -163,24 +197,41 @@
   height: auto;
   border-radius: 50%;
   overflow: hidden;
-  background: linear-gradient(145deg, #39415f, #232946);
 }
-.disc-img::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: currentColor;
-  opacity: 0.4;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M20 3.3v10.9a3.3 3.3 0 1 1-2.2-3.11V7.3L9.9 9v9.2a3.3 3.3 0 1 1-2.2-3.11V7.5L20 3.3z'/%3E%3C/svg%3E") center / 40% no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M20 3.3v10.9a3.3 3.3 0 1 1-2.2-3.11V7.3L9.9 9v9.2a3.3 3.3 0 1 1-2.2-3.11V7.5L20 3.3z'/%3E%3C/svg%3E") center / 40% no-repeat;
-}
-.disc-img img {
-  position: relative;
+.disc-img {
   animation: spin 9s linear infinite;
   animation-play-state: paused;
 }
-.playing .disc-img img {
+.playing .disc-img {
   animation-play-state: running;
+}
+.disc[data-empty] .disc-img {
+  animation: none;
+}
+/* 封面:占位在下,图片盖在上面;没有地址、加载失败时图片隐藏,露出占位。 */
+.ph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--kite-ph-bg);
+  color: var(--kite-ph-fg);
+}
+.ph svg {
+  width: 36%;
+  height: 36%;
+}
+.disc-img > img, .cover > img, .xfade > img {
+  position: absolute;
+  inset: 0;
+}
+img[data-err], img:not([src]) {
+  visibility: hidden;
+}
+.xfade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 @keyframes spin {
   to {
@@ -274,39 +325,63 @@
 }
 .kp[data-mode="open"] .bar {
   opacity: 0;
-  transform: scale(.98);
   pointer-events: none;
   visibility: hidden;
-  transition: opacity .1s, transform .1s, visibility 0s .1s;
+  transition: opacity .1s, visibility 0s .1s;
 }
 .kp:not([data-has-track]) .bar {
   display: none;
 }
+/* position:播放条、面板、抽屉贴同一侧;center 时水平居中,收成圆形也在正中。只影响桌面。 */
+.kp[data-pos="left"] .bar, .kp[data-pos="left"] .stage, .kp[data-pos="left"] .stage-shadow, .kp[data-pos="left"] .sheet {
+  left: var(--kite-offset-x);
+  right: auto;
+}
+.kp[data-pos="center"] .bar, .kp[data-pos="center"] .stage, .kp[data-pos="center"] .stage-shadow, .kp[data-pos="center"] .sheet {
+  left: 50%;
+  right: auto;
+  margin-left: calc(var(--kite-width) / -2);
+}
+.kp[data-pos="center"][data-mode="orb"] .bar {
+  margin-left: -32px;
+}
 .kp[data-device="mobile"] .bar {
-  right: 12px;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  width: calc(100vw - 24px);
-  height: 64px;
-  border-radius: 32px;
+  left: auto;
+  right: 10px;
+  margin-left: 0;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  border-radius: 29px;
+  /* 上拉展开由脚本跟手,浏览器不要把这个手势当成滚动。 */
+  touch-action: none;
 }
 .kp[data-device="mobile"] .disc {
   left: 5px;
   top: 5px;
-  width: 54px;
-  height: 54px;
+  width: 48px;
+  height: 48px;
 }
 .kp[data-device="mobile"] .bar-text {
-  left: 66px;
-  right: 132px;
+  left: 60px;
+  right: 128px;
   top: 9px;
+  height: 40px;
+}
+.kp[data-device="mobile"] .bar-title {
+  font-size: 14px;
+  line-height: 21px;
+}
+.kp[data-device="mobile"] .bar-sub {
+  height: 19px;
+  font-size: 12px;
+  line-height: 19px;
 }
 .kp[data-device="mobile"] .bar-ctl {
-  right: 10px;
-  top: 12px;
+  right: 8px;
+  top: 9px;
 }
 .kp[data-device="mobile"] .bar-ctl .blob {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
 }
 .kp[data-device="mobile"] .bar-ctl .ib {
   width: 40px;
@@ -316,43 +391,93 @@
   display: none;
 }
 .kp[data-device="mobile"][data-mode="orb"] .bar {
-  width: 56px;
-  height: 56px;
-  border-radius: 28px;
+  width: 58px;
+  height: 58px;
+  border-radius: 29px;
 }
 .kp[data-device="mobile"][data-mode="orb"] .disc {
-  left: 1px;
-  top: 1px;
+  left: 5px;
+  top: 5px;
 }
 
 /* ---------- 展开:桌面面板 / 手机全屏 / 沉浸 ---------- */
 .stage {
   position: fixed;
   z-index: 2147482500;
-  right: var(--kite-offset);
-  bottom: var(--kite-offset);
-  width: 400px;
-  height: min(712px, calc(100vh - 2 * var(--kite-offset)));
+  right: var(--kite-offset-x);
+  bottom: var(--kite-offset-y);
+  width: var(--kite-width);
+  height: min(712px, calc(100vh - 2 * var(--kite-offset-y)));
   border-radius: 28px;
   overflow: hidden;
   color: #FFFFFF;
   background: #2B3350;
-  box-shadow: 0 40px 80px -30px rgba(10,12,30,.6), inset 0 0 0 1px rgba(255,255,255,.08);
+  box-shadow: var(--kite-panel-shadow);
   --pad: 32px;
-  --h: min(712px, calc(100vh - 2 * var(--kite-offset)));
+  --h: min(712px, calc(100vh - 2 * var(--kite-offset-y)));
   --cs: clamp(160px, calc(var(--h) - 376px), 336px);
-  --cx: calc((400px - var(--cs)) / 2);
+  --cx: calc((var(--kite-width) - var(--cs)) / 2);
   --cy: 60px;
   --ss: 48px;
   --sx: 28px;
   --sy: 62px;
   --ly-top: 126px;
   --ctl-h: 176px;
+  /* 封面页最下面一排按钮(副歌、翻译)的高度;歌词页没有这一排,控制区整体下移这么多。 */
+  --xh: 52px;
   --safe-b: 0px;
   --safe-t: 0px;
+  touch-action: none;
+}
+/*
+ * 面板的阴影另放一层:展开 / 收起时卡片被裁成播放条的形状,面板自己的阴影也会被裁掉,
+ * 由这一层跟着卡片缩放、随进度变深(morph.ts),到位后与面板的阴影重合。平时看不见。
+ */
+.stage-shadow {
+  position: fixed;
+  z-index: 2147482400;
+  right: var(--kite-offset-x);
+  bottom: var(--kite-offset-y);
+  width: var(--kite-width);
+  height: min(712px, calc(100vh - 2 * var(--kite-offset-y)));
+  border-radius: 28px;
+  box-shadow: var(--kite-panel-shadow);
+  transform-origin: 0 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.kp[data-device="mobile"] .stage-shadow, .kp[data-immersive] .stage-shadow {
+  display: none;
+}
+/* 展开 / 收起时移动的元素都以左上角为原点;跟手时去掉它们的过渡,样式逐帧写上(morph.ts)。 */
+.stage :is(.cover, .badge, .top, .meta, .head, .ctl, .lyrics, .lyr-trans) {
+  transform-origin: 0 0;
+}
+.stage.morph :is(.cover, .badge, .top, .meta, .head, .ctl, .lyrics, .lyr-trans) {
+  transition: none;
+}
+/*
+ * 封面页 → 歌词页的进度 --kite-pg:0 封面,1 歌词。只写在用到它的元素上(脚本注册成不继承的属性),
+ * 横向拖动时由脚本逐帧写在这几个元素上,改动不会让歌词树重新计算样式。
+ */
+.kp[data-view="lyrics"]:not([data-immersive]) :is(.page, .cover, .badge, .ctl, .extra) {
+  --kite-pg: 1;
+}
+.fg {
+  position: absolute;
+  inset: 0;
+}
+/* 跟手拖动期间去掉过渡,松手后再交给过渡滑到目标页。 */
+.stage.paging .page, .stage.paging .cover, .stage.paging .badge, .stage.paging .ctl, .stage.paging .extra {
+  transition: none;
+}
+/* 进出沉浸模式时直接换布局,这一帧不要过渡(容器另有动画)。 */
+.stage.snap, .stage.snap * {
+  transition: none !important;
 }
 .kp[data-device="mobile"] .stage {
   inset: 0;
+  margin: 0;
   width: auto;
   height: auto;
   border-radius: 0;
@@ -371,6 +496,7 @@
 }
 .kp[data-immersive] .stage {
   inset: 0;
+  margin: 0;
   width: auto;
   height: auto;
   border-radius: 0;
@@ -378,34 +504,105 @@
   --cx: max(64px, calc(50vw - 560px));
   --cy: calc(50vh - var(--cs) / 2 - 120px);
 }
+/*
+ * 光感背景:没有封面时是中性底色;有封面时是一张 32×48 的小画布(见 paintAmbient),拉满后由双线性插值
+ * 变成柔和的色块,不用实时模糊滤镜。上面依次是薄雾(浅色提亮、深色压暗;封面太亮时再压一档)、
+ * 左上的白色光斑、右下的封面主色光斑、颗粒。光斑播放时缓慢漂移。
+ */
 .amb {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #2B3350;
+  background: var(--kite-amb-empty);
 }
-.amb img {
+.amb canvas {
   position: absolute;
-  left: -60%;
-  top: -30%;
-  width: 220%;
-  height: 160%;
-  filter: blur(64px) saturate(1.35) brightness(.72);
-  transform: translateZ(0);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: saturate(var(--kite-amb-sat));
+}
+.spot {
+  position: absolute;
+  inset: -15%;
+  animation: drift 40s ease-in-out infinite alternate;
+  animation-play-state: paused;
+  pointer-events: none;
+}
+.playing .spot {
+  animation-play-state: running;
+}
+.veil, .dim {
+  position: absolute;
+  inset: 0;
+}
+.veil {
+  background: var(--kite-amb-veil);
+}
+/* 压暗到主题的目标亮度,光斑也一起压暗,所以光斑处仍比别处亮。 */
+.dim {
+  background: #000000;
+  opacity: var(--amb-dim, var(--kite-amb-dim));
   transition: opacity .6s;
 }
-.kp[data-immersive] .amb img {
-  left: -20%;
-  top: -40%;
-  width: 140%;
-  height: 180%;
-  filter: blur(110px) saturate(1.35) brightness(.7);
+.amb[data-empty] .dim {
+  opacity: 0;
 }
-/* 白色、浅色封面会把底色洗白:整体压一层暗色,保证白字歌词的对比度。 */
+.spot-a {
+  background: radial-gradient(70% 45% at 28% 18%, var(--kite-amb-spot), rgba(255,255,255,0) 70%);
+}
+.spot-b {
+  background: radial-gradient(60% 40% at 78% 82%, var(--amb-tint, rgba(255,255,255,0)), rgba(255,255,255,0) 70%);
+  opacity: var(--kite-amb-tint);
+  animation-duration: 46s;
+  animation-direction: alternate-reverse;
+}
+.amb[data-empty] .spot-b {
+  background: radial-gradient(90% 60% at 22% 12%, var(--kite-accent), rgba(255,255,255,0) 70%);
+  opacity: var(--kite-amb-empty-spot);
+}
+.grain {
+  position: absolute;
+  inset: 0;
+  opacity: var(--kite-amb-grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+@keyframes drift {
+  from {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.08);
+  }
+}
+/* 只在顶栏和控制区局部压暗,中间的歌词保留封面的颜色。 */
 .scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(14,14,26,.34) 0%, rgba(14,14,26,.22) 42%, rgba(14,14,26,.52) 100%);
+  background: linear-gradient(180deg, var(--kite-amb-scrim-top) 0, rgba(0,0,0,0) 120px), linear-gradient(0deg, var(--kite-amb-scrim-bottom) 0, rgba(0,0,0,0) 280px);
+}
+/* 展开 / 收起途中卡片里的播放条内容:排版与播放条相同,由 morph.ts 移到封面旁边并淡出;平时看不见。 */
+.mini {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--bar-w);
+  height: var(--bar-h);
+  pointer-events: none;
+}
+.mini .bar-text, .mini .bar-ctl {
+  opacity: 0;
+  transition: none;
+  transform-origin: 0 0;
+}
+.mini .bar-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.mini .bar-sub {
+  color: rgba(255,255,255,.72);
 }
 .top {
   position: absolute;
@@ -418,8 +615,10 @@
   align-items: center;
   justify-content: space-between;
 }
-.top .ib:hover, .ctl .ib:hover, .stage .ib:hover {
-  background: rgba(255,255,255,.12);
+@media (hover: hover) {
+  .stage .ib:hover {
+    background: rgba(255,255,255,.12);
+  }
 }
 .dots {
   display: flex;
@@ -434,15 +633,20 @@
   transition: width .35s var(--ease), background-color .35s;
 }
 .kp[data-view="cover"] .dots button[data-go="cover"], .kp[data-view="lyrics"] .dots button[data-go="lyrics"] {
-  width: 16px;
+  width: 12px;
   background: rgba(255,255,255,.95);
 }
 .kp[data-immersive] .dots {
   visibility: hidden;
 }
-.kp[data-device="mobile"] .immersive {
+/* 手机没有沉浸模式;沉浸模式里只留左上角的收起,不再放一个功能重复的退出按钮。 */
+.kp[data-device="mobile"] .immersive, .kp[data-immersive] .immersive {
   visibility: hidden;
 }
+/*
+ * 封面是两页共用的元素:盒子固定在大图的位置,歌词页左上角的小图只用 transform 缩过去(--kite-ck 是两者之比,
+ * 由脚本量出),翻页时跟着手指走,不触发重新布局。圆角按缩放反算,看上去从 16px 变成 8px。
+ */
 .cover {
   position: absolute;
   z-index: 2;
@@ -450,46 +654,162 @@
   top: var(--cy);
   width: var(--cs);
   height: var(--cs);
-  border-radius: 18px;
+  --k: calc(1 + (var(--kite-ck, .15) - 1) * var(--kite-pg));
+  transform-origin: 0 0;
+  transform: translate(calc((var(--sx) - var(--cx)) * var(--kite-pg)), calc((var(--sy) - var(--cy)) * var(--kite-pg))) scale(var(--k));
+  border-radius: calc((16px - 8px * var(--kite-pg)) / var(--k));
   overflow: hidden;
   background: rgba(255,255,255,.08);
-  box-shadow: 0 30px 60px -24px rgba(8,10,30,.6);
-  transition: left .48s var(--ease), top .48s var(--ease), width .48s var(--ease), height .48s var(--ease), border-radius .48s var(--ease), box-shadow .48s var(--ease);
+  box-shadow: 0 18px 40px -20px rgba(8,10,30,.42);
+  transition: transform .38s var(--ease), border-radius .38s var(--ease);
 }
-.kp[data-view="lyrics"]:not([data-immersive]) .cover {
-  left: var(--sx);
-  top: var(--sy);
-  width: var(--ss);
-  height: var(--ss);
-  border-radius: 10px;
-  box-shadow: 0 8px 18px -8px rgba(8,10,30,.55);
+/*
+ * 有音质标签时封面底部压暗一点,浅色封面上标签也看得清;翻到歌词页时跟标签一起淡出。
+ * --kite-pg 不继承,这里显式继承封面上的值。
+ */
+.cover-shade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 32%;
+  --kite-pg: inherit;
+  background: linear-gradient(0deg, rgba(0,0,0,.34), rgba(0,0,0,.12) 45%, rgba(0,0,0,0));
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
 }
+.cover[data-badge] .cover-shade {
+  opacity: calc(1 - var(--kite-pg) * 3);
+}
+/* 开启高音质时封面描边亮一下,靠近标签的左下角更亮(由 lightUp 播放)。 */
+.cover-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1.5px rgba(255,238,210,.95), inset 0 0 20px rgba(255,214,150,.35);
+  background: radial-gradient(80% 45% at 0% 100%, rgba(255,214,150,.22), rgba(255,214,150,0) 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+/*
+ * 音质标签:封面左下角,跟着封面的位置插值,翻到歌词页时淡出。
+ * 开启:金色渐变的音质名,右边斜切,露出后面深色半透明的规格,整体金色细边;
+ * 关闭:只剩描边的音质名,规格收在音质名后面。
+ * 打开:金色 100ms 淡入,规格 80ms 后用 300ms 连同文字滑出;收起:规格先变成 --,趁音质名还是金色时滑回它后面,
+ * 金色再褪掉(先褪色的话,半透明的音质名底下会透出正在收回的规格)。
+ */
 .badge {
   position: absolute;
-  left: 12px;
-  bottom: 12px;
+  z-index: 2;
+  left: calc(var(--cx) + 12px);
+  top: calc(var(--cy) + var(--cs) - 36px);
+  transform-origin: 0 0;
+  transform: translate(calc((var(--sx) - var(--cx)) * var(--kite-pg)), calc((var(--sy) - var(--cy) + var(--ss) - var(--cs)) * var(--kite-pg)));
   display: flex;
-  height: 22px;
-  border-radius: 6px;
-  overflow: hidden;
-  font-size: 11px;
+  align-items: stretch;
+  height: 24px;
+  font-size: 12px;
   line-height: 22px;
-  font-weight: 600;
-  transition: opacity .2s;
-}
-.badge b {
-  padding: 0 7px;
-  background: #F4D59C;
-  color: #4A320C;
-  font-weight: 600;
-}
-.badge span {
-  padding: 0 7px;
-  background: rgba(14,16,30,.48);
-  color: #FFFFFF;
-}
-.kp[data-view="lyrics"]:not([data-immersive]) .badge {
+  white-space: nowrap;
+  /* 规格滑到音质名后面时比音质名宽,超出左边的部分裁掉。 */
+  overflow: hidden;
+  border-radius: 6px;
   opacity: 0;
+  pointer-events: none;
+  transition: transform .38s var(--ease), opacity .2s;
+}
+.badge[data-show] {
+  opacity: calc(1 - var(--kite-pg) * 3);
+}
+/* 整个标签都能点(音质名与规格),不只左半边。 */
+.kp[data-view="cover"] .badge[data-show]:not([disabled]), .kp[data-immersive] .badge[data-show]:not([disabled]) {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.badge[disabled] {
+  cursor: default;
+}
+.bq-label {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  padding: 0 8px;
+  border: 1px solid rgba(255,255,255,.5);
+  border-radius: 6px;
+  background: rgba(0,0,0,.12);
+  color: rgba(255,255,255,.8);
+  font-weight: 600;
+  letter-spacing: .02em;
+  transition: border-color .16s .2s, border-radius .16s .2s, color .16s .2s, background-color .16s .2s;
+}
+.bq-gold {
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 55%), linear-gradient(100deg, #FCEBC8 0%, #F2CF92 48%, #DFAA66 100%);
+  /* 右边斜切:顶边比底边长 6px,露出后面的规格。 */
+  clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  opacity: 0;
+  transition: opacity .18s ease-in .2s;
+}
+.bq-text {
+  position: relative;
+}
+.bq-sheen {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.8), rgba(255,255,255,0));
+  transform: translateX(-120%) skewX(-20deg);
+  pointer-events: none;
+}
+.bq-detail {
+  position: relative;
+  margin-left: -7px;
+  padding: 0 9px 0 14px;
+  border: 1px solid rgba(240,201,138,.85);
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+  background: rgba(46,32,18,.72);
+  color: rgba(255,240,218,.96);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  /* 规格像抽屉一样藏在音质名后面:关闭时整块左移到音质名底下,开启时连同文字一起滑出来。 */
+  transform: translateX(-100%);
+  opacity: 0;
+  transition: transform .18s cubic-bezier(.4,0,1,1) .06s, opacity .1s linear .16s;
+}
+/* 标签底边跑过的一道光(lightUp)。 */
+.bq-streak {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  bottom: 0;
+  width: 44px;
+  height: 1.5px;
+  background: linear-gradient(90deg, rgba(255,240,210,0), #FFF6E4, rgba(255,240,210,0));
+  box-shadow: 0 0 6px 1px rgba(255,214,150,.7);
+  opacity: 0;
+  pointer-events: none;
+}
+.badge[data-on] .bq-label {
+  border-color: rgba(240,201,138,.9) transparent rgba(240,201,138,.9) rgba(240,201,138,.9);
+  border-radius: 6px 0 0 6px;
+  background-color: transparent;
+  color: #4A3216;
+  /* 字先等金色铺上一点再变深,否则有一帧是深色字压在深色底上。 */
+  transition: border-color .12s, border-radius .12s, color .12s .04s, background-color .12s;
+}
+.badge[data-on] .bq-gold {
+  opacity: 1;
+  transition: opacity .1s ease-out;
+}
+.badge[data-on] .bq-detail {
+  transform: none;
+  opacity: 1;
+  transition: transform .3s cubic-bezier(.2,.8,.2,1) .08s, opacity .06s linear .08s;
 }
 
 .pages {
@@ -501,29 +821,19 @@
 .page {
   position: absolute;
   inset: 0;
-  transition: transform .35s var(--ease), opacity .35s var(--ease);
+  transition: transform .38s var(--ease);
 }
 .page > * {
   pointer-events: auto;
 }
 .page-cover {
-  transform: none;
+  transform: translateX(calc(var(--kite-pg) * -100%));
 }
 .page-lyrics {
-  transform: translateX(100%);
-  opacity: .4;
-}
-.kp[data-view="lyrics"] .page-cover {
-  transform: translateX(-100%);
-  opacity: .4;
-}
-.kp[data-view="lyrics"] .page-lyrics {
-  transform: none;
-  opacity: 1;
+  transform: translateX(calc((1 - var(--kite-pg)) * 100%));
 }
 .kp[data-immersive] .page-cover, .kp[data-immersive] .page-lyrics {
   transform: none;
-  opacity: 1;
 }
 .meta {
   position: absolute;
@@ -543,7 +853,7 @@
   margin-top: 4px;
   font-size: 14px;
   line-height: 20px;
-  color: rgba(255,255,255,.72);
+  color: rgba(255,255,255,.8);
 }
 .tag {
   flex: none;
@@ -585,7 +895,7 @@
 .head-sub {
   font-size: 13px;
   line-height: 18px;
-  color: rgba(255,255,255,.72);
+  color: rgba(255,255,255,.8);
 }
 .kp[data-immersive] .head {
   display: none;
@@ -596,14 +906,14 @@
   left: 0;
   right: 0;
   top: var(--ly-top);
-  bottom: calc(var(--ctl-h) + var(--safe-b) + 24px);
+  bottom: calc(var(--ctl-h) - var(--xh) + var(--safe-b) + 24px);
   overflow: hidden;
-  touch-action: pan-x;
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 11%, #000 80%, transparent 100%);
   mask-image: linear-gradient(180deg, transparent 0, #000 11%, #000 80%, transparent 100%);
   transition: bottom .4s var(--ease);
-  --lsize: 22px;
-  --tsize: 15px;
+  /* 翻译与原文同样大小(参考网易云),当前行两行都是白色。 */
+  --lsize: 20px;
+  --tsize: 20px;
 }
 .kp[data-idle] .lyrics {
   bottom: calc(var(--safe-b) + 24px);
@@ -614,11 +924,11 @@
   top: 10vh;
   bottom: 10vh;
   --lsize: 34px;
-  --tsize: 20px;
+  --tsize: 22px;
 }
 .line {
   position: absolute;
-  left: 18px;
+  left: calc(var(--sx) - 10px);
   right: 40px;
   top: 0;
   padding: 6px 10px;
@@ -627,8 +937,11 @@
   transition: transform .6s var(--lyric), opacity .4s, filter .4s, background-color .16s;
   will-change: transform;
 }
-.line:hover {
-  background: rgba(255,255,255,.08);
+/* 鼠标悬停只提亮文字,不出背景色块。 */
+@media (hover: hover) {
+  .line:hover .lt, .line:hover .tr {
+    color: rgba(255,255,255,.8);
+  }
 }
 .lt {
   display: block;
@@ -637,19 +950,19 @@
   font-weight: 700;
   color: rgba(255,255,255,.42);
   transform-origin: 0 50%;
-  transform: scale(.82);
-  transition: transform .36s var(--ease), color .36s;
+  transform: scale(.84);
+  transition: transform .5s var(--lyric), color .5s;
 }
 .tr {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   font-size: var(--tsize);
-  line-height: 1.45;
-  font-weight: 600;
+  line-height: 1.36;
+  font-weight: 700;
   color: rgba(255,255,255,.42);
   transform-origin: 0 50%;
-  transform: scale(.87);
-  transition: transform .36s var(--ease), color .36s;
+  transform: scale(.84);
+  transition: transform .5s var(--lyric), color .5s;
 }
 .line.cur .lt {
   transform: none;
@@ -657,7 +970,7 @@
 }
 .line.cur .tr {
   transform: none;
-  color: rgba(255,255,255,.9);
+  color: #FFFFFF;
 }
 .line.cur .u {
   color: transparent;
@@ -668,8 +981,27 @@
   background-clip: text;
 }
 .line.far {
-  opacity: .5;
-  filter: blur(1.2px);
+  opacity: .75;
+}
+/* 手动滚动:锚点上的焦点句用当前句的样式,正在唱的句子暂时变回普通样式;焦点切换 200ms。 */
+.lyrics.manual .lt, .lyrics.manual .tr {
+  transition-duration: .2s;
+}
+.lyrics.manual .line.cur:not(.focus) .lt, .lyrics.manual .line.cur:not(.focus) .tr {
+  transform: scale(.84);
+  color: rgba(255,255,255,.42);
+}
+.lyrics.manual .line.cur:not(.focus) .u {
+  color: inherit;
+  background: none;
+}
+.line.focus .lt, .line.focus .tr {
+  transform: none;
+  color: #FFFFFF;
+}
+.line.focus .u {
+  color: #FFFFFF;
+  background: none;
 }
 .kp:not([data-trans]) .tr {
   display: none;
@@ -683,7 +1015,7 @@
   justify-content: center;
   gap: 16px;
   font-size: 15px;
-  color: rgba(255,255,255,.72);
+  color: rgba(255,255,255,.8);
 }
 .lyr-empty .eq {
   height: 36px;
@@ -717,6 +1049,24 @@
 .lyrics.manual .seek {
   opacity: 1;
 }
+/* 歌词页右下角的「词」:控制区上方,控制区隐藏时落到底部(参考网易云)。 */
+.lyr-trans {
+  position: absolute;
+  right: calc(var(--pad) - 10px);
+  bottom: calc(var(--ctl-h) - var(--xh) + var(--safe-b) + 26px);
+  color: rgba(255,255,255,.8);
+  transition: transform .4s var(--ease), color .2s;
+}
+.lyr-trans svg {
+  width: 20px;
+  height: 20px;
+}
+.kp[data-idle] .lyr-trans {
+  transform: translateY(calc(var(--ctl-h) - var(--xh)));
+}
+.kp[data-immersive] .lyr-trans {
+  display: none;
+}
 
 .ctl {
   position: absolute;
@@ -724,11 +1074,13 @@
   left: var(--pad);
   right: var(--pad);
   bottom: calc(var(--safe-b) + 24px);
-  transition: opacity .3s var(--ease), transform .4s var(--ease);
+  transform: translateY(calc(var(--kite-pg) * var(--xh)));
+  transition: opacity .3s var(--ease), transform .38s var(--ease);
 }
+/* 歌词页隐藏控制区:向下滑出并淡出(参考网易云),歌词区随之变高。 */
 .kp[data-idle] .ctl {
   opacity: 0;
-  transform: translateY(24px);
+  transform: translateY(calc(var(--xh) + 40px));
   pointer-events: none;
 }
 .kp[data-immersive] .ctl {
@@ -757,30 +1109,43 @@
 .pchorus {
   background: rgba(255,255,255,.38);
 }
+/* 进度每帧都在变:填充用 scaleX、拖动点用 translateX,不改宽度和位置,不触发重新布局。 */
 .pfill {
   left: 0;
+  right: 0;
   background: #FFFFFF;
-  width: calc(var(--pct, 0) * 100%);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--pct, 0));
+}
+.pknob {
+  position: absolute;
+  inset: 0;
+  transform: translateX(calc(var(--pct, 0) * 100%));
+  pointer-events: none;
 }
 .pthumb {
   position: absolute;
   top: 5px;
-  left: calc(var(--pct, 0) * 100%);
+  left: -6.5px;
   width: 13px;
   height: 13px;
-  margin-left: -6.5px;
   border-radius: 50%;
   background: #FFFFFF;
   box-shadow: 0 2px 6px rgba(0,0,0,.25);
   transform: scale(0);
   transition: transform .18s var(--ease);
 }
-.progress:hover .pthumb, .progress:focus-within .pthumb {
+.progress:focus-within .pthumb, .progress:active .pthumb {
   transform: scale(1);
 }
-.progress:hover .ptrack, .progress:hover .pfill, .progress:hover .pchorus {
-  height: 5px;
-  top: 9px;
+@media (hover: hover) {
+  .progress:hover .pthumb {
+    transform: scale(1);
+  }
+  .progress:hover .ptrack, .progress:hover .pfill, .progress:hover .pchorus {
+    height: 5px;
+    top: 9px;
+  }
 }
 .progress input {
   position: absolute;
@@ -796,7 +1161,7 @@
   justify-content: space-between;
   font-size: 11px;
   line-height: 14px;
-  color: rgba(255,255,255,.72);
+  color: rgba(255,255,255,.8);
   font-variant-numeric: tabular-nums;
 }
 .buttons {
@@ -831,7 +1196,12 @@
   align-items: center;
   justify-content: space-between;
   margin-top: 12px;
-  color: rgba(255,255,255,.72);
+  color: rgba(255,255,255,.8);
+  opacity: calc(1 - var(--kite-pg) * 2.5);
+  transition: opacity .3s var(--ease);
+}
+.kp[data-view="lyrics"]:not([data-immersive]) .extra {
+  pointer-events: none;
 }
 .extra .ib svg {
   width: 20px;
@@ -889,10 +1259,10 @@
   position: fixed;
   z-index: 2147482800;
   inset: 0;
-  background: rgba(10,12,18,.42);
+  background: rgba(10,12,18,.28);
   opacity: 0;
   pointer-events: none;
-  transition: opacity .3s;
+  transition: opacity .28s;
 }
 .kp[data-sheet] .backdrop {
   opacity: 1;
@@ -901,53 +1271,46 @@
 .sheet {
   position: fixed;
   z-index: 2147482900;
-  right: var(--kite-offset);
-  bottom: calc(var(--kite-offset) + 84px);
-  width: 400px;
+  right: var(--kite-offset-x);
+  bottom: calc(var(--kite-offset-y) + 84px);
+  width: var(--kite-width);
   height: min(520px, calc(100vh - 140px));
   border-radius: 24px;
   overflow: hidden;
-  background: var(--kite-sheet);
+  background: var(--kite-sheet-glass);
+  -webkit-backdrop-filter: var(--kite-glass-filter);
+  backdrop-filter: var(--kite-glass-filter);
   color: var(--kite-fg);
-  box-shadow: 0 -12px 40px -12px rgba(10,12,18,.3);
+  box-shadow: inset 0 1px 0 var(--kite-glass-edge), 0 0 0 .5px var(--kite-glass-rim), 0 -12px 40px -12px rgba(10,12,18,.3);
   display: flex;
   flex-direction: column;
   transform: translateY(calc(100% + 120px));
   visibility: hidden;
-  transition: transform .4s cubic-bezier(.2,1.04,.3,1), visibility 0s .4s;
+  transition: transform .26s var(--ease-in), visibility 0s .26s;
 }
 .kp[data-mode="open"] .sheet {
-  bottom: var(--kite-offset);
+  bottom: var(--kite-offset-y);
   border-radius: 24px;
 }
 .kp[data-sheet] .sheet {
   transform: none;
   visibility: visible;
-  transition: transform .4s cubic-bezier(.2,1.04,.3,1), visibility 0s;
+  transition: transform .36s var(--ease), visibility 0s;
 }
 .kp[data-device="mobile"] .sheet {
   left: 0;
   right: 0;
+  margin-left: 0;
   bottom: 0;
   width: auto;
-  height: min(72vh, 620px);
-  border-radius: 24px 24px 0 0;
+  height: min(74vh, 640px);
+  border-radius: 20px 20px 0 0;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .sheet-head {
   flex: none;
   position: relative;
-  padding: 22px 20px 0;
-}
-.handle {
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  width: 36px;
-  height: 5px;
-  margin-left: -18px;
-  border-radius: 3px;
-  background: var(--kite-chip-strong);
+  padding: 18px 20px 0;
 }
 .sheet-title {
   display: flex;
@@ -1043,20 +1406,10 @@
   border-radius: 12px;
   text-align: left;
   transition: background-color .16s;
-  animation: rowin .46s var(--ease) both;
-  animation-delay: calc(var(--i, 0) * 30ms);
 }
-.row:hover {
-  background: var(--kite-chip);
-}
-@keyframes rowin {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
+@media (hover: hover) {
+  .row:hover {
+    background: var(--kite-chip);
   }
 }
 .row-main {
@@ -1106,32 +1459,6 @@
   color: var(--kite-muted);
   opacity: .7;
 }
-.rtag {
-  flex: none;
-  height: 15px;
-  padding: 0 4px;
-  border-radius: 4px;
-  font-size: 10px;
-  line-height: 14px;
-  font-weight: 700;
-}
-.rtag.vip {
-  background: #F6E7C8;
-  color: #7A5310;
-}
-.rtag.paid {
-  border: 1px solid currentColor;
-}
-.rtag.trial {
-  border: 1px solid currentColor;
-  color: var(--kite-accent);
-}
-@supports (color: color-mix(in srgb, red 50%, blue)) {
-  .rtag.trial {
-    border-color: color-mix(in srgb, var(--kite-accent) 55%, transparent);
-    background: color-mix(in srgb, var(--kite-accent) 10%, transparent);
-  }
-}
 .empty {
   padding: 40px 20px;
   text-align: center;
@@ -1148,6 +1475,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  /* left: 50% 时自动宽度只按半屏算,短句也会折行:按内容取宽,超过视口再折。 */
+  width: max-content;
   max-width: calc(100vw - 32px);
   padding: 10px 16px;
   border-radius: 999px;
@@ -1177,10 +1506,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .disc-img img {
+  .disc-img {
     animation: none !important;
-  }
-  .line.far {
-    filter: none;
   }
 }

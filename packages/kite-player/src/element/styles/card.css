@@ -46,6 +46,26 @@
   border-radius: 14px;
   background: linear-gradient(145deg, #E8EAF0, #D6DAE3);
 }
+/* 没有封面、加载失败时图片隐藏,露出下面的占位(中性渐变 + 音符)。 */
+.ph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--kite-ph-bg);
+  color: var(--kite-ph-fg);
+}
+.ph svg {
+  width: 36%;
+  height: 36%;
+}
+.cover > img {
+  position: absolute;
+  inset: 0;
+}
+img[data-err], img:not([src]) {
+  visibility: hidden;
+}
 .locked .cover {
   filter: grayscale(.75);
   opacity: .72;
@@ -63,8 +83,10 @@
   width: 22px;
   height: 22px;
 }
-.ib:hover {
-  background: var(--kite-chip);
+@media (hover: hover) {
+  .ib:hover {
+    background: var(--kite-chip);
+  }
 }
 .ib:active {
   transform: scale(.9);
@@ -83,8 +105,10 @@
   flex: none;
   transition: background-color .16s, color .16s;
 }
-.chip:hover {
-  color: var(--kite-fg);
+@media (hover: hover) {
+  .chip:hover {
+    color: var(--kite-fg);
+  }
 }
 .chip svg {
   width: 14px;
@@ -175,37 +199,6 @@
     transform: scaleY(1);
   }
 }
-.tg {
-  display: inline-block;
-  flex: none;
-  height: 16px;
-  padding: 0 5px;
-  border-radius: 4px;
-  font-size: 10px;
-  line-height: 15px;
-  font-weight: 700;
-}
-.tg.vip {
-  background: #F6E7C8;
-  color: #7A5310;
-}
-.tg.out {
-  border: 1px solid currentColor;
-  color: var(--kite-accent);
-}
-.tg.trial {
-  border: 1px solid currentColor;
-  color: var(--kite-accent);
-}
-@supports (color: color-mix(in srgb, red 50%, blue)) {
-  .tg.out {
-    border-color: color-mix(in srgb, var(--kite-accent) 55%, transparent);
-  }
-  .tg.trial {
-    border-color: color-mix(in srgb, var(--kite-accent) 55%, transparent);
-    background: color-mix(in srgb, var(--kite-accent) 10%, transparent);
-  }
-}
 .progress {
   position: relative;
   display: flex;
@@ -223,12 +216,15 @@
   background: var(--kite-track);
   overflow: hidden;
 }
+/* 进度每帧都在变:用 scaleX,不改宽度,不触发重新布局。 */
 .bar b {
   position: absolute;
   left: 0;
+  right: 0;
   top: 0;
   bottom: 0;
-  width: calc(var(--pct, 0) * 100%);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--pct, 0));
   border-radius: 2px;
   background: var(--kite-accent);
 }
@@ -454,12 +450,20 @@
   height: 42px;
 }
 
-/* 大卡片 */
+/*
+ * 大卡片:左边封面,右边从上到下是歌名、标签与「从副歌听」、三行歌词(歌词底边与封面底边对齐),
+ * 最下面一整行是控制条。窄的时候歌词换到封面下面占满整行。
+ */
 .l {
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: "cover info" "cover lyric" "ctl ctl";
+  column-gap: 28px;
   color: #FFFFFF;
   border-radius: 24px;
   padding: 28px;
-  box-shadow: 0 24px 50px -28px rgba(20,30,70,.7);
+  box-shadow: 0 20px 44px -28px rgba(20,30,70,.5);
   background: #33405F;
 }
 .l .amb {
@@ -480,23 +484,26 @@
   inset: 0;
   background: linear-gradient(180deg, rgba(14,14,26,.12), rgba(14,14,26,.38));
 }
-.l > :not(.amb):not(.scrim) {
+.l > :not(.amb):not(.scrim):not(.open) {
   position: relative;
 }
-.l .top {
-  display: flex;
-  gap: 26px;
-  align-items: flex-start;
-}
 .l .cover {
-  width: 168px;
-  height: 168px;
+  grid-area: cover;
+  width: 216px;
+  height: 216px;
   border-radius: 16px;
-  box-shadow: 0 20px 40px -18px rgba(6,8,26,.65);
+  box-shadow: 0 16px 34px -18px rgba(6,8,26,.5);
 }
 .l .info {
-  flex: 1;
+  grid-area: info;
   min-width: 0;
+  /* 右上角留给「在播放器中打开」。 */
+  padding-right: 40px;
+}
+.l .open {
+  position: absolute;
+  top: 20px;
+  right: 20px;
 }
 .l .kicker {
   font-size: 12px;
@@ -511,39 +518,52 @@
   font-weight: 700;
 }
 .l .who {
-  margin-top: 4px;
+  margin-top: 2px;
   font-size: 15px;
   line-height: 22px;
   color: rgba(255,255,255,.75);
 }
 .l .tags {
   display: flex;
-  gap: 6px;
-  margin-top: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
 }
+.l .tags:empty {
+  display: none;
+}
+/* 大卡片在封面的深色环境色上:标签换成浅色。 */
 .l .tg.out {
-  border-color: rgba(255,255,255,.45);
-  color: rgba(255,255,255,.85);
+  --t-fg: rgba(255,255,255,.9);
+  --t-bg: rgba(255,255,255,.12);
+  --t-line: rgba(255,255,255,.4);
+}
+.l .tg.vip {
+  --t-fg: #F2D08C;
+  --t-bg: rgba(242,208,140,.14);
+  --t-line: rgba(242,208,140,.45);
 }
 .l .chip {
-  margin-top: 12px;
   background: rgba(255,255,255,.16);
   color: #FFFFFF;
 }
 .l .lyric {
-  margin-top: 26px;
-  min-height: 94px;
+  grid-area: lyric;
+  align-self: end;
+  min-width: 0;
+  margin-top: 16px;
 }
 .l .lyric-prev, .l .lyric-next {
-  font-size: 15px;
-  line-height: 22px;
+  font-size: 14px;
+  line-height: 21px;
   font-weight: 600;
   color: rgba(255,255,255,.42);
 }
 .l .lyric-line {
-  margin-top: 4px;
-  font-size: 21px;
-  line-height: 30px;
+  margin-top: 2px;
+  font-size: 20px;
+  line-height: 29px;
   font-weight: 700;
 }
 .l .lyric-line .u {
@@ -558,20 +578,23 @@
   color: rgba(255,255,255,.85);
 }
 .l .controls {
+  grid-area: ctl;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 18px;
+  margin-top: 20px;
 }
-.l .controls .ib:hover {
-  background: rgba(255,255,255,.14);
+@media (hover: hover) {
+  .l .controls .ib:hover {
+    background: rgba(255,255,255,.14);
+  }
 }
 .l .blob {
   width: 52px;
   height: 52px;
 }
 .l .blob svg {
-  filter: drop-shadow(0 8px 14px rgba(0,0,0,.18));
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,.16));
 }
 .l .blob .blob-shape {
   fill: #FFFFFF;
@@ -593,16 +616,21 @@
 }
 /* 紧凑布局:卡片宽度 ≤ 520px 时宿主带 data-narrow(见 util.ts 的 watchNarrow)。 */
 :host([data-narrow]) .l {
+  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  grid-template-areas: "cover info" "lyric lyric" "ctl ctl";
+  column-gap: 16px;
   padding: 20px;
   border-radius: 22px;
-}
-:host([data-narrow]) .l .top {
-  gap: 16px;
 }
 :host([data-narrow]) .l .cover {
   width: 112px;
   height: 112px;
   border-radius: 14px;
+}
+:host([data-narrow]) .l .open {
+  top: 12px;
+  right: 12px;
 }
 :host([data-narrow]) .l .title {
   font-size: 22px;
@@ -614,12 +642,17 @@
 :host([data-narrow]) .l .chip {
   display: none;
 }
+:host([data-narrow]) .l .lyric {
+  margin-top: 20px;
+}
 :host([data-narrow]) .l .lyric-line {
   font-size: 19px;
   line-height: 27px;
 }
 :host([data-narrow]) .l .controls {
   flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 20px;
 }
 :host([data-narrow]) .l .controls .progress {
   order: -1;
@@ -705,8 +738,10 @@
   flex: none;
   transition: filter .16s, transform .16s var(--ease);
 }
-.playall:hover {
-  filter: brightness(1.08);
+@media (hover: hover) {
+  .playall:hover {
+    filter: brightness(1.08);
+  }
 }
 .playall:active {
   transform: scale(.95);
@@ -733,8 +768,10 @@
   font-size: 14px;
   transition: background-color .16s;
 }
-.row:hover {
-  background: var(--kite-chip);
+@media (hover: hover) {
+  .row:hover {
+    background: var(--kite-chip);
+  }
 }
 .row .idx {
   color: var(--kite-muted);

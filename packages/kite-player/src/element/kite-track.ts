@@ -5,15 +5,16 @@ import { keyed } from "lit/directives/keyed.js";
 import { firstSungIndex, formatTime, lineUnits, wordProgress } from "../core/lyrics";
 import type { Player } from "../core/player";
 import type { LyricLine, Lyrics, PlayerState, Track } from "../core/types";
-import { blob, eq, icons } from "./icons";
+import { blob, coverPh, eq, icons } from "./icons";
 import { cardSheet } from "./styles";
 import {
   artists,
   canPlay,
   emit,
   emitFly,
-  hideBroken,
   type OpenDetail,
+  onCoverError,
+  onCoverLoad,
   openEvent,
   playerFor,
   sizeOf,
@@ -149,7 +150,7 @@ export class KiteTrackElement extends LitElement {
       ? html`${icons.lock}<span class="ell">${unplayableMessage(t)}</span>`
       : html`<span class="ell">${[artists(t), t.album.name, formatTime(t.durationMs / 1000)].filter(Boolean).join(" · ")}</span>`;
     return html`<div class=${classes} part="card">
-      <div class="cover"><img alt="" src=${ifDefined(t.album.cover || undefined)} @error=${hideBroken} /></div>
+      <div class="cover">${coverPh}<img alt="" draggable="false" src=${ifDefined(t.album.cover || undefined)} @error=${onCoverError} @load=${onCoverLoad} /></div>
       <div class="main">
         <div class="title">${eq}<span class="ell">${t.title}</span>${t.trial ? html`<span class="tg trial">仅试听</span>` : nothing}<span class="who ell">${artists(t)}</span></div>
         <div class="sub" ?hidden=${cur && canPlay(t)}>${sub}</div>
@@ -171,7 +172,7 @@ export class KiteTrackElement extends LitElement {
     const locked = !canPlay(t);
     const lv = this.lyricView(cur);
     return html`<div class=${classes} part="card">
-      <div class="cover"><img alt="" src=${ifDefined(t.album.cover || undefined)} @error=${hideBroken} /></div>
+      <div class="cover">${coverPh}<img alt="" draggable="false" src=${ifDefined(t.album.cover || undefined)} @error=${onCoverError} @load=${onCoverLoad} /></div>
       <div class="main">
         <div class="head">
           <div style="flex:1;min-width:0">
@@ -195,23 +196,22 @@ export class KiteTrackElement extends LitElement {
     const locked = !canPlay(t);
     const lv = this.lyricView(cur);
     return html`<div class=${classes} part="card">
-      <div class="amb"><img alt="" src=${ifDefined(t.album.cover || undefined)} @error=${hideBroken} /></div>
+      <div class="amb"><img alt="" draggable="false" src=${ifDefined(t.album.cover || undefined)} @error=${onCoverError} @load=${onCoverLoad} /></div>
       <div class="scrim"></div>
-      <div class="top">
-        <div class="cover"><img alt="" src=${ifDefined(t.album.cover || undefined)} @error=${hideBroken} /></div>
-        <div class="info">
-          <div class="kicker">${cur ? "单曲 · 正在播放" : "单曲"}</div>
-          <div class="title ell">${t.title}</div>
-          <div class="who ell">${[artists(t), t.album.name].filter(Boolean).join(" · ")}</div>
-          <div class="tags">${this.tags(t)}</div>
-          ${
+      <div class="cover">${coverPh}<img alt="" draggable="false" src=${ifDefined(t.album.cover || undefined)} @error=${onCoverError} @load=${onCoverLoad} /></div>
+      <div class="info">
+        <div class="kicker">${cur ? "单曲 · 正在播放" : "单曲"}</div>
+        <div class="title ell">${t.title}</div>
+        <div class="who ell">${[artists(t), t.album.name].filter(Boolean).join(" · ")}</div>
+        <div class="tags">
+          ${this.tags(t)}${
             locked
               ? html`<div class="error" style="color:rgba(255,255,255,.75)">${unplayableMessage(t)}</div>`
               : html`<button class="chip chorus" @click=${this.onChorus}>${icons.wave}从副歌听</button>`
           }
         </div>
-        ${locked ? nothing : html`<button class="ib open" aria-label="在播放器中打开" style="color:rgba(255,255,255,.85)" @click=${this.onOpen}>${icons.expand}</button>`}
       </div>
+      ${locked ? nothing : html`<button class="ib open" aria-label="在播放器中打开" style="color:rgba(255,255,255,.85)" @click=${this.onOpen}>${icons.expand}</button>`}
       <div class="lyric">
         <div class="lyric-prev ell">${lv.prev}</div>
         ${this.renderLine(lv, false)}
@@ -347,13 +347,16 @@ export class KiteTrackElement extends LitElement {
     const s = this.player.state;
     if (!this.track || s.current?.id !== this.track.id || !this.hasUpdated) return;
     if (!this.dragging && s.duration > 0) this.setPct(Math.min(1, t / s.duration));
+    // 文字和逐字进度没变时不写,写一次就要重新排版 / 绘制。
     const cur = this.renderRoot.querySelector(".t-cur");
-    if (cur) cur.textContent = formatTime(t);
+    const time = formatTime(t);
+    if (cur && cur.textContent !== time) cur.textContent = time;
     const line = s.lyrics?.lines[s.lyricIndex];
     if (line && this.units.length) {
       const p = wordProgress(line, t * 1000);
       this.units.forEach((u, k) => {
-        u.style.setProperty("--p", String(Math.round((p[k] ?? 0) * 100) / 100));
+        const v = String(Math.round((p[k] ?? 0) * 100) / 100);
+        if (u.style.getPropertyValue("--p") !== v) u.style.setProperty("--p", v);
       });
     }
   }

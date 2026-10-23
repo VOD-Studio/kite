@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	mmpb "github.com/VOD-Studio/kite/gen/go/netease/music/v1"
 )
 
 // TestMapSong 验证歌曲映射：缩写字段 → proto 字段。
@@ -93,6 +95,33 @@ func TestDecodeSongDetail(t *testing.T) {
 	}
 	if songs[0].Name != "test" || songs[0].Album.Name != "album" {
 		t.Errorf("歌曲字段错误: %v", songs[0])
+	}
+}
+
+// TestDecodeSongDetail_MaxLevel 按详情里给出的最高一档推断歌曲音质;一档都没给时未知。
+func TestDecodeSongDetail_MaxLevel(t *testing.T) {
+	fixture := `{"code":200,"songs":[
+		{"id":1,"l":{"br":128000},"m":{"br":192000},"h":{"br":320000},"sq":{"br":937842},"hr":{"br":1702340}},
+		{"id":2,"l":{"br":128000},"h":{"br":320000},"sq":{"br":937842},"hr":null},
+		{"id":3,"l":{"br":128000},"h":{"br":320000},"sq":null},
+		{"id":4,"l":{"br":128000},"m":null,"h":null},
+		{"id":5}
+	]}`
+	songs, err := DecodeSongDetail(json.RawMessage(fixture))
+	if err != nil {
+		t.Fatalf("解析失败: %v", err)
+	}
+	want := []mmpb.SongLevel{
+		mmpb.SongLevel_SONG_LEVEL_HRES,
+		mmpb.SongLevel_SONG_LEVEL_LOSSLESS,
+		mmpb.SongLevel_SONG_LEVEL_EXHIGH,
+		mmpb.SongLevel_SONG_LEVEL_STANDARD,
+		mmpb.SongLevel_SONG_LEVEL_UNSPECIFIED,
+	}
+	for i, s := range songs {
+		if s.GetMaxLevel() != want[i] {
+			t.Errorf("歌曲 %d 的 MaxLevel = %v, 期望 %v", s.GetId(), s.GetMaxLevel(), want[i])
+		}
 	}
 }
 

@@ -25,17 +25,6 @@ export function canAnimate(el: Element): boolean {
   return typeof (el as HTMLElement).animate === "function" && !prefersReducedMotion();
 }
 
-/** hideBroken:加载失败时显示容器占位,同一图片下次加载成功后恢复显示。 */
-export function hideBroken(e: Event): void {
-  const image = e.currentTarget as HTMLImageElement;
-  image.hidden = true;
-  image.addEventListener("load", showLoaded, { once: true });
-}
-
-function showLoaded(e: Event): void {
-  (e.currentTarget as HTMLImageElement).hidden = false;
-}
-
 /**
  * 元素用到的播放核心。数据来源取自元素自己的 api 属性,没有时取页面里第一个带 api 的元素;
  * 都没有时由 whenSource 等待(例如页面之后用 JS 设置自定义数据来源)。
@@ -47,6 +36,17 @@ export function playerFor(el: HTMLElement, api?: string | null): Player {
     if (url) player.setSource(createKiteSource(url));
   }
   return player;
+}
+
+/**
+ * 封面 <img> 的 error / load:加载失败时隐藏图片,露出下面的占位(coverPh);换了地址加载成功再显示。
+ * 没有地址时 <img> 不带 src,本来就是透明的。
+ */
+export function onCoverError(e: Event): void {
+  (e.target as HTMLElement).setAttribute("data-err", "");
+}
+export function onCoverLoad(e: Event): void {
+  (e.target as HTMLElement).removeAttribute("data-err");
 }
 
 /** 卡片把封面「飞」进播放器时派发的事件(kite-player 负责动画)。 */

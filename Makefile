@@ -19,8 +19,6 @@ CARGO_AUDIT_VERSION   := 0.22.2
 PYYAML_VERSION        := 6.0.3
 # packages/kite-player(npm 包 @violetjs/kite-player)用的 Node 大版本;CI 的 setup-node 读这里。
 NODE_VERSION          := 24
-# player-demo 的本地端口(demo 调试页)。
-PLAYER_DEMO_PORT      ?= 3847
 # 仅本地热重载用,不影响 CI。
 AIR_VERSION           := latest
 
@@ -170,11 +168,12 @@ player-package-check: player-check
 		if [ -z "$${CHROME:-}$${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-}" ]; then npm exec -- playwright install chromium; fi && \
 		npm run package:check
 
-## player-demo: 构建 kite-player 并起 demo 调试页(默认 http://127.0.0.1:3847/demo/,换端口 make player-demo PLAYER_DEMO_PORT=xxxx;Ctrl-C 停止;需要 Node 与 python3)
+## player-demo: 构建 packages/kite-player 并起离线演示页看效果(默认 http://127.0.0.1:5174/demo/index.html)
+## 手机上看:make player-demo DEMO_HOST=0.0.0.0,同一局域网打开打印出的地址;DEMO_PORT 改端口。
+DEMO_HOST ?= 127.0.0.1
+DEMO_PORT ?= 5174
 player-demo:
-	cd packages/kite-player && npm run build
-	@echo "demo: http://127.0.0.1:$(PLAYER_DEMO_PORT)/demo/  (Ctrl-C 停止)"
-	cd packages/kite-player && python3 -m http.server $(PLAYER_DEMO_PORT) --bind 127.0.0.1
+	cd packages/kite-player && { [ -d node_modules ] || npm ci --no-audit --no-fund; } && HOST=$(DEMO_HOST) PORT=$(DEMO_PORT) npm run demo
 
 ## docker-run: 在隔离的 Docker 工具链中运行 CMD,省略 CMD 则进入 shell(不要求宿主机安装 Go/Node)
 docker-run: export KITE_DOCKER_COMMAND = $(if $(CMD),$(CMD),exec bash)

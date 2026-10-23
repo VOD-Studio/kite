@@ -4,14 +4,15 @@ import { ifDefined } from "lit/directives/if-defined.js";
 import { formatTime } from "../core/lyrics";
 import type { Player } from "../core/player";
 import type { PlayerState, Playlist } from "../core/types";
-import { icons } from "./icons";
+import { coverPh, icons } from "./icons";
 import { cardSheet } from "./styles";
 import {
   artists,
   canPlay,
   emit,
   emitFly,
-  hideBroken,
+  onCoverError,
+  onCoverLoad,
   openQueueEvent,
   playerFor,
   sizeOf,
@@ -117,9 +118,9 @@ export class KitePlaylistElement extends LitElement {
     return html`<div class=${classMap({ card: true, pl: true, big, cur: inThis, playing: inThis && this.s.playing })} part="card">
       <div class="head">
         <div class="stack">
-          <div class="cover c3"><img alt="" src=${ifDefined(covers[2] || undefined)} @error=${hideBroken} /></div>
-          <div class="cover c2"><img alt="" src=${ifDefined(covers[1] || undefined)} @error=${hideBroken} /></div>
-          <div class="cover c1"><img alt="" src=${ifDefined(covers[0] || undefined)} @error=${hideBroken} /></div>
+          <div class="cover c3">${coverPh}<img alt="" draggable="false" src=${ifDefined(covers[2] || undefined)} @error=${onCoverError} @load=${onCoverLoad} /></div>
+          <div class="cover c2">${coverPh}<img alt="" draggable="false" src=${ifDefined(covers[1] || undefined)} @error=${onCoverError} @load=${onCoverLoad} /></div>
+          <div class="cover c1">${coverPh}<img alt="" draggable="false" src=${ifDefined(covers[0] || undefined)} @error=${onCoverError} @load=${onCoverLoad} /></div>
         </div>
         <div class="info">
           <div class="kicker">歌单</div>

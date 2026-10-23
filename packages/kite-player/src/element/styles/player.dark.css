@@ -1,9 +1,28 @@
 /* <kite-player> 的暗色变量。只写 :host 规则:构建时生成 theme="dark" 与跟随系统两份(见 styles/index.ts)。 */
 
 :host {
-  --kite-glass: linear-gradient(180deg, rgba(44,46,54,.62), rgba(26,28,34,.5));
-  --kite-glass-edge: rgba(255,255,255,.2);
+  /* 深色毛玻璃不加亮边:内高光和描边都很淡,否则在暗底上像一圈发白的塑料。 */
+  --kite-glass: rgba(30,32,38,.62);
+  --kite-glass-edge: rgba(255,255,255,.1);
   --kite-glass-rim: rgba(255,255,255,.08);
+  --kite-glass-sheen: rgba(255,255,255,.04);
+  --kite-glass-shadow: 0 16px 40px -12px rgba(0,0,0,.55);
+  --kite-glass-filter: blur(24px) saturate(1.6);
+  --kite-sheet-glass: rgba(28,30,36,.9);
+  --kite-panel-shadow: 0 0 0 .5px rgba(255,255,255,.08), 0 24px 56px -28px rgba(0,0,0,.6), 0 6px 18px -10px rgba(0,0,0,.3);
+  --kite-ph-bg: linear-gradient(135deg, #2B2E36, #1E2026);
+  --kite-ph-fg: #6B717D;
+  --kite-amb-sat: 1.1;
+  --kite-amb-veil: rgba(8,10,20,.3);
+  --kite-amb-target: .06;
+  --kite-amb-dim: .3;
+  --kite-amb-spot: rgba(255,255,255,.1);
+  --kite-amb-tint: .3;
+  --kite-amb-scrim-top: rgba(0,0,0,.22);
+  --kite-amb-scrim-bottom: rgba(0,0,0,.35);
+  --kite-amb-grain: .04;
+  --kite-amb-empty: linear-gradient(180deg, #2B2F38 0%, #16181D 100%);
+  --kite-amb-empty-spot: .18;
   --kite-fg: #ECEDEF;
   --kite-muted: #A9AEB9;
   --kite-line: rgba(255,255,255,.14);
@@ -13,4 +32,10 @@
   --kite-ring-track: rgba(255,255,255,.22);
   --kite-blob: #F2F3F5;
   --kite-blob-icon: #15171C;
+  --kite-tag-vip: #E2BD70;
+  --kite-tag-vip-bg: rgba(226,189,112,.12);
+  --kite-tag-vip-line: rgba(226,189,112,.4);
+  --kite-tag-paid: #9AB4E4;
+  --kite-tag-paid-bg: rgba(154,180,228,.1);
+  --kite-tag-paid-line: rgba(154,180,228,.36);
 }

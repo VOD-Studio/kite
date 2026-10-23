@@ -57,5 +57,9 @@ export function createKiteSource(api: string, options: KiteSourceOptions = {}): 
     async info() {
       return get<SourceInfo>("/player/v1/info");
     },
+    // 公开模式的播放地址带 quality 参数就按较低的音质(不超过服务端上限)给直链,参数不参与签名。
+    streamUrl(track, quality) {
+      return track.stream + (track.stream.includes("?") ? "&" : "?") + "quality=" + quality;
+    },
   };
 }

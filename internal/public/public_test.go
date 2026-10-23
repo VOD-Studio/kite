@@ -33,6 +33,7 @@ type fakeCatalog struct {
 	anonURL    map[int64]*mmpb.SongURL
 	ownerURL   map[int64]*mmpb.SongURL
 	lastCookie string
+	lastLevel  mmpb.SongLevel
 	calls      map[string]int
 }
 
@@ -98,9 +99,10 @@ func (f *fakeCatalog) Chorus(context.Context, int64) ([]*mmpb.ChorusSegment, err
 	return []*mmpb.ChorusSegment{{StartMs: 62000, EndMs: 92000}}, nil
 }
 
-func (f *fakeCatalog) StreamURL(_ context.Context, id int64, _ mmpb.SongLevel, cookie string) (*mmpb.SongURL, error) {
+func (f *fakeCatalog) StreamURL(_ context.Context, id int64, level mmpb.SongLevel, cookie string) (*mmpb.SongURL, error) {
 	f.mu.Lock()
 	f.lastCookie = cookie
+	f.lastLevel = level
 	f.mu.Unlock()
 	if cookie != "" {
 		return f.ownerURL[id], nil
@@ -260,6 +262,20 @@ func TestPlaylist(t *testing.T) {
 	require.Equal(t, "NOT_ALLOWED", reason(t, rec), "不在白名单的歌单不能读")
 }
 
+func TestTrackQuality(t *testing.T) {
+	s, cat, _, h := newTestServer(t, testOptions())
+	cat.songs[1].MaxLevel = mmpb.SongLevel_SONG_LEVEL_HRES
+	cat.songs[3].MaxLevel = mmpb.SongLevel_SONG_LEVEL_STANDARD
+
+	require.Equal(t, "exhigh", decode[trackDTO](t, get(t, h, "/player/v1/tracks/1")).Quality, "歌曲高于上限时按上限")
+	require.Equal(t, "standard", decode[trackDTO](t, get(t, h, "/player/v1/tracks/3")).Quality, "歌曲低于上限时按歌曲")
+	rec := get(t, h, "/player/v1/tracks/2")
+	require.NotContains(t, rec.Body.String(), `"quality"`, "上游没给音质信息时省略")
+
+	s.opts.Level = mmpb.SongLevel_SONG_LEVEL_HRES
+	require.Equal(t, "hires", decode[trackDTO](t, get(t, h, "/player/v1/tracks/1")).Quality)
+}
+
 func TestTrackAllowlist(t *testing.T) {
 	_, _, _, h := newTestServer(t, testOptions())
 
@@ -296,6 +312,23 @@ func TestStream(t *testing.T) {
 	expired := streamPath(t, h, "1")
 	c.add(3 * time.Hour)
 	require.Equal(t, "LINK_EXPIRED", reason(t, get(t, h, expired)))
+}
+
+func TestStreamQuality(t *testing.T) {
+	_, cat, _, h := newTestServer(t, testOptions())
+	path := streamPath(t, h, "1")
+
+	// 直链按音质分别缓存,每个音质第一次请求才会到上游,所以按这个顺序观察。
+	require.Equal(t, http.StatusFound, get(t, h, path+"&quality=standard").Code)
+	require.Equal(t, mmpb.SongLevel_SONG_LEVEL_STANDARD, cat.lastLevel, "听众可以要求更低的音质")
+	require.Equal(t, http.StatusFound, get(t, h, path+"&quality=hires").Code)
+	require.Equal(t, mmpb.SongLevel_SONG_LEVEL_EXHIGH, cat.lastLevel, "不能超过服务端上限")
+	cat.lastLevel = mmpb.SongLevel_SONG_LEVEL_UNSPECIFIED
+	require.Equal(t, http.StatusFound, get(t, h, path).Code)
+	require.Equal(t, mmpb.SongLevel_SONG_LEVEL_UNSPECIFIED, cat.lastLevel, "不带参数按服务端上限,与上一次同音质,命中缓存")
+	rec := get(t, h, path+"&quality=best")
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Equal(t, "BAD_REQUEST", reason(t, rec))
 }
 
 func TestStreamVIPWithOwner(t *testing.T) {

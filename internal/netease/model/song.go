@@ -26,6 +26,16 @@ type rawSong struct {
 	Al   rawAlbum    `json:"al"`   // 专辑信息（album 缩写）
 	Dt   int64       `json:"dt"`   // 时长毫秒（duration 缩写）
 	Fee  int         `json:"fee"`  // 付费类型：0免费 1VIP 4数字专辑 8试听
+	L    *rawQuality `json:"l"`    // 标准（128k）音频；没有该音质时为 null
+	M    *rawQuality `json:"m"`    // 较高（192k）音频
+	H    *rawQuality `json:"h"`    // 极高（320k）音频
+	Sq   *rawQuality `json:"sq"`   // 无损音频
+	Hr   *rawQuality `json:"hr"`   // Hi-Res 音频
+}
+
+// rawQuality 是歌曲某一档音质的文件信息，这里只关心它在不在。
+type rawQuality struct {
+	Br int64 `json:"br"` // 码率
 }
 
 // rawSongDetail 是歌曲详情接口的响应。
@@ -45,6 +55,23 @@ func MapSong(s rawSong) *mmpb.Song {
 		Album:      MapAlbum(s.Al),
 		DurationMs: s.Dt,
 		Fee:        int32(s.Fee),
+		MaxLevel:   maxLevel(s),
+	}
+}
+
+// maxLevel 按详情里给出的音质档位推断歌曲本身的最高音质;一档都没给(部分列表接口)时返回 UNSPECIFIED。
+func maxLevel(s rawSong) mmpb.SongLevel {
+	switch {
+	case s.Hr != nil && s.Hr.Br > 0:
+		return mmpb.SongLevel_SONG_LEVEL_HRES
+	case s.Sq != nil && s.Sq.Br > 0:
+		return mmpb.SongLevel_SONG_LEVEL_LOSSLESS
+	case s.H != nil && s.H.Br > 0:
+		return mmpb.SongLevel_SONG_LEVEL_EXHIGH
+	case (s.M != nil && s.M.Br > 0) || (s.L != nil && s.L.Br > 0):
+		return mmpb.SongLevel_SONG_LEVEL_STANDARD
+	default:
+		return mmpb.SongLevel_SONG_LEVEL_UNSPECIFIED
 	}
 }
 

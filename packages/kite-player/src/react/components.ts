@@ -18,6 +18,8 @@ export interface KitePlayerProps extends ElementProps {
   theme?: Theme;
   /** scroll(默认):向下滚动时收成圆形;none:不收起。 */
   collapse?: "scroll" | "none";
+  /** 桌面上放在哪一侧:right(默认)/ left / center;手机上始终在底部。 */
+  position?: "right" | "left" | "center";
 }
 
 export interface KiteTrackProps extends ElementProps {

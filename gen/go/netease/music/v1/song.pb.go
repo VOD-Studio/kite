@@ -254,7 +254,9 @@ type Song struct {
 	// 时长（毫秒）。
 	DurationMs int64 `protobuf:"varint,5,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
 	// 付费类型：0 免费、1 VIP、4 数字专辑、8 试听片段。
-	Fee           int32 `protobuf:"varint,6,opt,name=fee,proto3" json:"fee,omitempty"`
+	Fee int32 `protobuf:"varint,6,opt,name=fee,proto3" json:"fee,omitempty"`
+	// 歌曲本身提供的最高音质（按详情里的 h / sq / hr 推断），不含账号权益；上游没给时为 UNSPECIFIED。
+	MaxLevel      SongLevel `protobuf:"varint,7,opt,name=max_level,json=maxLevel,proto3,enum=netease.music.v1.SongLevel" json:"max_level,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -329,6 +331,13 @@ func (x *Song) GetFee() int32 {
 		return x.Fee
 	}
 	return 0
+}
+
+func (x *Song) GetMaxLevel() SongLevel {
+	if x != nil {
+		return x.MaxLevel
+	}
+	return SongLevel_SONG_LEVEL_UNSPECIFIED
 }
 
 // 播放 URL 信息。
@@ -2424,7 +2433,7 @@ const file_netease_music_v1_song_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x17\n" +
 	"\apic_url\x18\x03 \x01(\tR\x06picUrl\x12!\n" +
 	"\fpublish_time\x18\x04 \x01(\tR\vpublishTime\x120\n" +
-	"\x06artist\x18\x05 \x01(\v2\x18.netease.music.v1.ArtistR\x06artist\"\xc0\x01\n" +
+	"\x06artist\x18\x05 \x01(\v2\x18.netease.music.v1.ArtistR\x06artist\"\xfa\x01\n" +
 	"\x04Song\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x122\n" +
@@ -2432,7 +2441,8 @@ const file_netease_music_v1_song_proto_rawDesc = "" +
 	"\x05album\x18\x04 \x01(\v2\x17.netease.music.v1.AlbumR\x05album\x12\x1f\n" +
 	"\vduration_ms\x18\x05 \x01(\x03R\n" +
 	"durationMs\x12\x10\n" +
-	"\x03fee\x18\x06 \x01(\x05R\x03fee\"\xf5\x01\n" +
+	"\x03fee\x18\x06 \x01(\x05R\x03fee\x128\n" +
+	"\tmax_level\x18\a \x01(\x0e2\x1b.netease.music.v1.SongLevelR\bmaxLevel\"\xf5\x01\n" +
 	"\aSongURL\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12\x18\n" +
@@ -2637,56 +2647,57 @@ var file_netease_music_v1_song_proto_depIdxs = []int32{
 	1,  // 0: netease.music.v1.Album.artist:type_name -> netease.music.v1.Artist
 	1,  // 1: netease.music.v1.Song.artists:type_name -> netease.music.v1.Artist
 	2,  // 2: netease.music.v1.Song.album:type_name -> netease.music.v1.Album
-	3,  // 3: netease.music.v1.GetSongDetailResponse.song:type_name -> netease.music.v1.Song
-	0,  // 4: netease.music.v1.GetSongURLRequest.level:type_name -> netease.music.v1.SongLevel
-	4,  // 5: netease.music.v1.GetSongURLResponse.url:type_name -> netease.music.v1.SongURL
-	5,  // 6: netease.music.v1.GetLyricResponse.lyric:type_name -> netease.music.v1.Lyric
-	13, // 7: netease.music.v1.WordLyricLine.words:type_name -> netease.music.v1.WordLyricWord
-	14, // 8: netease.music.v1.WordLyric.lines:type_name -> netease.music.v1.WordLyricLine
-	14, // 9: netease.music.v1.WordLyric.translated_lines:type_name -> netease.music.v1.WordLyricLine
-	14, // 10: netease.music.v1.WordLyric.romanized_lines:type_name -> netease.music.v1.WordLyricLine
-	12, // 11: netease.music.v1.QualityDetailResponse.qualities:type_name -> netease.music.v1.SongQuality
-	17, // 12: netease.music.v1.ChorusTimeResponse.segments:type_name -> netease.music.v1.ChorusSegment
-	16, // 13: netease.music.v1.CreatorInfoResponse.creators:type_name -> netease.music.v1.SongCreator
-	15, // 14: netease.music.v1.GetWordLyricResponse.word_lyric:type_name -> netease.music.v1.WordLyric
-	3,  // 15: netease.music.v1.SimilarSongsResponse.songs:type_name -> netease.music.v1.Song
-	6,  // 16: netease.music.v1.SongService.GetSongDetail:input_type -> netease.music.v1.GetSongDetailRequest
-	8,  // 17: netease.music.v1.SongService.GetSongURL:input_type -> netease.music.v1.GetSongURLRequest
-	10, // 18: netease.music.v1.SongService.GetLyric:input_type -> netease.music.v1.GetLyricRequest
-	18, // 19: netease.music.v1.SongService.Like:input_type -> netease.music.v1.LikeRequest
-	20, // 20: netease.music.v1.SongService.Trash:input_type -> netease.music.v1.TrashRequest
-	22, // 21: netease.music.v1.SongService.DisallowRecommend:input_type -> netease.music.v1.DisallowRecommendRequest
-	24, // 22: netease.music.v1.SongService.CheckAvailable:input_type -> netease.music.v1.CheckAvailableRequest
-	26, // 23: netease.music.v1.SongService.LikedList:input_type -> netease.music.v1.LikedListRequest
-	28, // 24: netease.music.v1.SongService.QualityDetail:input_type -> netease.music.v1.QualityDetailRequest
-	30, // 25: netease.music.v1.SongService.LikeCount:input_type -> netease.music.v1.LikeCountRequest
-	32, // 26: netease.music.v1.SongService.IsLike:input_type -> netease.music.v1.IsLikeRequest
-	34, // 27: netease.music.v1.SongService.DynamicCover:input_type -> netease.music.v1.DynamicCoverRequest
-	36, // 28: netease.music.v1.SongService.ChorusTime:input_type -> netease.music.v1.ChorusTimeRequest
-	38, // 29: netease.music.v1.SongService.CreatorInfo:input_type -> netease.music.v1.CreatorInfoRequest
-	40, // 30: netease.music.v1.SongService.GetWordLyric:input_type -> netease.music.v1.GetWordLyricRequest
-	42, // 31: netease.music.v1.SongService.SimilarSongs:input_type -> netease.music.v1.SimilarSongsRequest
-	7,  // 32: netease.music.v1.SongService.GetSongDetail:output_type -> netease.music.v1.GetSongDetailResponse
-	9,  // 33: netease.music.v1.SongService.GetSongURL:output_type -> netease.music.v1.GetSongURLResponse
-	11, // 34: netease.music.v1.SongService.GetLyric:output_type -> netease.music.v1.GetLyricResponse
-	19, // 35: netease.music.v1.SongService.Like:output_type -> netease.music.v1.LikeResponse
-	21, // 36: netease.music.v1.SongService.Trash:output_type -> netease.music.v1.TrashResponse
-	23, // 37: netease.music.v1.SongService.DisallowRecommend:output_type -> netease.music.v1.DisallowRecommendResponse
-	25, // 38: netease.music.v1.SongService.CheckAvailable:output_type -> netease.music.v1.CheckAvailableResponse
-	27, // 39: netease.music.v1.SongService.LikedList:output_type -> netease.music.v1.LikedListResponse
-	29, // 40: netease.music.v1.SongService.QualityDetail:output_type -> netease.music.v1.QualityDetailResponse
-	31, // 41: netease.music.v1.SongService.LikeCount:output_type -> netease.music.v1.LikeCountResponse
-	33, // 42: netease.music.v1.SongService.IsLike:output_type -> netease.music.v1.IsLikeResponse
-	35, // 43: netease.music.v1.SongService.DynamicCover:output_type -> netease.music.v1.DynamicCoverResponse
-	37, // 44: netease.music.v1.SongService.ChorusTime:output_type -> netease.music.v1.ChorusTimeResponse
-	39, // 45: netease.music.v1.SongService.CreatorInfo:output_type -> netease.music.v1.CreatorInfoResponse
-	41, // 46: netease.music.v1.SongService.GetWordLyric:output_type -> netease.music.v1.GetWordLyricResponse
-	43, // 47: netease.music.v1.SongService.SimilarSongs:output_type -> netease.music.v1.SimilarSongsResponse
-	32, // [32:48] is the sub-list for method output_type
-	16, // [16:32] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	0,  // 3: netease.music.v1.Song.max_level:type_name -> netease.music.v1.SongLevel
+	3,  // 4: netease.music.v1.GetSongDetailResponse.song:type_name -> netease.music.v1.Song
+	0,  // 5: netease.music.v1.GetSongURLRequest.level:type_name -> netease.music.v1.SongLevel
+	4,  // 6: netease.music.v1.GetSongURLResponse.url:type_name -> netease.music.v1.SongURL
+	5,  // 7: netease.music.v1.GetLyricResponse.lyric:type_name -> netease.music.v1.Lyric
+	13, // 8: netease.music.v1.WordLyricLine.words:type_name -> netease.music.v1.WordLyricWord
+	14, // 9: netease.music.v1.WordLyric.lines:type_name -> netease.music.v1.WordLyricLine
+	14, // 10: netease.music.v1.WordLyric.translated_lines:type_name -> netease.music.v1.WordLyricLine
+	14, // 11: netease.music.v1.WordLyric.romanized_lines:type_name -> netease.music.v1.WordLyricLine
+	12, // 12: netease.music.v1.QualityDetailResponse.qualities:type_name -> netease.music.v1.SongQuality
+	17, // 13: netease.music.v1.ChorusTimeResponse.segments:type_name -> netease.music.v1.ChorusSegment
+	16, // 14: netease.music.v1.CreatorInfoResponse.creators:type_name -> netease.music.v1.SongCreator
+	15, // 15: netease.music.v1.GetWordLyricResponse.word_lyric:type_name -> netease.music.v1.WordLyric
+	3,  // 16: netease.music.v1.SimilarSongsResponse.songs:type_name -> netease.music.v1.Song
+	6,  // 17: netease.music.v1.SongService.GetSongDetail:input_type -> netease.music.v1.GetSongDetailRequest
+	8,  // 18: netease.music.v1.SongService.GetSongURL:input_type -> netease.music.v1.GetSongURLRequest
+	10, // 19: netease.music.v1.SongService.GetLyric:input_type -> netease.music.v1.GetLyricRequest
+	18, // 20: netease.music.v1.SongService.Like:input_type -> netease.music.v1.LikeRequest
+	20, // 21: netease.music.v1.SongService.Trash:input_type -> netease.music.v1.TrashRequest
+	22, // 22: netease.music.v1.SongService.DisallowRecommend:input_type -> netease.music.v1.DisallowRecommendRequest
+	24, // 23: netease.music.v1.SongService.CheckAvailable:input_type -> netease.music.v1.CheckAvailableRequest
+	26, // 24: netease.music.v1.SongService.LikedList:input_type -> netease.music.v1.LikedListRequest
+	28, // 25: netease.music.v1.SongService.QualityDetail:input_type -> netease.music.v1.QualityDetailRequest
+	30, // 26: netease.music.v1.SongService.LikeCount:input_type -> netease.music.v1.LikeCountRequest
+	32, // 27: netease.music.v1.SongService.IsLike:input_type -> netease.music.v1.IsLikeRequest
+	34, // 28: netease.music.v1.SongService.DynamicCover:input_type -> netease.music.v1.DynamicCoverRequest
+	36, // 29: netease.music.v1.SongService.ChorusTime:input_type -> netease.music.v1.ChorusTimeRequest
+	38, // 30: netease.music.v1.SongService.CreatorInfo:input_type -> netease.music.v1.CreatorInfoRequest
+	40, // 31: netease.music.v1.SongService.GetWordLyric:input_type -> netease.music.v1.GetWordLyricRequest
+	42, // 32: netease.music.v1.SongService.SimilarSongs:input_type -> netease.music.v1.SimilarSongsRequest
+	7,  // 33: netease.music.v1.SongService.GetSongDetail:output_type -> netease.music.v1.GetSongDetailResponse
+	9,  // 34: netease.music.v1.SongService.GetSongURL:output_type -> netease.music.v1.GetSongURLResponse
+	11, // 35: netease.music.v1.SongService.GetLyric:output_type -> netease.music.v1.GetLyricResponse
+	19, // 36: netease.music.v1.SongService.Like:output_type -> netease.music.v1.LikeResponse
+	21, // 37: netease.music.v1.SongService.Trash:output_type -> netease.music.v1.TrashResponse
+	23, // 38: netease.music.v1.SongService.DisallowRecommend:output_type -> netease.music.v1.DisallowRecommendResponse
+	25, // 39: netease.music.v1.SongService.CheckAvailable:output_type -> netease.music.v1.CheckAvailableResponse
+	27, // 40: netease.music.v1.SongService.LikedList:output_type -> netease.music.v1.LikedListResponse
+	29, // 41: netease.music.v1.SongService.QualityDetail:output_type -> netease.music.v1.QualityDetailResponse
+	31, // 42: netease.music.v1.SongService.LikeCount:output_type -> netease.music.v1.LikeCountResponse
+	33, // 43: netease.music.v1.SongService.IsLike:output_type -> netease.music.v1.IsLikeResponse
+	35, // 44: netease.music.v1.SongService.DynamicCover:output_type -> netease.music.v1.DynamicCoverResponse
+	37, // 45: netease.music.v1.SongService.ChorusTime:output_type -> netease.music.v1.ChorusTimeResponse
+	39, // 46: netease.music.v1.SongService.CreatorInfo:output_type -> netease.music.v1.CreatorInfoResponse
+	41, // 47: netease.music.v1.SongService.GetWordLyric:output_type -> netease.music.v1.GetWordLyricResponse
+	43, // 48: netease.music.v1.SongService.SimilarSongs:output_type -> netease.music.v1.SimilarSongsResponse
+	33, // [33:49] is the sub-list for method output_type
+	17, // [17:33] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_netease_music_v1_song_proto_init() }

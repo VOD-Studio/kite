@@ -64,7 +64,8 @@
     "test": "vitest run",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
     "package:check": "node scripts/package-check.mjs",
-    "screenshots": "npm run build && node scripts/screenshots.mjs"
+    "screenshots": "npm run build && node scripts/screenshots.mjs",
+    "demo": "npm run build && node scripts/serve.mjs"
   },
   "dependencies": {
     "lit": "^3.3.3"

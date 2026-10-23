@@ -14,6 +14,9 @@ export interface Album {
 /** 付费类型:免费、VIP、数字专辑。 */
 export type Access = "free" | "vip" | "paid";
 
+/** 音质档位:标准、极高(320k)、无损、Hi-Res。 */
+export type Quality = "standard" | "exhigh" | "lossless" | "hires";
+
 /** 一首歌。stream / lyrics 是可直接请求的绝对地址。 */
 export interface Track {
   id: string;
@@ -33,6 +36,11 @@ export interface Track {
   stream: string;
   /** 歌词接口地址。 */
   lyrics: string;
+  /**
+   * 这首歌能播放的最高音质(歌曲本身的最高音质与服务端上限中较低的一个)。可选:
+   * 自建后端可以不填;播放器只在极高及以上时在封面上显示音质标签。
+   */
+  quality?: Quality;
 }
 
 export interface Playlist {
@@ -84,6 +92,11 @@ export interface DataSource {
   track(id: string): Promise<Track>;
   lyrics(track: Track): Promise<Lyrics>;
   info?(): Promise<SourceInfo>;
+  /**
+   * 按不超过 quality 的音质播放这首歌的地址(听众关掉高音质、省流量时用)。可选:
+   * 不实现时播放器不提供音质切换,封面上的音质标签只做展示。
+   */
+  streamUrl?(track: Track, quality: Quality): string;
 }
 
 /** 播放模式:顺序(播完停)、列表循环、单曲循环、随机。 */
@@ -114,4 +127,6 @@ export interface PlayerState {
   /** 当前歌词行下标,-1 表示还没到第一行。 */
   lyricIndex: number;
   error: PlayerError | null;
+  /** 是否按这首歌能播放的最高音质播放;关掉时改用标准音质(省流量),需要数据来源支持 streamUrl。 */
+  highQuality: boolean;
 }

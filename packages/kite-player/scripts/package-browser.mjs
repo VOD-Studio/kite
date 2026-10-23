@@ -122,20 +122,22 @@ export async function checkBrowser(consumer) {
     const normal = await panel.boundingBox();
     assert.ok(normal && normal.width > 0 && normal.height > 0);
     await panel.getByRole("button", { name: "沉浸模式", exact: true }).click();
-    await panel.getByRole("button", { name: "退出沉浸模式", exact: true }).waitFor();
     await finishAnimations(page);
     const immersive = await panel.boundingBox();
     assert.ok(
       immersive && immersive.width > normal.width && immersive.height >= normal.height,
       "Immersive mode must visibly enlarge the panel",
     );
-    await panel.getByRole("button", { name: "退出沉浸模式", exact: true }).click();
-    await panel.getByRole("button", { name: "沉浸模式", exact: true }).waitFor();
+    await panel.getByRole("button", { name: "收起", exact: true }).press("Escape");
+    await finishAnimations(page);
+    await panel.waitFor({ state: "hidden" });
+    await floating.getByRole("button", { name: "展开播放器", exact: true }).first().click();
+    await panel.waitFor();
     await finishAnimations(page);
     const restored = await panel.boundingBox();
     assert.ok(
       restored && Math.abs(restored.width - normal.width) < 2 && Math.abs(restored.height - normal.height) < 2,
-      "Leaving immersive mode restores the panel geometry",
+      "Reopening after immersive collapse restores the normal panel geometry",
     );
 
     await panel.getByRole("button", { name: "歌词", exact: true }).click();
@@ -149,17 +151,17 @@ export async function checkBrowser(consumer) {
     const time = await page.evaluate(() => window.consumerPlayer.currentTime());
     assert.ok(time >= 20 && time < 24, `Clicking a lyric seeks to its timestamp, got ${time}`);
     await panel.getByRole("button", { name: "暂停", exact: true }).click();
-    await panel.getByRole("button", { name: "显示翻译", exact: true }).click();
-    assert.equal(
-      await panel.getByRole("button", { name: "显示翻译", exact: true }).getAttribute("aria-pressed"),
-      "false",
-    );
+    const translations = panel
+      .locator("section")
+      .filter({ has: page.getByRole("list") })
+      .getByRole("button", { name: "显示翻译", exact: true });
+    await translations.click();
+    await finishAnimations(page);
+    assert.equal(await translations.getAttribute("aria-pressed"), "false");
     await panel.getByText("The wind remembers its name", { exact: true }).waitFor({ state: "hidden" });
-    await panel.getByRole("button", { name: "显示翻译", exact: true }).click();
-    assert.equal(
-      await panel.getByRole("button", { name: "显示翻译", exact: true }).getAttribute("aria-pressed"),
-      "true",
-    );
+    await translations.click();
+    await finishAnimations(page);
+    assert.equal(await translations.getAttribute("aria-pressed"), "true");
     await panel.getByText("The wind remembers its name", { exact: true }).waitFor();
     await panel.getByRole("button", { name: "收起", exact: true }).click();
     await finishAnimations(page);

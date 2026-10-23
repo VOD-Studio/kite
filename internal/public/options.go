@@ -69,6 +69,16 @@ var levels = map[string]mmpb.SongLevel{
 	"hires":    mmpb.SongLevel_SONG_LEVEL_HRES,
 }
 
+// levelName 是音质在协议里的名字(levels 的反查);不在表里时按 exhigh,与默认上限一致。
+func levelName(lv mmpb.SongLevel) string {
+	for name, v := range levels {
+		if v == lv {
+			return name
+		}
+	}
+	return "exhigh"
+}
+
 // ParseOptions 校验并解析公开模式配置。任何一项不合法都返回错误,调用方应拒绝启动:
 // 公开模式不鉴权,配置含糊时宁可起不来,也不暴露超出预期的内容。
 func ParseOptions(c config.PublicConfig) (Options, error) {

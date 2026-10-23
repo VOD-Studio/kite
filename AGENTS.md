@@ -81,6 +81,7 @@ cmd/*
 - **`make interop-go`** —— Go 互操作冒烟(需要访问 buf.build,CI 的 `Contract Go Consumer` job 跑它):用 BSR 上生成的 SDK 对真实 kite-server 运行 `docs/integration.md` 的示例。示例与 `interop/go/kite.go` 逐字一致(测试守护),改示例先改文档再同步。
 - **`make player-check`** —— `packages/kite-player` 的 `npm ci` + 类型检查 + Biome + 测试 + 构建。不在 `make check` 里,改了 `packages/kite-player` 或 `/player/v1` 协议后跑。
 - **`make player-package-check`** —— 在源码检查后只 pack 一次,于仓库外验证真实 tgz 的类型、ESM、React SSR、打包及 Chromium 交互。CI 的 `Player Source and Package` 使用同样验收;发布直接消费 main CI 留存的 tgz,不再重新打包(由 `scripts/npm-release_test.sh` 守护)。
+- **`make player-demo`** —— 构建 `packages/kite-player` 并起离线演示页看效果;`DEMO_HOST=0.0.0.0` 时同一局域网的手机可以打开。改了播放器界面或动画后用它在真机上确认。
 - **`make docker-run CMD='…'` / `make docker-check`** —— 隔离的 Go / Node 开发环境及 Linux 全量本地检查,不挂载宿主机 HOME、Docker socket 或发布凭据;入口与范围见 CONTRIBUTING「Docker 开发工具链」(约定)。
 - **`make clean`** —— 清本地构建产物(`tmp/`、`bin/`)。不清 `gen/`。
 

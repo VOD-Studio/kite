@@ -8,6 +8,8 @@ export interface Snapshot {
   mode: PlayMode;
   volume: number;
   playlist: { id: string; name: string } | null;
+  /** 旧快照没有这个字段,按开启处理。 */
+  highQuality?: boolean;
   savedAt: number;
 }
 

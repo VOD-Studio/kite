@@ -135,7 +135,7 @@ secrets:
 | `/player/v1/playlists/{id}` | 歌单 `{id, name, cover, trackCount, tracks: [Track]}`;`tracks` 按歌单顺序,最多 1000 首 |
 | `/player/v1/tracks/{id}` | 单曲 `Track` |
 | `/player/v1/tracks/{id}/lyrics` | 歌词 `{lines, chorus, instrumental}` |
-| `/player/v1/tracks/{id}/stream?exp=&sig=` | 302 跳转到上游直链(https);服务账号对该歌无权益、上游只给试听片段时,响应带 `X-Kite-Trial: start=0; end=30000`(毫秒) |
+| `/player/v1/tracks/{id}/stream?exp=&sig=[&quality=]` | 302 跳转到上游直链(https);可选的 `quality`(`standard` / `exhigh` / `lossless` / `hires`)要求更低的音质(省流量),不会超过 `KITE_PUBLIC_QUALITY`,不参与签名;服务账号对该歌无权益、上游只给试听片段时,响应带 `X-Kite-Trial: start=0; end=30000`(毫秒) |
 | `/healthz` | 健康检查,不限流 |
 
 `Track`:
@@ -150,11 +150,13 @@ secrets:
   "access": "free",
   "playable": true,
   "stream": "/player/v1/tracks/1973665667/stream?exp=1792536000&sig=…",
-  "lyrics": "/player/v1/tracks/1973665667/lyrics"
+  "lyrics": "/player/v1/tracks/1973665667/lyrics",
+  "quality": "exhigh"
 }
 ```
 
 - `access`:`free` / `vip` / `paid`(数字专辑)。`playable` 是按站点当前登录态推断的结果,最终以播放链接为准。
+- `quality`:这首歌在本服务上能播放的最高音质,`standard` / `exhigh` / `lossless` / `hires`,取歌曲本身的最高音质与 `KITE_PUBLIC_QUALITY` 中较低的一个;上游没给音质信息时省略。不含服务账号的权益,实际播放可能更低。播放器只在 `exhigh` 及以上时在封面上显示音质标签。
 - `stream` 是相对本服务的地址,直接作为 `<audio src>`;上游直链几十分钟后过期,播放中断时重新请求 `stream` 即可。
 - `stream` 的 302 响应在**试听片段**时带 `X-Kite-Trial` 头(`start=0; end=30000`,毫秒):站点账号对该歌无权益时上游只给约 30 秒的片段,自建后端可据此区分完整版;完整版没有这个头。`<audio>` 不读响应头,组件本身不消费它。
 
@@ -185,6 +187,7 @@ secrets:
 | `LINK_INVALID` | 403 | 播放链接签名无效 |
 | `ORIGIN_NOT_ALLOWED` | 403 | 调用页面不在 `KITE_PUBLIC_ORIGINS` 里 |
 | `INVALID_ID` | 400 | ID 不是正整数 |
+| `BAD_REQUEST` | 400 | 参数不合法(如 `quality` 不在可选值里) |
 | `RATE_LIMITED` | 429 | 请求太频繁,带 `Retry-After` |
 | `UPSTREAM_ERROR` | 502 | 上游暂时不可用 |
 

@@ -140,14 +140,8 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) handleInfo(w http.ResponseWriter, _ *http.Request) {
-	quality := "exhigh"
-	for name, lv := range levels {
-		if lv == s.opts.Level {
-			quality = name
-		}
-	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, http.StatusOK, infoDTO{Version: protocolVersion, Login: s.owners.state(), Quality: quality})
+	writeJSON(w, http.StatusOK, infoDTO{Version: protocolVersion, Login: s.owners.state(), Quality: levelName(s.opts.Level)})
 }
 
 func (s *Server) handlePlaylist(w http.ResponseWriter, r *http.Request) {
@@ -233,9 +227,19 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "LINK_INVALID", "播放链接签名无效")
 		return
 	}
+	// 听众可以要求更低的音质(省流量),不能超过服务端上限;这个参数不进签名,因为它只会降低音质。
+	level := s.opts.Level
+	if v := q.Get("quality"); v != "" {
+		lv, ok := levels[v]
+		if !ok {
+			writeError(w, http.StatusBadRequest, "BAD_REQUEST", "quality 只能是 standard / exhigh / lossless / hires")
+			return
+		}
+		level = min(lv, level)
+	}
 	credential := s.owners.next()
 	cookie := credential.cookie
-	su, err := s.cat.StreamURL(r.Context(), id, s.opts.Level, cookie)
+	su, err := s.cat.StreamURL(r.Context(), id, level, cookie)
 	if errors.Is(err, merrors.ErrUnauthorized) {
 		credential.expire()
 		writeError(w, http.StatusNotFound, "UNPLAYABLE", "服务账号登录态已失效,请稍后重试")

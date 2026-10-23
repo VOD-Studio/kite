@@ -152,7 +152,8 @@
       id,
       title,
       artists: [{ id: artist, name: artist }],
-      album: { id: album, name: album, cover: cover(art) },
+      // 没有插画的歌演示无封面的占位。
+      album: { id: album, name: album, cover: art ? cover(art) : "" },
       durationMs,
       access: access || "free",
       playable: trial || !access,
@@ -178,7 +179,7 @@
         track("t7", "雨季来信", "林间", "晴朗的周三", "paper", 3.9, "paper", "vip"),
         track("t5", "夜灯", "慢鱼", "夜灯", "lamp", 4.3, "lamp"),
         track("t9", "远方的信", "夏至", "星群", "night", 3.8, "paper", "vip", true),
-        track("t8", "晴朗的周三", "林间", "晴朗的周三", "paper", 2.6, null),
+        track("t8", "晴朗的周三", "林间", "晴朗的周三", null, 2.6, null),
         track("t6", "星群", "夏至", "星群", "night", 3.7, "paper", "paid"),
       ],
     },
@@ -190,6 +191,9 @@
     },
   };
   playlists.p2.tracks = ["t5", "t6", "t9", "t3", "t2", "t1"].map((id) => tracks[id]);
+  // 每首歌能播放的最高音质:极高及以上才在封面上显示标签,标准音质和试听不显示。
+  const qualities = { t1: "exhigh", t2: "lossless", t3: "hires", t4: "standard", t5: "exhigh", t6: "lossless", t7: "exhigh", t9: "standard" };
+  for (const [id, q] of Object.entries(qualities)) tracks[id].quality = q;
   for (const pl of Object.values(playlists)) pl.trackCount = pl.tracks.length;
 
   const strip = ({ lyricsData, ...t }) => t;
@@ -205,6 +209,8 @@
     },
     lyrics: async (t) => tracks[t.id].lyricsData,
     info: async () => ({ version: "demo", login: "none", quality: "exhigh" }),
+    // 关掉高音质时按标准音质播放(演示里只是换个地址,模拟音频照常播放)。
+    streamUrl: (t, quality) => `${t.stream}?quality=${quality}`,
   };
 
   /** DemoAudio 实现播放核心需要的 AudioLike:按真实时钟推进,派发与 <audio> 相同的事件。 */
@@ -227,7 +233,7 @@
       this._halt();
       this._src = value;
       this._base = 0;
-      const t = tracks[String(value).replace(/^demo:/, "")];
+      const t = tracks[String(value).replace(/^demo:/, "").split("?")[0]];
       // 试听片段只有前 30 秒:进度条与自动切歌都按这个长度来,和真实上游的 freeTrialInfo 一致。
       this._duration = t ? (t.trial ? 30 : t.durationMs / 1000) : NaN;
       setTimeout(() => ["loadedmetadata", "durationchange", "canplay"].forEach((e) => this._emit(e)), 20);

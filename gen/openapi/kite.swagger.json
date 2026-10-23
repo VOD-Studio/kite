@@ -4521,6 +4521,10 @@
           "type": "integer",
           "format": "int32",
           "title": "付费类型：0 免费、1 VIP、4 数字专辑、8 试听片段。"
+        },
+        "maxLevel": {
+          "$ref": "#/definitions/v1SongLevel",
+          "title": "歌曲本身提供的最高音质（按详情里的 h / sq / hr 推断），不含账号权益；上游没给时为 UNSPECIFIED。"
         }
       },
       "title": "Song 是歌曲实体。被歌曲详情、歌单、专辑、搜索、推荐、FM 等接口复用。"
