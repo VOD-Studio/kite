@@ -17,7 +17,7 @@ class Authorization(unittest.TestCase):
         self.env = patch.dict(os.environ, {'GITHUB_REPOSITORY': m.REPO, 'GITHUB_REF': 'refs/heads/main', 'GITHUB_WORKFLOW_REF': m.REPO + '/.github/workflows/release.yml@refs/heads/main', 'CI_POLL_TRIES': '1'})
         self.env.start(); self.addCleanup(self.env.stop)
         self.commit = {'sha': SHA, 'parents': [{'sha': 'b' * 40}]}
-        self.pr = {'merged_at': 'now', 'merge_commit_sha': SHA, 'user': {'login': 'github-actions[bot]', 'type': 'Bot'}, 'base': {'ref': 'main', 'repo': {'full_name': m.REPO}}, 'head': {'ref': m.release_branch('kite'), 'repo': {'full_name': m.REPO}}, 'title': 'chore(main): release 0.7.0'}
+        self.pr = {'state': 'closed', 'merged_at': 'now', 'merge_commit_sha': SHA, 'user': {'login': 'github-actions[bot]', 'type': 'Bot'}, 'base': {'ref': 'main', 'repo': {'full_name': m.REPO}}, 'head': {'ref': m.release_branch('kite'), 'repo': {'full_name': m.REPO}}, 'title': 'chore(kite): release 0.7.0'}
         self.run = {'id': 9, 'workflow_id': 5, 'path': '.github/workflows/ci.yml', 'event': 'push', 'head_sha': SHA, 'head_branch': 'main', 'head_repository': {'full_name': m.REPO}, 'run_number': 1, 'run_attempt': 2, 'status': 'completed', 'conclusion': 'success'}
         self.workflow = {'id': 5, 'path': '.github/workflows/ci.yml', 'state': 'active'}
         self.jobs = [{'name': 'CI OK', 'status': 'completed', 'conclusion': 'success'}]
@@ -47,12 +47,48 @@ class Authorization(unittest.TestCase):
         return json.dumps(value)
 
     def test_both_component_identities(self):
-        for component, title in [('kite', 'chore(main): release 0.7.0'), ('player', 'chore(main): release player 0.7.0')]:
+        for component, title in [('kite', 'chore(kite): release 0.7.0'), ('player', 'chore(player): release 0.7.0')]:
             self.pr['head']['ref'] = m.release_branch(component)
             self.pr['title'] = title
             m.require_release_pr(self.commit, component, '0.7.0')
             other = 'player' if component == 'kite' else 'kite'
             with self.assertRaises(ValueError): m.require_release_pr(self.commit, other, '0.7.0')
+
+    def test_open_titles_require_explicit_product_and_exact_version(self):
+        self.pr.update(state='open', merged_at=None, merge_commit_sha=None)
+        for component in m.COMPONENTS:
+            self.pr['head']['ref'] = m.release_branch(component)
+            self.pr['title'] = f'chore({component}): release 0.7.0'
+            with self.subTest(component=component):
+                self.assertTrue(m.trusted_release_pr(self.pr, component, '0.7.0'))
+                self.assertFalse(m.trusted_release_pr(self.pr, component, '0.7.1'))
+                self.assertFalse(m.trusted_merged_release_pr(self.pr, component, '0.7.0'))
+                other = 'player' if component == 'kite' else 'kite'
+                self.assertFalse(m.trusted_release_pr(self.pr, other, '0.7.0'))
+                self.pr['title'] = 'chore(main): release ' + ('player ' if component == 'player' else '') + '0.7.0'
+                self.assertFalse(m.trusted_release_pr(self.pr, component))
+                self.assertFalse(m.trusted_merged_release_pr(self.pr, component))
+
+    def test_historical_titles_only_authorize_merged_release_reads(self):
+        original = copy.deepcopy(self.pr)
+        for component in m.COMPONENTS:
+            self.pr.clear(); self.pr.update(copy.deepcopy(original))
+            self.pr['head']['ref'] = m.release_branch(component)
+            self.pr['title'] = 'chore(main): release ' + ('player ' if component == 'player' else '') + '0.7.0'
+            with self.subTest(component=component):
+                self.assertFalse(m.trusted_release_pr(self.pr, component))
+                m.require_release_pr(self.commit, component, '0.7.0')
+                with self.assertRaises(ValueError): m.require_release_pr(self.commit, component, '0.7.1')
+                other = 'player' if component == 'kite' else 'kite'
+                with self.assertRaises(ValueError): m.require_release_pr(self.commit, other, '0.7.0')
+            historical = copy.deepcopy(self.pr)
+            for field, value in [('state', 'open'), ('merged_at', None), ('merge_commit_sha', 'c' * 40),
+                                 ('user', {'login': 'human', 'type': 'Bot'}),
+                                 ('head', {'ref': m.release_branch(other), 'repo': {'full_name': m.REPO}}),
+                                 ('base', {'ref': 'main', 'repo': {'full_name': 'evil/kite'}})]:
+                self.pr.clear(); self.pr.update(copy.deepcopy(historical)); self.pr[field] = value
+                with self.subTest(component=component, field=field), self.assertRaises(ValueError):
+                    m.require_release_pr(self.commit, component, '0.7.0')
 
     def test_forged_release_identity(self):
         original = copy.deepcopy(self.pr)
@@ -63,7 +99,7 @@ class Authorization(unittest.TestCase):
         for section in ('head', 'base'):
             self.pr.clear(); self.pr.update(copy.deepcopy(original)); self.pr[section]['repo']['full_name'] = 'evil/kite'
             with self.subTest(section=section), self.assertRaises(ValueError): m.require_release_pr(self.commit, 'kite', '0.7.0')
-        for field, value in [('title', 'chore(main): release player 0.7.0'), ('title', 'chore(main): release 0.7.0\n'), ('merged_at', None), ('merge_commit_sha', 'c' * 40)]:
+        for field, value in [('title', 'chore(player): release 0.7.0'), ('title', 'chore(kite): release 0.7.0\n'), ('title', 'chore(kite): release 0.7.1'), ('merged_at', None), ('merge_commit_sha', 'c' * 40)]:
             self.pr.clear(); self.pr.update(copy.deepcopy(original)); self.pr[field] = value
             with self.subTest(field=field, value=value), self.assertRaises(ValueError): m.require_release_pr(self.commit, 'kite', '0.7.0')
 

@@ -5,6 +5,8 @@ set -euo pipefail
 GH=${GH:-gh}
 : "${GH_REPO:?需要 GH_REPO}"
 : "${PR_NUMBER:?需要 PR_NUMBER}"
+: "${PR_BASE_SHA:?需要 CI plan 的 PR_BASE_SHA}"
+: "${PR_HEAD_SHA:?需要 CI plan 的 PR_HEAD_SHA}"
 [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || { echo 'PR_NUMBER 必须是数字' >&2; exit 1; }
 pattern='^(feat|fix|perf|refactor|docs|style|test|chore|build|ci|revert|hotfix)(\([^()]+\))?(!)?: [^[:space:]].*'
 
@@ -32,6 +34,8 @@ sys.exit(0 if os.environ["GH_REPO"] == common.REPO and any(common.trusted_releas
   fi
   echo 'release PR 应由维护者使用 Squash 合并;普通业务 PR 保留三种合并选项'
 fi
+
+python3 "$(dirname "$0")/pr-version-state.py" "$PR_BASE_SHA" "$PR_HEAD_SHA" <<<"$pr"
 
 commits=$("$GH" api --paginate "repos/$GH_REPO/pulls/$PR_NUMBER/commits?per_page=100" | jq -s 'add')
 expected=$(jq -r '.commits' <<<"$pr")

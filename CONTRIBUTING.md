@@ -38,6 +38,7 @@ make docker-check                          # Linux make check + player 源码与
 - **本地自检**:`make check`(gofmt + go mod tidy + ShellCheck/脚本回归 + vet + test + lint + proto-lint)。部署事务和安装器回归需要 Linux,macOS 会明确打印 skip;`make docker-check` 会在 Linux 执行它们。`make vuln`、`make proto-breaking`、`make verify-gen` 依赖网络或 git 基线,按需单独跑。
 - **先计划,再执行**:`scripts/ci-plan.py` 是任务注册表和选取规则的唯一来源。PR 按完整 base…head 差异选择检查,保留重命名前后的影响;main push 执行全部确定性检查。公开播放器协议变更同时覆盖 Go 和 player,可执行示例变更覆盖相应消费者,控制面变更和未知路径保守扩大检查。
 - **门禁只有一个**:`CI OK`。门禁重算计划并验证 SHA、run/attempt 和事件上下文,同时核对实际 workflow jobs 与 `needs`。只有计划明确授权的不适用任务可以跳过;失败、取消、缺失任务、必需任务跳过或未注册 job 都不能变绿。PR 标题编辑也不能绕过源码检查。
+- **版本状态随 PR 校验**:`PR Metadata` 以 CI plan 的 base/head SHA 计算真实三方合并结果,所有 PR 都不能回退或删除现有产品版本。release PR 必须仅提升本产品版本,与标题一致,另一产品保持 main 的值;普通 PR 和可信 release-PR dispatch 共用此检查。旧分支未修改的版本以合并结果为准,不把旧 head 快照误判为回退。解决 manifest 冲突时保留 main 中另一产品的版本,不要整段覆盖成旧分支内容。
 - **工具版本的唯一来源**:Go 以 `go.mod` 为准;Node / golangci-lint / buf / govulncheck / cargo-audit / GoReleaser / Cosign / PyYAML 以 `Makefile` 顶部为准,Rust 以 `interop/rust/rust-toolchain.toml` 为准。第三方 Actions 固定完整 commit SHA,镜像 base 固定 digest;不要在 workflow 重复维护工具版本。
 - **漏洞门禁**:依赖或安全控制面变化时扫描对应模块,`scheduled.yml` 每日扫描根 Go 模块、`interop/go`、player 的完整 npm 依赖树及 Rust。已知修复版本必须失败,不能因为它高于当前工具链就当成「尚未发布」;无修复版本保留 advisory 并更新 issue。安装、执行和解析故障显式失败,某个扫描器失败不阻断其它已选扫描。
 - **执行隔离与排队**:PR 只使用托管 runner;Go 测试覆盖 Linux / macOS,另做 Windows vet。PR 的旧 CI 可以取消;main 按 SHA 保留发布证据。发版、BSR、部署各自使用 [`queue: max`](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency),不替换队列内等待项;GitHub 上限为 100 个 pending,满队列后的新运行会取消。
@@ -52,7 +53,7 @@ make docker-check                          # Linux make check + player 源码与
 
 Go 产品(CLI + server)仍共用版本;player 是独立发布单元。版本和 CHANGELOG 由 release-please 从各自路径的 Conventional Commits 生成,**不再手改 player 版本号来发版**。根 CHANGELOG 只记 Go 产品,player 的记录位于包内;既有混合历史不改写。tag 分别为 `vX.Y.Z` 和 `player-vX.Y.Z`,GoReleaser 显式选择 Go current / previous tag,不会把 player tag 当作 Go 版本。
 
-纯 Go 变更不会触发 player 发版,纯 player 变更不会触发 Go 发版;共享协议变更可以产生两张 release PR,分别批准。普通业务 PR 合并只更新候选版本,不是发布批准。
+纯 Go 变更不会触发 player 发版,纯 player 变更不会触发 Go 发版;共享协议变更可以产生两张 release PR,分别批准。新标题分别为 `chore(kite): release X.Y.Z` 和 `chore(player): release X.Y.Z`,明确产品而非统一写 `main`。普通业务 PR 合并只更新候选版本,不是发布批准;已合并的历史标题仍可用于原发布验真,不回写历史记录。
 
 ```mermaid
 flowchart TD
@@ -186,7 +187,7 @@ flowchart TD
 
 - **手动合并**,不启用 auto-merge。审批是协作约定,不是强制要求作者无法给自己完成的审批数量。
 - **业务 PR 自选 Merge / Squash / Rebase**:需要保留原子提交时选 Merge 或 Rebase;Squash 只在 main 留一个汇总提交。PR 标题和所有非 merge 原子提交都必须符合上面的 Conventional Commits,确保任意合并方式都能正确推导版本。
-- **release PR 使用 Squash**:这是版本 / changelog 的发布批准记录,不是业务提交归档。普通 PR 合 main 只累计待发布变化;合并 `chore(main): release ...` PR 才启动正式发版与自动部署,不混淆这两类合并。
+- **release PR 使用 Squash**:这是版本 / changelog 的发布批准记录,不是业务提交归档。普通 PR 合 main 只累计待发布变化;合并 `chore(kite): release ...` 或 `chore(player): release ...` 才启动对应产品的正式发布,只有 kite 正式版继续 BSR 与 server 部署。
 - **分支清理按需执行**:合并后确认无未交付修改再删除;Squash / Rebase 后不要仅凭 `git branch --merged` 判断是否已合入。仓库治理脚本不擅自改变自动删分支偏好。
 
 ## 报告安全问题

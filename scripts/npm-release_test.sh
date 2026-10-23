@@ -50,7 +50,7 @@ class NpmRelease(unittest.TestCase):
         self.release = {'id': 1, 'tag_name': 'player-v0.2.0', 'draft': True, 'prerelease': False}
         self.commit = {'sha': SHA, 'parents': [{'sha': 'b' * 40}]}
         self.shadowed_tag = False
-        self.pr = {'merged_at': 'now', 'merge_commit_sha': SHA,
+        self.pr = {'state': 'closed', 'merged_at': 'now', 'merge_commit_sha': SHA,
                    'user': {'login': 'github-actions[bot]', 'type': 'Bot'},
                    'base': {'ref': 'main', 'repo': {'full_name': m.common.REPO}},
                    'head': {'ref': 'release-please--branches--main--components--player', 'repo': {'full_name': m.common.REPO}},

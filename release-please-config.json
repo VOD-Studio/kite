@@ -26,12 +26,14 @@
     ".": {
       "release-type": "go",
       "component": "kite",
+      "pull-request-title-pattern": "chore(kite): release ${version}",
       "include-component-in-tag": false,
       "exclude-paths": ["packages/kite-player"]
     },
     "packages/kite-player": {
       "release-type": "node",
       "component": "player",
+      "pull-request-title-pattern": "chore(player): release ${version}",
       "include-component-in-tag": true,
       "tag-separator": "-"
     }

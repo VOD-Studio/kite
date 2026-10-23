@@ -275,11 +275,15 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Validate title, release identity and atomic commits
+        with:
+          fetch-depth: 0
+      - name: Validate title, release identity, merged versions and atomic commits
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ needs.plan.outputs.pr_number }}
+          PR_BASE_SHA: ${{ fromJSON(needs.plan.outputs.plan).context.baseSha }}
+          PR_HEAD_SHA: ${{ fromJSON(needs.plan.outputs.plan).context.headSha }}
         run: scripts/pr-commits.sh
 
   ci-ok:

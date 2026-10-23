@@ -29,8 +29,10 @@ def route():
     if not isinstance(prs, list) or len(prs) >= 100:
         raise ValueError("source PR query is invalid or exceeds the routing bound")
     branches = {common.release_branch(component) for component in common.COMPONENTS}
+    title_prefixes = tuple(f"chore({component}): release " for component in common.COMPONENTS)
+    title_prefixes += ("chore(main): release ",)
     candidates = [pr for pr in prs if pr.get("head", {}).get("ref") in branches
-                  or pr.get("title", "").startswith("chore(main): release ")]
+                  or pr.get("title", "").startswith(title_prefixes)]
     outputs = {"go_tag": "", "player_tag": ""}
     if not candidates:
         return outputs
@@ -38,7 +40,7 @@ def route():
         raise ValueError("source must identify exactly one component release PR")
     pr = candidates[0]
     components = [component for component in common.COMPONENTS
-                  if common.trusted_release_pr(pr, component)]
+                  if common.trusted_merged_release_pr(pr, component)]
     if (len(components) != 1 or pr.get("state") != "closed"
             or not pr.get("merged_at") or pr.get("merge_commit_sha") != sha):
         raise ValueError("source is not the merged commit of one trusted component release PR")

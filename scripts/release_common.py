@@ -42,9 +42,22 @@ def release_branch(component):
 
 
 def trusted_release_pr(pr, component, version=None):
-    """Check both open and merged PR identity; callers enforce state and exact SHA."""
+    """Check current release PR identity; callers enforce state and exact SHA."""
+    return _trusted_release_pr(pr, component, version, f"chore({component}): release ")
+
+
+def trusted_merged_release_pr(pr, component, version=None):
+    """Read historical titles only for merged PRs, never for open authorization."""
+    if (pr.get("state") != "closed" or not pr.get("merged_at")
+            or not SHA.fullmatch(pr.get("merge_commit_sha", ""))):
+        return False
+    legacy = "chore(main): release " + ("player " if component == "player" else "")
+    return (trusted_release_pr(pr, component, version)
+            or _trusted_release_pr(pr, component, version, legacy))
+
+
+def _trusted_release_pr(pr, component, version, prefix):
     branch = release_branch(component)
-    prefix = "chore(main): release " + ("player " if component == "player" else "")
     title = pr.get("title", "")
     if not title.startswith(prefix):
         return False
@@ -101,8 +114,8 @@ def require_release_pr(commit, component, version):
     if not SHA.fullmatch(commit.get("sha", "")) or len(commit.get("parents", [])) != 1:
         raise ValueError("release PR must produce one squash commit with exactly one parent")
     prs = [pr for page in pages(f"commits/{commit['sha']}/pulls?per_page=100") for pr in page]
-    trusted = [pr for pr in prs if pr.get("merged_at") and pr.get("merge_commit_sha") == commit["sha"]
-               and trusted_release_pr(pr, component, version)]
+    trusted = [pr for pr in prs if pr.get("merge_commit_sha") == commit["sha"]
+               and trusted_merged_release_pr(pr, component, version)]
     if len(trusted) != 1:
         raise ValueError("tag is not the squash commit of one trusted component release PR")
 

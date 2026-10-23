@@ -41,7 +41,7 @@ class Dispatch(unittest.TestCase):
                         GITHUB_REPOSITORY=REPO, GITHUB_REF='refs/heads/main',
                         GITHUB_WORKFLOW_REF=REPO + '/.github/workflows/release-please.yml@refs/heads/main',
                         POLL_TRIES='1', POLL_SLEEP='0', STATE=str(self.root / 'state'), CALLS=str(self.root / 'calls'))
-        self.pr = {'number': 7, 'state': 'open', 'title': 'chore(main): release 0.7.0',
+        self.pr = {'number': 7, 'state': 'open', 'title': 'chore(kite): release 0.7.0',
                    'user': {'login': 'github-actions[bot]', 'type': 'Bot'},
                    'base': {'ref': 'main', 'repo': {'full_name': REPO}},
                    'head': {'sha': SHA, 'ref': 'release-please--branches--main--components--kite', 'repo': {'full_name': REPO}}}
@@ -61,7 +61,7 @@ class Dispatch(unittest.TestCase):
     def test_each_component_approves_and_dispatches(self):
         for component in ('kite', 'player'):
             self.pr['head']['ref'] = 'release-please--branches--main--components--' + component
-            self.pr['title'] = 'chore(main): release ' + ('player ' if component == 'player' else '') + '0.7.0'
+            self.pr['title'] = f'chore({component}): release 0.7.0'
             self.run['head_branch'] = self.pr['head']['ref']
             self.state['runs'] = [self.run]
             calls = self.invoke(); self.assertEqual(len(calls), 1); self.assertIn('/approve', ' '.join(calls[0]))
@@ -70,7 +70,7 @@ class Dispatch(unittest.TestCase):
 
     def test_both_releases_dispatched_independently(self):
         player = copy.deepcopy(self.pr)
-        player.update(number=8, title='chore(main): release player 0.2.0')
+        player.update(number=8, title='chore(player): release 0.2.0')
         player['head']['ref'] = 'release-please--branches--main--components--player'
         self.state['prs'].append(player); self.state['runs'] = []
         self.assertEqual([call[-1] for call in self.invoke()], [self.pr['head']['ref'], player['head']['ref']])
@@ -90,17 +90,29 @@ class Dispatch(unittest.TestCase):
 
     def test_forged_identity_does_not_dispatch(self):
         original = copy.deepcopy(self.pr)
-        for field, value in [('title', 'chore(main): release player 0.7.0'), ('user', {'login': 'github-actions[bot]', 'type': 'User'}), ('state', 'closed')]:
+        for field, value in [('title', 'chore(player): release 0.7.0'), ('user', {'login': 'github-actions[bot]', 'type': 'User'}), ('state', 'closed')]:
             self.pr.clear(); self.pr.update(copy.deepcopy(original)); self.pr[field] = value
             self.assertEqual(self.invoke(), [])
         self.pr.clear(); self.pr.update(copy.deepcopy(original)); self.pr['head']['repo']['full_name'] = 'evil/kite'
         self.assertEqual(self.invoke(), [])
 
+    def test_legacy_open_titles_never_approve_or_dispatch(self):
+        for component, title in [('kite', 'chore(main): release 0.7.0'),
+                                  ('player', 'chore(main): release player 0.7.0')]:
+            self.pr['head']['ref'] = 'release-please--branches--main--components--' + component
+            self.pr['title'] = title
+            self.run['head_branch'] = self.pr['head']['ref']
+            with self.subTest(component=component):
+                self.state['runs'] = [self.run]
+                self.assertEqual(self.invoke(), [])
+                self.state['runs'] = []
+                self.assertEqual(self.invoke(), [])
+
     def test_identity_races_refuse_all_writes(self):
         for field in ('sha', 'title', 'repo'):
             current = copy.deepcopy(self.pr)
             if field == 'sha': current['head']['sha'] = 'b' * 40
-            elif field == 'title': current['title'] = 'chore(main): release 9.9.9'
+            elif field == 'title': current['title'] = 'chore(kite): release 9.9.9'
             else: current['head']['repo']['full_name'] = 'evil/kite'
             self.state['current'] = current
             self.state['runs'] = [self.run]
