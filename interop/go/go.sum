@@ -1,5 +1,5 @@
-buf.build/gen/go/vod-studio/kite/grpc/go v1.6.2-20261017213358-4ec261178254.1 h1:dG9L+WPUxnsLynDqIten3Bk5JOZPe9La90ZmvqObIvU=
-buf.build/gen/go/vod-studio/kite/grpc/go v1.6.2-20261017213358-4ec261178254.1/go.mod h1:eoK2CzQnVZK4LkeD07PO6/g+OU71eXfuIqcrkAZ3fKQ=
+buf.build/gen/go/vod-studio/kite/grpc/go v1.6.2-20261019234934-3d14b768bf0c.1 h1:EAcnJPV9ja6UbXVYkhESHs2P4iIP0To4iC+bkIDJNMc=
+buf.build/gen/go/vod-studio/kite/grpc/go v1.6.2-20261019234934-3d14b768bf0c.1/go.mod h1:7GtN/sr4jC0ZMehcDErOEh3dmtCdmK57rypUSTEMLfs=
 buf.build/gen/go/vod-studio/kite/protocolbuffers/go v1.36.12-20261019234934-3d14b768bf0c.2 h1:0YhbF0xhcnn6sDj2WkfPr+LeMwavqdi/tqeE58oQe/8=
 buf.build/gen/go/vod-studio/kite/protocolbuffers/go v1.36.12-20261019234934-3d14b768bf0c.2/go.mod h1:ByFd8H0NAlgmeqYA2MzMhC0cY6DaSrd0dhaRWZ+piBA=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
