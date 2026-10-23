@@ -36,7 +36,7 @@ export function createKiteSource(api: string, options: KiteSourceOptions = {}): 
     const body: unknown = await res.json().catch(() => null);
     if (!res.ok) {
       const err = (body as { error?: { reason?: string; message?: string } } | null)?.error;
-      throw new KiteError(err?.reason ?? "HTTP_" + res.status, err?.message ?? "音乐服务返回了错误", res.status);
+      throw new KiteError(err?.reason ?? `HTTP_${res.status}`, err?.message ?? "音乐服务返回了错误", res.status);
     }
     return body as T;
   }

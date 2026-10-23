@@ -54,6 +54,10 @@ jobs:
           path: source
           fetch-depth: 0
           persist-credentials: false
+      - name: Select exact Go-only current and previous tags
+        if: steps.gate.outputs.build == 'true'
+        working-directory: source
+        run: python3 ../tooling/scripts/go-release-tags.py "$TAG" >> "$GITHUB_ENV"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         if: steps.gate.outputs.build == 'true'
         with:

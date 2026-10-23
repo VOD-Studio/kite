@@ -1,12 +1,14 @@
-import { createKiteSource } from "../core/source";
 import { getPlayer, type Player } from "../core/player";
+import { createKiteSource } from "../core/source";
+
 export { canPlay, unplayableMessage } from "../core/player";
+
 import type { Track } from "../core/types";
 
 /** $ 取 root 下必定存在的元素,找不到时抛错(说明模板与代码不一致)。 */
 export function $<T extends Element = HTMLElement>(root: ParentNode, sel: string): T {
   const el = root.querySelector<T>(sel);
-  if (!el) throw new Error("kite-player: 缺少元素 " + sel);
+  if (!el) throw new Error(`kite-player: 缺少元素 ${sel}`);
   return el;
 }
 

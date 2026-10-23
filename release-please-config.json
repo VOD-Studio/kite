@@ -1,15 +1,39 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "bootstrap-sha": "c86238013c6e384f76cace96cb30dafa0fa9e5c9",
-  "release-type": "go",
-  "include-component-in-tag": false,
+  "separate-pull-requests": true,
   "include-v-in-tag": true,
   "bump-minor-pre-major": true,
-  "changelog-type": "github",
+  "changelog-type": "default",
+  "changelog-sections": [
+    {"type": "feat", "section": "新功能"},
+    {"type": "fix", "section": "问题修复"},
+    {"type": "hotfix", "section": "紧急修复"},
+    {"type": "perf", "section": "性能优化"},
+    {"type": "refactor", "section": "代码重构"},
+    {"type": "docs", "section": "文档", "hidden": true},
+    {"type": "build", "section": "构建与依赖"},
+    {"type": "ci", "section": "持续集成", "hidden": true},
+    {"type": "test", "section": "测试", "hidden": true},
+    {"type": "chore", "section": "维护", "hidden": true},
+    {"type": "style", "section": "代码风格", "hidden": true},
+    {"type": "revert", "section": "回退"}
+  ],
   "draft": true,
   "force-tag-creation": true,
   "prerelease": false,
   "packages": {
-    ".": {}
+    ".": {
+      "release-type": "go",
+      "component": "kite",
+      "include-component-in-tag": false,
+      "exclude-paths": ["packages/kite-player"]
+    },
+    "packages/kite-player": {
+      "release-type": "node",
+      "component": "player",
+      "include-component-in-tag": true,
+      "tag-separator": "-"
+    }
   }
 }

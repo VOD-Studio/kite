@@ -36,23 +36,31 @@ elif path in ('/actions/permissions', '/actions/permissions/workflow'):
     key = 'policy' if path.endswith('/permissions') else 'workflow'
     if body is not None: state[key].update(body)
     result = state[key]
-elif path == '/environments/production':
-    if body is not None:
-        if state['env'] is None: state['env'] = {'protection_rules': []}
-        state['env'].update(body)
-    if state['env'] is None:
-        print('Not Found (HTTP 404)', file=sys.stderr)
-        sys.exit(1)
-    result = state['env']
-elif path == '/environments/production/deployment-branch-policies':
-    if method == 'POST':
-        state['branches'].append(dict(body, id=99))
-    result = {'branch_policies': state['branches']}
-elif path.startswith('/environments/production/deployment-branch-policies/'):
-    key = int(path.rsplit('/', 1)[1])
-    state['branches'] = [item for item in state['branches'] if item['id'] != key]
+elif path.startswith('/environments/') and not path.endswith('/secrets'):
+    parts = path.split('/')
+    name = parts[2]
+    env_key = 'env' if name == 'production' else 'npm_env'
+    branch_key = 'branches' if name == 'production' else 'npm_branches'
+    if len(parts) == 3:
+        if body is not None:
+            if state.get(env_key) is None: state[env_key] = {'protection_rules': []}
+            state[env_key].update(body)
+        if state.get(env_key) is None:
+            print('Not Found (HTTP 404)', file=sys.stderr)
+            sys.exit(1)
+        result = state[env_key]
+    elif len(parts) == 4 and parts[3] == 'deployment-branch-policies':
+        state.setdefault(branch_key, [])
+        if method == 'POST': state[branch_key].append(dict(body, id=99))
+        result = {'branch_policies': state[branch_key]}
+    elif len(parts) == 5 and parts[3] == 'deployment-branch-policies':
+        key = int(parts[4])
+        state[branch_key] = [item for item in state[branch_key] if item['id'] != key]
+    else: sys.exit('unexpected environment endpoint: ' + path)
 elif path == '/environments/production/secrets':
     result = {'secrets': [{'name': name} for name in state['env_secrets']]}
+elif path == '/environments/npm/secrets':
+    result = {'secrets': [{'name': name} for name in state.get('npm_env_secrets', [])]}
 elif path == '/actions/secrets':
     result = {'secrets': [{'name': name} for name in state['repo_secrets']]}
 elif path == '/actions/organization-secrets':
@@ -70,6 +78,16 @@ JSON
 if python3 "$here/github-settings.py" >"$tmp/log" 2>&1; then echo 'FAIL 不安全配置不能被报告为就绪'; exit 1; fi
 [ ! -e "$SETTINGS_WRITES" ] || { echo 'FAIL 默认检查不应修改 GitHub'; exit 1; }
 echo 'ok   默认只读并识别不完整保护'
+if python3 "$here/github-settings.py" --apply >"$tmp/log" 2>&1; then echo 'FAIL 人工线性历史冲突不能被静默删除'; exit 1; fi
+[ ! -e "$SETTINGS_WRITES" ] || { echo 'FAIL 冲突必须在任何远端配置修改之前拒绝'; exit 1; }
+python3 - <<'PY'
+import json, os
+with open(os.environ['SETTINGS_STATE']) as f: s = json.load(f)
+assert any(r['type'] == 'required_linear_history' for r in s['rulesets']['1']['rules'])
+# 管理员确认后自行移除冲突,不是配置脚本代替管理员删除保护。
+s['rulesets']['1']['rules'] = [r for r in s['rulesets']['1']['rules'] if r['type'] != 'required_linear_history']
+with open(os.environ['SETTINGS_STATE'], 'w') as f: json.dump(s, f)
+PY
 if python3 "$here/github-settings.py" --apply >"$tmp/log" 2>&1; then echo 'FAIL 缺生产环境凭据不能假成功'; exit 1; fi
 python3 - <<'PY'
 import json, os
@@ -85,9 +103,18 @@ assert s['policy']['sha_pinning_required']
 assert s['workflow']['can_approve_pull_request_reviews'], '不得意外禁用 release bot 创建 PR'
 assert s['repo_secrets'] == ['KITE_DEPLOY_SSH_KEY'], '不得提前删除仍被生产使用的密钥'
 assert [(p['name'],p['type']) for p in s['branches']] == [('main','branch')]
+assert [(p['name'],p['type']) for p in s['npm_branches']] == [('main','branch')]
+tag_rules = next(r for r in s['rulesets'].values() if r['name'] == 'Protect release tags')
+assert set(tag_rules['conditions']['ref_name']['include']) == {'refs/tags/v*', 'refs/tags/player-v*'}
+assert {'deletion', 'update'} <= {r['type'] for r in tag_rules['rules']}
 # 模拟管理员完成独立凭据迁移,不是脚本读取/复制 secret 值。
 s['env_secrets'] = ['KITE_PRODUCTION_SSH_KEY','KITE_PRODUCTION_KNOWN_HOSTS','KITE_PRODUCTION_HOST']
+s['npm_env_secrets'] = ['NPM_TOKEN']
 s['repo_secrets'] = []
+# 人工加强PR审查与严格检查不应被显式apply降级。
+rules['pull_request']['parameters']['required_approving_review_count'] = 2
+rules['pull_request']['parameters']['require_code_owner_review'] = True
+rules['required_status_checks']['parameters']['strict_required_status_checks_policy'] = True
 with open(os.environ['SETTINGS_STATE'], 'w') as f: json.dump(s,f)
 PY
 python3 "$here/github-settings.py" >"$tmp/log" 2>&1 || { cat "$tmp/log"; exit 1; }
@@ -100,24 +127,41 @@ with open(os.environ['SETTINGS_STATE']) as f: after = json.load(f)
 assert before == after, '重复应用应保持相同配置,不能重复增加规则或分支'
 PY
 echo 'ok   显式配置保留人工规则/合并选择,凭据独立迁移后幂等通过'
+python3 - <<'PY'
+import json, os
+with open(os.environ['SETTINGS_STATE']) as f: s = json.load(f)
+s['npm_env_secrets'] = []
+with open(os.environ['SETTINGS_STATE'], 'w') as f: json.dump(s, f)
+PY
+if python3 "$here/github-settings.py" >"$tmp/log" 2>&1; then echo 'FAIL npm 缺发布凭据不能被报告为就绪'; exit 1; fi
+python3 - <<'PY'
+import json, os
+with open(os.environ['SETTINGS_STATE']) as f: s = json.load(f)
+s['npm_env_secrets'] = ['NPM_TOKEN']
+with open(os.environ['SETTINGS_STATE'], 'w') as f: json.dump(s, f)
+PY
+echo 'ok   npm 必须具备独立环境凭据'
 for scope in repo_secrets org_secrets; do
-  python3 - "$scope" <<'PY'
+  for secret in KITE_PRODUCTION_SSH_KEY NPM_TOKEN; do
+  python3 - "$scope" "$secret" <<'PY'
 import json, os, sys
 with open(os.environ['SETTINGS_STATE']) as f: s = json.load(f)
 s['repo_secrets'] = []
 s['org_secrets'] = []
-s[sys.argv[1]] = ['KITE_PRODUCTION_SSH_KEY']
+s[sys.argv[1]] = [sys.argv[2]]
 with open(os.environ['SETTINGS_STATE'], 'w') as f: json.dump(s,f)
 PY
   if python3 "$here/github-settings.py" >"$tmp/log" 2>&1; then
-    echo "FAIL ${scope} 的同名部署凭据不能被环境配置掩盖"; exit 1
+    echo "FAIL ${scope} 的同名 ${secret} 凭据不能被环境配置掩盖"; exit 1
   fi
+  done
 done
-echo 'ok   仓库/组织的同名 production 密钥会被拒绝'
+echo 'ok   仓库/组织的同名 production/npm 密钥会被拒绝'
 python3 - <<'PY'
 import json, os
 with open(os.environ['SETTINGS_STATE']) as f: s = json.load(f)
 s['org_secrets'] = []
+s['repo_secrets'] = []
 s['env']['protection_rules'] = [{'type': 'wait_timer', 'wait_timer': 12}]
 with open(os.environ['SETTINGS_STATE'], 'w') as f: json.dump(s,f)
 PY
@@ -129,3 +173,24 @@ cmp -s "$SETTINGS_WRITES" "$tmp/before-protected-apply" || {
   echo 'FAIL 人工门禁冲突时不得先修改其它设置或重写环境'; exit 1
 }
 echo 'ok   现有人工部署门禁在任何配置修改之前阻止 apply'
+python3 - <<'PY'
+import json, os
+with open(os.environ['SETTINGS_STATE']) as f: s = json.load(f)
+s['env']['protection_rules'] = []
+s['npm_env']['protection_rules'] = [{'type': 'required_reviewers', 'reviewers': [{'type': 'User', 'id': 123}]}]
+with open(os.environ['SETTINGS_STATE'], 'w') as f: json.dump(s,f)
+PY
+if python3 "$here/github-settings.py" --apply >"$tmp/log" 2>&1; then echo 'FAIL npm人工审批不得静默覆盖'; exit 1; fi
+cmp -s "$SETTINGS_WRITES" "$tmp/before-protected-apply" || { echo 'FAIL npm冲突时不能写配置'; exit 1; }
+python3 - <<'PY'
+import json, os
+with open(os.environ['SETTINGS_STATE']) as f: s = json.load(f)
+s['npm_env']['protection_rules'] = []
+for rule in s['rulesets']['1']['rules']:
+    if rule['type'] == 'required_status_checks':
+        rule['parameters']['required_status_checks'].append({'context': 'Manual security', 'integration_id': 123})
+with open(os.environ['SETTINGS_STATE'], 'w') as f: json.dump(s,f)
+PY
+if python3 "$here/github-settings.py" --apply >"$tmp/log" 2>&1; then echo 'FAIL 额外人工必需检查应如实报冲突'; exit 1; fi
+cmp -s "$SETTINGS_WRITES" "$tmp/before-protected-apply" || { echo 'FAIL 人工必需检查冲突时不能写配置'; exit 1; }
+echo 'ok   npm人工审批及额外required checks保留并在写入前报告冲突'

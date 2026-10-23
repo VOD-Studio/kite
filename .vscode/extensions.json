@@ -1,0 +1,4 @@
+{
+  // 导入排序与格式化统一由 Biome 负责(配置见 packages/kite-player/biome.json)。
+  "recommendations": ["biomejs.biome"]
+}

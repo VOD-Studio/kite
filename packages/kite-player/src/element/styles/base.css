@@ -19,6 +19,9 @@
   --kite-tag-paid-line: rgba(68,101,158,.38);
   font-family: var(--kite-font);
   -webkit-font-smoothing: antialiased;
+  /* 组件是 UI 控件:文字不参与划选。 */
+  user-select: none;
+  -webkit-user-select: none;
 }
 * {
   box-sizing: border-box;
@@ -42,6 +45,9 @@ img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* 组件是 UI 控件:图片不允许被拖出页面(CSS 覆盖 Chromium/Safari,Firefox 用模板的 draggable 属性)。 */
+  -webkit-user-drag: none;
+  user-select: none;
 }
 [hidden] {
   display: none !important;

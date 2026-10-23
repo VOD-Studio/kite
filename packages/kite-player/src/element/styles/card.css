@@ -44,7 +44,7 @@
   flex: none;
   overflow: hidden;
   border-radius: 14px;
-  background: #D9DCE2;
+  background: linear-gradient(145deg, #E8EAF0, #D6DAE3);
 }
 /* 没有封面、加载失败时图片隐藏,露出下面的占位(中性渐变 + 音符)。 */
 .ph {

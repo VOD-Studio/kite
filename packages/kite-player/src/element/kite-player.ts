@@ -9,14 +9,25 @@ import { firstSungIndex, formatTime, lineUnits, wordProgress } from "../core/lyr
 import { modeLabels, type Player } from "../core/player";
 import type { Lyrics, PlayerState, Playlist, Quality, Track } from "../core/types";
 import { blob, coverPh, eq, icons } from "./icons";
-import { apply as applyMorph, clear as clearMorph, cubicBezier, frame as morphFrame, measure, play as playMorph, type MorphGeo, type MorphParts } from "./morph";
+import {
+  apply as applyMorph,
+  clear as clearMorph,
+  cubicBezier,
+  type MorphGeo,
+  type MorphParts,
+  measure,
+  frame as morphFrame,
+  play as playMorph,
+} from "./morph";
 import { playerSheet } from "./styles";
 import {
   $,
   artists,
-  canPlay,
   canAnimate,
+  canPlay,
+  type FlyDetail,
   flyEvent,
+  type OpenDetail,
   onCoverError,
   onCoverLoad,
   openEvent,
@@ -26,8 +37,6 @@ import {
   toastEvent,
   unplayableMessage,
   writeFlag,
-  type FlyDetail,
-  type OpenDetail,
 } from "./util";
 
 type Mode = "bar" | "orb" | "open";
@@ -195,7 +204,16 @@ export class KitePlayerElement extends LitElement {
    * 上拉展开 / 下拉收起的跟手状态(手机):卡片顶边跟着手指,p 是形变进度(0 播放条,1 全屏)。
    * geo 在面板显示出来之后才有,在那之前的移动只记下位置。
    */
-  private pull: { pointer: number; opening: boolean; startY: number; lastY: number; lastT: number; vy: number; p: number; geo: MorphGeo | null } | null = null;
+  private pull: {
+    pointer: number;
+    opening: boolean;
+    startY: number;
+    lastY: number;
+    lastT: number;
+    vy: number;
+    p: number;
+    geo: MorphGeo | null;
+  } | null = null;
   /** 正在播放的形变:用来在中途打断时算出当前进度,从那里接着走。 */
   private morphRun: { from: number; to: number; duration: number; ease: (t: number) => number } | null = null;
   private morphParts: MorphParts | null = null;
@@ -253,7 +271,8 @@ export class KitePlayerElement extends LitElement {
     const from = this.ui.stageShown ? this.currentP() : 0;
     await this.showStage();
     const geo = this.measureMorph();
-    if (geo && this.runMorph(geo, from, 1, morphOpen.duration * (1 - from), morphOpen.ease) && from === 0) this.holdFirstFrame();
+    if (geo && this.runMorph(geo, from, 1, morphOpen.duration * (1 - from), morphOpen.ease) && from === 0)
+      this.holdFirstFrame();
     this.resetIdle();
     this.q(".stage .close").focus({ preventScroll: true });
   }
@@ -320,10 +339,19 @@ export class KitePlayerElement extends LitElement {
       miniText: this.q<HTMLElement>(".mini .bar-text"),
       miniCtl: this.q<HTMLElement>(".mini .bar-ctl"),
       top: this.q(".top"),
-      below: lyricsView ? [] : [{ el: this.q(".meta"), fade: [0.55, 0.35] }, { el: this.q(".ctl"), fade: late }],
+      below: lyricsView
+        ? []
+        : [
+            { el: this.q(".meta"), fade: [0.55, 0.35] },
+            { el: this.q(".ctl"), fade: late },
+          ],
       beside: lyricsView ? { el: this.q(".head"), fade: [0.3, 0.4] } : null,
       rest: lyricsView
-        ? [{ el: this.q(".lyrics"), fade: [0.55, 0.35] }, { el: this.q(".lyr-trans"), fade: late }, { el: this.q(".ctl"), fade: late }]
+        ? [
+            { el: this.q(".lyrics"), fade: [0.55, 0.35] },
+            { el: this.q(".lyr-trans"), fade: late },
+            { el: this.q(".ctl"), fade: late },
+          ]
         : immersive
           ? [{ el: this.q(".lyrics"), fade: [0.55, 0.35] }]
           : [],
@@ -344,7 +372,13 @@ export class KitePlayerElement extends LitElement {
   }
 
   /** runMorph 从进度 from 动到 to。返回卡片的动画,不能做动画时返回 null。 */
-  private runMorph(geo: MorphGeo, from: number, to: number, duration: number, ease: (t: number) => number): Animation | null {
+  private runMorph(
+    geo: MorphGeo,
+    from: number,
+    to: number,
+    duration: number,
+    ease: (t: number) => number,
+  ): Animation | null {
     this.cancelMorph();
     clearMorph(geo.parts);
     if (!canAnimate(geo.parts.stage)) return null;
@@ -399,7 +433,14 @@ export class KitePlayerElement extends LitElement {
 
   /** 播放条上按下:记下位置;往上拉超过判定距离才开始跟手展开,横向或往下就不管。 */
   private onBarDown = (e: PointerEvent): void => {
-    if (e.pointerType === "mouse" || !this.ui.mobile || this.ui.mode === "open" || !this.player.state.current || this.pull) return;
+    if (
+      e.pointerType === "mouse" ||
+      !this.ui.mobile ||
+      this.ui.mode === "open" ||
+      !this.player.state.current ||
+      this.pull
+    )
+      return;
     this.barPress = { pointer: e.pointerId, x: e.clientX, y: e.clientY };
     const move = (ev: PointerEvent) => {
       if (ev.pointerId !== this.barPress.pointer) return;
@@ -433,7 +474,16 @@ export class KitePlayerElement extends LitElement {
 
   /** startPull 开始跟手:展开时先把面板放进页面(从播放条大小开始),收起时面板已经在。 */
   private async startPull(e: PointerEvent, opening: boolean): Promise<void> {
-    this.pull = { pointer: e.pointerId, opening, startY: e.clientY, lastY: e.clientY, lastT: e.timeStamp, vy: 0, p: opening ? 0 : 1, geo: null };
+    this.pull = {
+      pointer: e.pointerId,
+      opening,
+      startY: e.clientY,
+      lastY: e.clientY,
+      lastT: e.timeStamp,
+      vy: 0,
+      p: opening ? 0 : 1,
+      geo: null,
+    };
     if (opening) await this.showStage();
     if (!this.pull) return;
     this.pull.geo = this.measureMorph();
@@ -468,17 +518,24 @@ export class KitePlayerElement extends LitElement {
     if (!pl) return;
     this.q(".stage").classList.remove("morph");
     const fling = performance.now() - pl.lastT < 100 ? pl.vy : 0;
-    const toOpen = !cancelled && (pl.opening ? pl.p > 1 / 3 || fling < -pullSpeed : !(pl.p < 0.75 || fling > pullSpeed));
+    const toOpen =
+      !cancelled && (pl.opening ? pl.p > 1 / 3 || fling < -pullSpeed : !(pl.p < 0.75 || fling > pullSpeed));
     if (!pl.geo) {
       if (!toOpen) this.hideStage();
       return;
     }
     if (toOpen) {
       this.patch({ mode: "open" });
-      if (!this.runMorph(pl.geo, pl.p, 1, Math.max(160, (pl.opening ? 460 : 300) * (1 - pl.p)), morphOpen.ease)) clearMorph(pl.geo.parts);
+      if (!this.runMorph(pl.geo, pl.p, 1, Math.max(160, (pl.opening ? 460 : 300) * (1 - pl.p)), morphOpen.ease))
+        clearMorph(pl.geo.parts);
       this.resetIdle();
     } else {
-      this.collapseFrom(pl.geo, pl.p, Math.max(160, (pl.opening ? 300 : 380) * pl.p), pl.opening ? morphOpen.ease : morphClose.ease);
+      this.collapseFrom(
+        pl.geo,
+        pl.p,
+        Math.max(160, (pl.opening ? 300 : 380) * pl.p),
+        pl.opening ? morphOpen.ease : morphClose.ease,
+      );
     }
   }
 
@@ -518,7 +575,7 @@ export class KitePlayerElement extends LitElement {
     return html`<div class="bar" part="bar" @pointerdown=${this.onBarDown} @click=${{ handleEvent: (e: Event) => this.onStageClickCapture(e), capture: true }}>
       <button class="disc expand" aria-label="展开播放器" ?data-empty=${!cover} @click=${this.onExpand}>
         <span class="ring" style=${styleMap({ "--pct": String(pct) })}></span
-        ><span class="disc-img">${coverPh}<img alt="" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} /></span>
+        ><span class="disc-img">${coverPh}<img alt="" draggable="false" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} /></span>
       </button>
       <button class="bar-text expand" aria-label="展开播放器" @click=${this.onExpand}>
         <span class="bar-line"
@@ -539,14 +596,20 @@ export class KitePlayerElement extends LitElement {
     const ui = this.ui;
     const cover = t?.album.cover || undefined;
     const who = artists(t);
-    const tag = [t?.trial ? "仅试听" : "", t?.access === "vip" ? "VIP" : t?.access === "paid" ? "数字专辑" : ""].filter(Boolean).join(" · ");
+    const tag = [t?.trial ? "仅试听" : "", t?.access === "vip" ? "VIP" : t?.access === "paid" ? "数字专辑" : ""]
+      .filter(Boolean)
+      .join(" · ");
     const badge = qualityBadge(t);
     const lyr = s.lyrics;
     const empty = !lyr || lyr.instrumental || lyr.lines.length === 0;
     const chorus = lyr?.chorus[0];
-    const chorusStyle = chorus && s.duration > 0
-      ? { left: `${(chorus.start / 1000 / s.duration) * 100}%`, width: `${((chorus.end - chorus.start) / 1000 / s.duration) * 100}%` }
-      : null;
+    const chorusStyle =
+      chorus && s.duration > 0
+        ? {
+            left: `${(chorus.start / 1000 / s.duration) * 100}%`,
+            width: `${((chorus.end - chorus.start) / 1000 / s.duration) * 100}%`,
+          }
+        : null;
     return html`<div
       class="stage"
       part="panel"
@@ -583,7 +646,7 @@ export class KitePlayerElement extends LitElement {
           </section>
         </div>
         <button class="cover" aria-label=${ui.view === "cover" ? "查看歌词" : "返回封面"} ?data-badge=${!!badge} @click=${this.onCoverClick}>
-          ${coverPh}<img alt="" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} /><span class="cover-shade"></span><span class="cover-rim"></span>
+          ${coverPh}<img alt="" draggable="false" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} /><span class="cover-shade"></span><span class="cover-rim"></span>
         </button>
         ${this.renderBadge(s, badge)}
         <div class="mini" aria-hidden="true">
@@ -607,7 +670,7 @@ export class KitePlayerElement extends LitElement {
           </div>
           <div class="times"><span class="t-cur">${formatTime(ui.dragging ? ui.dragPct * s.duration : s.time)}</span><span class="t-dur">${formatTime(s.duration)}</span></div>
           <div class="buttons">
-            <button class="ib mode" aria-label=${"播放模式:" + modeLabels[s.mode]} @click=${this.onModeClick}>
+            <button class="ib mode" aria-label=${`播放模式:${modeLabels[s.mode]}`} @click=${this.onModeClick}>
               <span class="m m-sequence">${icons.sequence}</span><span class="m m-loop">${icons.loop}</span><span class="m m-one">${icons.one}</span><span class="m m-shuffle">${icons.shuffle}</span>
             </button>
             <button class="ib big prev" aria-label="上一首" @click=${this.prev}>${icons.prev}</button>
@@ -661,7 +724,11 @@ export class KitePlayerElement extends LitElement {
         const isCur = t.id === cur;
         const tag = [
           t.trial ? html`<span class="rtag trial">仅试听</span>` : nothing,
-          t.access === "vip" ? html`<span class="rtag vip">VIP</span>` : t.access === "paid" ? html`<span class="rtag paid">数字专辑</span>` : nothing,
+          t.access === "vip"
+            ? html`<span class="rtag vip">VIP</span>`
+            : t.access === "paid"
+              ? html`<span class="rtag paid">数字专辑</span>`
+              : nothing,
         ];
         const sub = [artists(t), t.album.name].filter(Boolean).join(" · ");
         return html`<button class=${classMap({ row: true, locked: !canPlay(t), cur: isCur })} role="listitem" data-i=${i} @click=${() => this.pickRow(i)}>
@@ -714,7 +781,10 @@ export class KitePlayerElement extends LitElement {
     const streak = this.renderRoot.querySelector<HTMLElement>(".bq-streak");
     const badge = this.renderRoot.querySelector<HTMLElement>(".badge");
     if (rim && canAnimate(rim)) {
-      rim.animate([{ opacity: 0 }, { opacity: 1, offset: 0.16 }, { opacity: 1, offset: 0.36 }, { opacity: 0 }], { duration: 680, easing: "ease-out" });
+      rim.animate([{ opacity: 0 }, { opacity: 1, offset: 0.16 }, { opacity: 1, offset: 0.36 }, { opacity: 0 }], {
+        duration: 680,
+        easing: "ease-out",
+      });
     }
     this.sheen();
     if (streak && badge && canAnimate(streak)) {
@@ -865,7 +935,13 @@ export class KitePlayerElement extends LitElement {
     this.swallowClick = false;
     const target = e.target as HTMLElement;
     if (e.pointerType === "mouse" || target.closest(".ctl")) this.resetIdle();
-    if (e.pointerType === "mouse" || this.gesture.pointer !== -1 || this.pull || target.closest(".ctl, .seek, .lyr-trans")) return;
+    if (
+      e.pointerType === "mouse" ||
+      this.gesture.pointer !== -1 ||
+      this.pull ||
+      target.closest(".ctl, .seek, .lyr-trans")
+    )
+      return;
     const onLyrics = !!target.closest(".lyrics") && (this.ui.view === "lyrics" || this.ui.immersive);
     // 正在惯性滑行的歌词被按住就停下。
     if (onLyrics) cancelAnimationFrame(this.momentum);
@@ -905,7 +981,14 @@ export class KitePlayerElement extends LitElement {
       const stage = this.q(".stage");
       // 往下拉收起(手机):封面页任何位置,歌词页只在顶栏和歌名上(歌词区的纵向拖动是滚歌词)。
       const onTop = !!(e.target as HTMLElement).closest(".top, .head");
-      if (g.axis === "y" && dy > 0 && this.ui.mobile && !this.ui.immersive && (!g.onLyrics || onTop) && (this.ui.view === "cover" || onTop)) {
+      if (
+        g.axis === "y" &&
+        dy > 0 &&
+        this.ui.mobile &&
+        !this.ui.immersive &&
+        (!g.onLyrics || onTop) &&
+        (this.ui.view === "cover" || onTop)
+      ) {
         g.pointer = -1;
         this.capture(stage, e.pointerId);
         this.swallow();
@@ -1061,7 +1144,11 @@ export class KitePlayerElement extends LitElement {
     this.scrollState.last = scrollY;
     listen(window, "scroll", () => this.onScroll(), { passive: true });
     listen(window, flyEvent, (e) => this.fly((e as CustomEvent<FlyDetail>).detail));
-    listen(window, openQueueEvent, (e) => void this.openSheet((e as CustomEvent<{ playlist?: string }>).detail?.playlist));
+    listen(
+      window,
+      openQueueEvent,
+      (e) => void this.openSheet((e as CustomEvent<{ playlist?: string }>).detail?.playlist),
+    );
     listen(window, toastEvent, (e) => this.toast(String((e as CustomEvent<string>).detail ?? "")));
     listen(window, openEvent, (e) => {
       const d = (e as CustomEvent<OpenDetail>).detail ?? {};
@@ -1123,7 +1210,10 @@ export class KitePlayerElement extends LitElement {
     requestAnimationFrame(() => stage.classList.remove("snap"));
     for (const a of fg.getAnimations()) a.cancel();
     if (on) {
-      stage.animate([{ clipPath: insetFrom(before, after, radius) }, { clipPath: "inset(0px 0px 0px 0px round 0px)" }], { duration: 420, easing: easeOut });
+      stage.animate(
+        [{ clipPath: insetFrom(before, after, radius) }, { clipPath: "inset(0px 0px 0px 0px round 0px)" }],
+        { duration: 420, easing: easeOut },
+      );
     } else {
       const endRadius = parseFloat(getComputedStyle(stage).borderTopLeftRadius) || 0;
       stage.animate(
@@ -1138,7 +1228,12 @@ export class KitePlayerElement extends LitElement {
         { duration: 360, easing: easeOut },
       );
     }
-    fg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: on ? 260 : 220, delay: on ? 120 : 160, easing: "ease-out", fill: "backwards" });
+    fg.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: on ? 260 : 220,
+      delay: on ? 120 : 160,
+      easing: "ease-out",
+      fill: "backwards",
+    });
   }
 
   private cycleMode(showTip: boolean): void {
@@ -1159,9 +1254,13 @@ export class KitePlayerElement extends LitElement {
     const animate = this.ui.mode === "open" && this.lineEls.length > 0 && canAnimate(this.q(".lyrics"));
     const trs = animate ? [...this.renderRoot.querySelectorAll<HTMLElement>(".lines .tr")] : [];
     if (!trans && trs.length) {
-      await Promise.all(trs.map((tr) => tr.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: "ease-in", fill: "forwards" }).finished)).catch(
-        () => undefined,
-      );
+      await Promise.all(
+        trs.map(
+          (tr) =>
+            tr.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: "ease-in", fill: "forwards" })
+              .finished,
+        ),
+      ).catch(() => undefined);
     }
     this.patch({ trans });
     await this.updateComplete;
@@ -1169,7 +1268,13 @@ export class KitePlayerElement extends LitElement {
     this.layoutLines(animate ? "center" : "instant");
     if (trans) {
       for (const tr of trs) {
-        tr.animate([{ opacity: 0, translate: "0 -4px" }, { opacity: 1, translate: "0 0" }], { duration: 240, delay: 120, easing: "ease-out", fill: "backwards" });
+        tr.animate(
+          [
+            { opacity: 0, translate: "0 -4px" },
+            { opacity: 1, translate: "0 0" },
+          ],
+          { duration: 240, delay: 120, easing: "ease-out", fill: "backwards" },
+        );
       }
     }
   };
@@ -1182,15 +1287,19 @@ export class KitePlayerElement extends LitElement {
     if (this.ui.idle) this.patch({ idle: false });
     clearTimeout(this.timers.idle);
     if (this.ui.mode !== "open" || this.ui.view !== "lyrics" || this.ui.immersive) return;
-    this.timers.idle = window.setTimeout(() => {
-      if (!this.player.state.playing || this.ui.view !== "lyrics" || this.ui.immersive || this.ui.sheet) return;
-      this.patch({ idle: true });
-    }, this.ui.mobile ? idleDelay.mobile : idleDelay.desktop);
+    this.timers.idle = window.setTimeout(
+      () => {
+        if (!this.player.state.playing || this.ui.view !== "lyrics" || this.ui.immersive || this.ui.sheet) return;
+        this.patch({ idle: true });
+      },
+      this.ui.mobile ? idleDelay.mobile : idleDelay.desktop,
+    );
   };
 
   private hideControls(): void {
     clearTimeout(this.timers.idle);
-    if (this.ui.mode === "open" && this.ui.view === "lyrics" && !this.ui.immersive && !this.ui.idle) this.patch({ idle: true });
+    if (this.ui.mode === "open" && this.ui.view === "lyrics" && !this.ui.immersive && !this.ui.idle)
+      this.patch({ idle: true });
   }
 
   private onScroll(): void {
@@ -1279,7 +1388,9 @@ export class KitePlayerElement extends LitElement {
     });
     if (lyricIndex !== this.lastLine) {
       this.unitValues = [];
-      this.unitEls[this.lastLine]?.forEach((u) => u.style.removeProperty("--p"));
+      this.unitEls[this.lastLine]?.forEach((u) => {
+        u.style.removeProperty("--p");
+      });
     }
     this.lastLine = cur;
     if (this.manual.active) this.updateHint(base, anchor);
@@ -1453,7 +1564,13 @@ export class KitePlayerElement extends LitElement {
     const s = this.player.state;
     this.prefetchTabNames(ids);
     if (tab === "queue" || tab === s.playlist?.id) {
-      this.patch({ tab, sheetReady: true, sheetStatus: "ready", sheetTracks: s.queue, sheetName: s.playlist?.name ?? "" });
+      this.patch({
+        tab,
+        sheetReady: true,
+        sheetStatus: "ready",
+        sheetTracks: s.queue,
+        sheetName: s.playlist?.name ?? "",
+      });
       return;
     }
     this.patch({ tab, sheetReady: true, sheetStatus: "loading", sheetName: "" });
@@ -1526,12 +1643,15 @@ export class KitePlayerElement extends LitElement {
     const box = this.renderRoot.querySelector<HTMLElement>(sel);
     const img = box?.querySelector<HTMLImageElement>(":scope > img");
     if (!box || !img || !canAnimate(box)) return;
-    box.querySelectorAll(":scope > .xfade").forEach((el) => el.remove());
+    box.querySelectorAll(":scope > .xfade").forEach((el) => {
+      el.remove();
+    });
     const ghost = document.createElement("span");
     ghost.className = "xfade";
-    if (oldSrc) {
+    if (oldSrc && !img.hasAttribute("data-err")) {
       const old = document.createElement("img");
       old.alt = "";
+      old.draggable = false;
       old.src = oldSrc;
       ghost.append(old);
     } else {
@@ -1543,10 +1663,12 @@ export class KitePlayerElement extends LitElement {
     const start = () => {
       if (started) return;
       started = true;
-      ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 320, easing: "ease-out", fill: "forwards" }).finished.then(
-        () => ghost.remove(),
-        () => ghost.remove(),
-      );
+      ghost
+        .animate([{ opacity: 1 }, { opacity: 0 }], { duration: 320, easing: "ease-out", fill: "forwards" })
+        .finished.then(
+          () => ghost.remove(),
+          () => ghost.remove(),
+        );
     };
     if (!img.getAttribute("src") || img.complete) start();
     else {
@@ -1579,10 +1701,12 @@ export class KitePlayerElement extends LitElement {
         old.classList.add("xfade");
         old.getContext("2d")?.drawImage(canvas, 0, 0);
         canvas.after(old);
-        old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600, easing: "ease-out", fill: "forwards" }).finished.then(
-          () => old.remove(),
-          () => old.remove(),
-        );
+        old
+          .animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600, easing: "ease-out", fill: "forwards" })
+          .finished.then(
+            () => old.remove(),
+            () => old.remove(),
+          );
       }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       amb.toggleAttribute("data-empty", !img);
@@ -1647,14 +1771,21 @@ export class KitePlayerElement extends LitElement {
       inner.className = "ghost-in";
       const img = document.createElement("img");
       img.alt = "";
+      img.draggable = false;
       img.src = d.src;
       inner.append(img);
       y.append(inner);
       ghost.append(y);
       kp.append(ghost);
       const opts = { duration: 600, fill: "forwards" as const };
-      ghost.animate([{ transform: `translateX(${d.rect.left}px)` }, { transform: `translateX(${target.left}px)` }], { ...opts, easing: "cubic-bezier(.25,.8,.35,1)" });
-      y.animate([{ transform: `translateY(${d.rect.top}px)` }, { transform: `translateY(${target.top}px)` }], { ...opts, easing: "cubic-bezier(.55,0,.85,.45)" });
+      ghost.animate([{ transform: `translateX(${d.rect.left}px)` }, { transform: `translateX(${target.left}px)` }], {
+        ...opts,
+        easing: "cubic-bezier(.25,.8,.35,1)",
+      });
+      y.animate([{ transform: `translateY(${d.rect.top}px)` }, { transform: `translateY(${target.top}px)` }], {
+        ...opts,
+        easing: "cubic-bezier(.55,0,.85,.45)",
+      });
       inner
         .animate(
           [
@@ -1666,10 +1797,13 @@ export class KitePlayerElement extends LitElement {
         .finished.then(
           () => {
             ghost.remove();
-            this.q(this.ui.mode === "open" ? ".cover" : ".disc").animate([{ transform: "scale(1)" }, { transform: "scale(1.14)" }, { transform: "scale(1)" }], {
-              duration: 460,
-              easing: "cubic-bezier(.2,.85,.25,1)",
-            });
+            this.q(this.ui.mode === "open" ? ".cover" : ".disc").animate(
+              [{ transform: "scale(1)" }, { transform: "scale(1.14)" }, { transform: "scale(1)" }],
+              {
+                duration: 460,
+                easing: "cubic-bezier(.2,.85,.25,1)",
+              },
+            );
           },
           () => ghost.remove(),
         );
@@ -1696,9 +1830,9 @@ function renderLines(lyr: Lyrics | null): unknown {
     lyr,
     lyr.lines.map(
       (line, i) =>
-        html`<button class="line" role="listitem" data-i=${i}><span class="lt">${lineUnits(line).map((u) => html`<span class="u">${u}</span>`)}</span>${line.translation
-            ? html`<span class="tr">${line.translation}</span>`
-            : nothing}</button>`,
+        html`<button class="line" role="listitem" data-i=${i}><span class="lt">${lineUnits(line).map((u) => html`<span class="u">${u}</span>`)}</span>${
+          line.translation ? html`<span class="tr">${line.translation}</span>` : nothing
+        }</button>`,
     ),
   );
 }
@@ -1744,7 +1878,10 @@ function palette(px: Uint8ClampedArray, veil: [number, number, number, number]):
       const g = px[i + 1] ?? 0;
       const b = px[i + 2] ?? 0;
       const [vr, vg, vb, va] = veil;
-      lum += 0.2126 * lin(r * (1 - va) + vr * va) + 0.7152 * lin(g * (1 - va) + vg * va) + 0.0722 * lin(b * (1 - va) + vb * va);
+      lum +=
+        0.2126 * lin(r * (1 - va) + vr * va) +
+        0.7152 * lin(g * (1 - va) + vg * va) +
+        0.0722 * lin(b * (1 - va) + vb * va);
       n++;
       if (x >= 20 && y >= 20) {
         tr += r;

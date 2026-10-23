@@ -1,86 +1,68 @@
 name: npm
 
-# 把 packages/kite-player 发布到 npm(@violetjs/kite-player)。只有手动入口:
-#   改 packages/kite-player/package.json 的 version → PR 合入 main → Actions → npm → Run workflow(选 main)。
-#
-# 不用 git tag 触发:GoReleaser 按「上一个 tag」生成 kite 的 changelog,另一套 tag 会混进去。
-# 发布的是哪个 commit 由 npm provenance 记录(npm 包页面可查)。
-# 需要仓库 secret NPM_TOKEN(对 @violetjs scope 有发布权限的 npm token)。
-
 on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Player release tag whose exact main CI tarball will be published
+        required: true
+        type: string
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Recover player-vX.Y.Z; old sources can only finalize already-published identical bytes
+        required: true
+        type: string
 
-# 同时只发一次;已在跑的不取消(发布到一半被取消比排队更糟)
+# Do not drop pending versions or cancel an in-flight npm publication.
 concurrency:
   group: npm-publish
-  cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
-  id-token: write   # npm provenance(OIDC)
 
 jobs:
   publish:
     name: Publish @violetjs/kite-player
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: packages/kite-player
+    environment: npm
+    timeout-minutes: 40
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
     steps:
-      - name: 只从 main 发布
-        working-directory: .
-        env:
-          REF: ${{ github.ref }}
-          HAS_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
-        run: |
-          if [ "${REF}" != "refs/heads/main" ]; then
-            echo "::error::只能从 main 发布(当前 ${REF}),在 Run workflow 里选 main"
-            exit 1
-          fi
-          if [ "${HAS_TOKEN}" != "true" ]; then
-            echo "::error::缺少仓库 secret NPM_TOKEN"
-            exit 1
-          fi
-
+      # Checkout the trusted caller commit, not a user-supplied tag. The publisher
+      # checks main authorization and refuses provenance for any other source SHA.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
+      - name: Authorize exact CI producer and verify its tested package
+        id: package
+        run: python3 scripts/npm-release.py prepare
+
       - name: Load tool versions from Makefile
-        working-directory: .
+        if: steps.package.outputs.publish == 'true'
         run: make -s ci-env >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        if: steps.package.outputs.publish == 'true'
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: https://registry.npmjs.org
-          cache: npm
-          cache-dependency-path: packages/kite-player/package-lock.json
 
-      - name: 确认版本还没发布过
-        id: version
-        run: |
-          name=$(node -p "require('./package.json').name")
-          version=$(node -p "require('./package.json').version")
-          if npm view "${name}@${version}" version >/dev/null 2>&1; then
-            echo "::error::${name}@${version} 已经在 npm 上,先改 packages/kite-player/package.json 的 version"
-            exit 1
-          fi
-          # 预发布版本(如 0.2.0-beta.1)发到 next,不占用 latest
-          case "${version}" in
-            *-*) dist_tag=next ;;
-            *) dist_tag=latest ;;
-          esac
-          echo "将发布 ${name}@${version}(dist-tag ${dist_tag})"
-          echo "dist_tag=${dist_tag}" >> "$GITHUB_OUTPUT"
-
-      - run: npm ci --no-audit --no-fund
-      - run: npm run check
-
-      # access / provenance 由 package.json 的 publishConfig 决定
-      - name: 发布
+      # No install/build/pack here: publish the identical tarball consumed by CI.
+      # The npm credential is unavailable to authorization, download and recovery.
+      - name: Publish verified bytes with matching-source provenance
+        if: steps.package.outputs.publish == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          DIST_TAG: ${{ steps.version.outputs.dist_tag }}
-        run: npm publish --tag "${DIST_TAG}"
+        run: python3 scripts/npm-release.py publish
+
+      - name: Verify registry bytes and make the player release public (never Latest)
+        run: python3 scripts/npm-release.py finalize

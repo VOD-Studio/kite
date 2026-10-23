@@ -14,7 +14,7 @@ Go 实现的网易云能力服务 + 命令行工具(单体仓库)。分支 / com
 | `cmd/kite-docs` | 命令树 markdown 生成器(`make docs` 调用)。 |
 | `cmd/kite-gen-service` | service 一行转发胶水生成器(`make service-gen` 调用,映射表在 `internal/servicegen`)。 |
 | `cmd/demo` | 进度条等终端组件的演示脚本,非交付产物、不发布。 |
-| `packages/kite-player` | 网页播放器 npm 包 `@violetjs/kite-player`(TypeScript:播放核心 + Web Components + React hooks),只经 HTTP 消费公开模式 `/player/v1`,不参与 Go 构建。用法见 [`packages/kite-player/README.md`](packages/kite-player/README.md),手动发布见 CONTRIBUTING「npm 发布」。 |
+| `packages/kite-player` | 网页播放器 npm 包 `@violetjs/kite-player`(TypeScript:播放核心 + Web Components + React hooks),只经 HTTP 消费公开模式 `/player/v1`,不参与 Go 构建。用法见 [`packages/kite-player/README.md`](packages/kite-player/README.md),独立版本与发布恢复见 CONTRIBUTING「发布与恢复」。 |
 
 ## 分层
 
@@ -77,10 +77,12 @@ cmd/*
 - **`make docs`** —— 改命令树后刷新 `docs/cmd/`。`TestDocsFreshness` 依赖它,不跑会红。
 - **`make service-gen`** —— 改 proto rpc 或 `internal/servicegen` 映射表后刷新 `internal/service/*_gen.go`。freshness 测试依赖它,不跑会红;新增 rpc 必须在映射表登记(转发或手写),否则生成器报错。
 - **`make upstream-smoke`** —— 真实上游冒烟(需要外网,手动运行,不进 CI):对网易云真实接口逐个调用服务端 RPC,断言响应非空。**改了 endpoint 路径 / 解码器后必跑**——单元测试的夹具与解码器出自同一个假设,上游改了路径 / 字段名 / 类型都发现不了。
-- **`make interop-rust`** —— Rust 客户端互操作冒烟(需要 `cargo`,较慢,CI 的 `Rust Interop` job 跑它)。改 proto、鉴权或错误契约后建议本地跑一次。
-- **`make interop-go`** —— Go 互操作冒烟(需要访问 buf.build,CI 的 `Go Interop` job 跑它):用 BSR 上生成的 SDK 对真实 kite-server 运行 `docs/integration.md` 的示例。示例与 `interop/go/kite.go` 逐字一致(测试守护),改示例先改文档再同步。
-- **`make player-check`** —— `packages/kite-player` 的 `npm ci` + 类型检查 + 测试 + 构建(CI 的 `Player` job 跑它)。不在 `make check` 里,改了 `packages/kite-player` 或 `/player/v1` 协议后跑。
+- **`make interop-rust`** —— Rust 客户端互操作冒烟(需要 `cargo`,较慢,CI 的 `Contract Rust Consumer` job 跑它)。改 proto、鉴权或错误契约后建议本地跑一次。
+- **`make interop-go`** —— Go 互操作冒烟(需要访问 buf.build,CI 的 `Contract Go Consumer` job 跑它):用 BSR 上生成的 SDK 对真实 kite-server 运行 `docs/integration.md` 的示例。示例与 `interop/go/kite.go` 逐字一致(测试守护),改示例先改文档再同步。
+- **`make player-check`** —— `packages/kite-player` 的 `npm ci` + 类型检查 + Biome + 测试 + 构建。不在 `make check` 里,改了 `packages/kite-player` 或 `/player/v1` 协议后跑。
+- **`make player-package-check`** —— 在源码检查后只 pack 一次,于仓库外验证真实 tgz 的类型、ESM、React SSR、打包及 Chromium 交互。CI 的 `Player Source and Package` 使用同样验收;发布直接消费 main CI 留存的 tgz,不再重新打包(由 `scripts/npm-release_test.sh` 守护)。
 - **`make player-demo`** —— 构建 `packages/kite-player` 并起离线演示页看效果;`DEMO_HOST=0.0.0.0` 时同一局域网的手机可以打开。改了播放器界面或动画后用它在真机上确认。
+- **`make docker-run CMD='…'` / `make docker-check`** —— 隔离的 Go / Node 开发环境及 Linux 全量本地检查,不挂载宿主机 HOME、Docker socket 或发布凭据;入口与范围见 CONTRIBUTING「Docker 开发工具链」(约定)。
 - **`make clean`** —— 清本地构建产物(`tmp/`、`bin/`)。不清 `gen/`。
 
 ```bash
@@ -90,13 +92,13 @@ go vet ./...
 make check    # push 前自检:gofmt + go mod tidy + vet + test + lint + proto-lint
 ```
 
-CI 的约定(唯一门禁 `CI OK`、工具版本来源、发布流程)见 [`CONTRIBUTING.md`](CONTRIBUTING.md)「CI 约定」。
+CI 的约定(唯一门禁 `CI OK`、工具版本来源)与独立发布流程见 [`CONTRIBUTING.md`](CONTRIBUTING.md)「CI 约定」「发布与恢复」。
 
 ### 环境
 
-- Go 版本**以 `go.mod` 为准**。环境缺 Go 时 `make` 会无提示失败——**不要自行安装 Go**,停下来告知用户。
-- 改 proto 需要本地有 `buf`(Makefile 自动探测 `$GOPATH/bin/buf`)。
-- 改 `packages/kite-player` 需要 Node,大版本以 `Makefile` 的 `NODE_VERSION` 为准;缺 Node 时同样停下告知用户,不要自行安装。
+- Go 版本**以 `go.mod` 为准**。缺宿主机 Go 时可以使用已安装的 Docker 执行上面的开发入口;两者都不可用时停下来告知用户,**不要自行安装 Go**。
+- 改 proto 需要 `buf`(Makefile 自动探测 `$GOPATH/bin/buf`);Docker 开发镜像已包含。
+- 改 `packages/kite-player` 需要 Node,大版本以 `Makefile` 的 `NODE_VERSION` 为准;缺宿主机 Node 时同样可以使用 Docker,不要自行安装。
 
 ## 文档
 

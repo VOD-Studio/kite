@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import "../src/element";
 import { Player } from "../src/core/player";
+import type { Playlist, Track } from "../src/core/types";
 import { KitePlayerElement } from "../src/element";
 import { withDark } from "../src/element/styles";
-import type { Playlist, Track } from "../src/core/types";
 import { FakeAudio, fakeSource, flush, track } from "./helpers";
 
 const playlist: Playlist = {
@@ -11,7 +11,11 @@ const playlist: Playlist = {
   name: "写作时听",
   cover: "https://p1.music.126.net/a.jpg",
   trackCount: 3,
-  tracks: [track("1", { title: "纸飞机" }), track("2", { title: "慢车" }), track("3", { title: "雨季来信", access: "vip", playable: false })],
+  tracks: [
+    track("1", { title: "纸飞机" }),
+    track("2", { title: "慢车" }),
+    track("3", { title: "雨季来信", access: "vip", playable: false }),
+  ],
 };
 
 let player: Player;
@@ -45,7 +49,9 @@ const shadow = (el: Element) => el.shadowRoot as ShadowRoot;
 
 /** touch 在元素上派发一次触摸的指针事件(冒泡并穿出 shadow DOM,与真实触摸一样)。 */
 function touch(el: Element, type: string, clientX: number, clientY: number): void {
-  el.dispatchEvent(new PointerEvent(type, { pointerId: 7, pointerType: "touch", clientX, clientY, bubbles: true, composed: true }));
+  el.dispatchEvent(
+    new PointerEvent(type, { pointerId: 7, pointerType: "touch", clientX, clientY, bubbles: true, composed: true }),
+  );
 }
 
 describe("样式", () => {
@@ -192,7 +198,10 @@ describe("<kite-player>", () => {
   });
 
   it("点音质标签开关高音质:改用标准音质的地址并提示", async () => {
-    const source = { ...fakeSource({ ...playlist, tracks: [track("1", { quality: "hires" })] }), streamUrl: (t: Track, q: string) => `${t.stream}&quality=${q}` };
+    const source = {
+      ...fakeSource({ ...playlist, tracks: [track("1", { quality: "hires" })] }),
+      streamUrl: (t: Track, q: string) => `${t.stream}&quality=${q}`,
+    };
     player.setSource(source);
     const el = await mount(`<kite-player playlists="100"></kite-player>`);
     const root = shadow(el);
@@ -216,7 +225,9 @@ describe("<kite-player>", () => {
   });
 
   it("没有封面时显示占位,不留空白图片", async () => {
-    player.setSource(fakeSource({ ...playlist, tracks: [track("1", { album: { id: "al", name: "专辑", cover: "" } })] }));
+    player.setSource(
+      fakeSource({ ...playlist, tracks: [track("1", { album: { id: "al", name: "专辑", cover: "" } })] }),
+    );
     const el = await mount(`<kite-player playlists="100"></kite-player>`);
     const root = shadow(el);
     expect(root.querySelector(".disc-img .ph")).not.toBeNull();
@@ -265,6 +276,47 @@ describe("<kite-player>", () => {
     expect(player.state.mode).toBe("one");
     expect(root.querySelector(".kp")?.getAttribute("data-pm")).toBe("one");
     expect(btn?.getAttribute("aria-label")).toContain("单曲循环");
+  });
+
+  it("面板封面缺失时隐藏碎图,由占位样式兜底", async () => {
+    const bare = track("9", { title: "无封面", album: { id: "al", name: "晴朗的周三", cover: "" } });
+    player.setSource(fakeSource({ ...playlist, tracks: [bare, track("2", { title: "慢车" })] }));
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    root.querySelector<HTMLButtonElement>(".bar .toggle")?.click();
+    await settle(el);
+    for (const sel of [".cover > img", ".disc-img > img"]) {
+      const img = root.querySelector<HTMLImageElement>(sel);
+      if (!img) throw new Error(`没有封面图片:${sel}`);
+      expect(img.hasAttribute("src"), sel).toBe(false);
+      expect(getComputedStyle(img).visibility, sel).toBe("hidden");
+    }
+  });
+
+  it("封面加载失败后切歌,成功加载的新封面恢复显示", async () => {
+    const broken = track("9", { album: { id: "al", name: "损坏封面", cover: "https://example.com/broken.jpg" } });
+    const next = track("2", { title: "慢车" });
+    player.setSource(fakeSource({ ...playlist, tracks: [broken, next] }));
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    const selectors = [".cover > img", ".disc-img > img"];
+    for (const sel of selectors) {
+      const img = root.querySelector<HTMLImageElement>(sel);
+      if (!img) throw new Error(`没有封面图片:${sel}`);
+      img.dispatchEvent(new Event("error"));
+      expect(getComputedStyle(img).visibility, sel).toBe("hidden");
+    }
+
+    player.next();
+    await settle(el);
+    expect(player.state.current?.id).toBe("2");
+    for (const sel of selectors) {
+      const img = root.querySelector<HTMLImageElement>(sel);
+      if (!img) throw new Error(`没有封面图片:${sel}`);
+      expect(img.getAttribute("src"), sel).toBe(next.album.cover);
+      img.dispatchEvent(new Event("load"));
+      expect(getComputedStyle(img).visibility, sel).not.toBe("hidden");
+    }
   });
 
   it("播放列表抽屉:列出歌曲,VIP 歌不能播并给出提示", async () => {
@@ -320,6 +372,42 @@ describe("<kite-player>", () => {
 });
 
 describe("<kite-track>", () => {
+  it("封面缺失或加载失败时隐藏碎图,由占位样式兜底", async () => {
+    const bare = track("9", { title: "无封面", album: { id: "al", name: "晴朗的周三", cover: "" } });
+    player.setSource(fakeSource({ ...playlist, tracks: [bare] }));
+    for (const size of ["s", "m", "l"]) {
+      const el = await mount(`<kite-track song="9" size="${size}"></kite-track>`);
+      const imgs = [...shadow(el).querySelectorAll<HTMLImageElement>(".cover img, .amb img")];
+      expect(imgs.length, size).toBeGreaterThan(0);
+      for (const img of imgs) {
+        expect(img.hasAttribute("src"), size).toBe(false);
+        expect(getComputedStyle(img).visibility, size).toBe("hidden");
+      }
+    }
+  });
+
+  it("封面加载失败后更换歌曲,正常封面和背景恢复显示", async () => {
+    const broken = track("9", { album: { id: "al", name: "损坏封面", cover: "https://example.com/broken.jpg" } });
+    player.setSource(fakeSource({ ...playlist, tracks: [broken, ...playlist.tracks] }));
+    for (const size of ["s", "m", "l"]) {
+      const el = await mount(`<kite-track song="9" size="${size}"></kite-track>`);
+      const root = shadow(el);
+      const images = [...root.querySelectorAll<HTMLImageElement>(".cover img, .amb img")];
+      expect(images.length, size).toBeGreaterThan(0);
+      for (const img of images) {
+        img.dispatchEvent(new Event("error"));
+        expect(getComputedStyle(img).visibility, size).toBe("hidden");
+      }
+      el.setAttribute("song", "2");
+      await settle(el);
+      for (const img of root.querySelectorAll<HTMLImageElement>(".cover img, .amb img")) {
+        expect(img.getAttribute("src"), size).toBe(playlist.tracks[1]?.album.cover);
+        img.dispatchEvent(new Event("load"));
+        expect(getComputedStyle(img).visibility, size).not.toBe("hidden");
+      }
+    }
+  });
+
   it("三种尺寸都能渲染,点播放与播放器同步", async () => {
     for (const size of ["s", "m", "l"]) {
       const el = await mount(`<kite-track song="2" size="${size}"></kite-track>`);
@@ -426,7 +514,9 @@ describe("紧凑布局", () => {
     globalThis.ResizeObserver = class {
       constructor(private cb: ResizeObserverCallback) {}
       observe(): void {
-        observers.push((width) => this.cb([{ contentRect: { width } } as ResizeObserverEntry], this as unknown as ResizeObserver));
+        observers.push((width) =>
+          this.cb([{ contentRect: { width } } as ResizeObserverEntry], this as unknown as ResizeObserver),
+        );
       }
       unobserve(): void {}
       disconnect(): void {}

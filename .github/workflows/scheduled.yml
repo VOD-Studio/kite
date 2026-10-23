@@ -1,7 +1,7 @@
 # 定时任务:跟踪「没改代码也会变化」的外部状态,与 PR 门禁(ci.yml)解耦。
 #
-#   - vuln:每日全量 govulncheck；可修复漏洞/工具错误失败，无修复版保持 advisory。
-#     两者都开 / 更新 issue，避免无修复版漏洞从维护视野中消失。
+#   - vuln:每日扫描根/interop Go、player npm 与 Rust 锁文件。
+#     可修复漏洞或工具故障失败；无修复版 advisory 同样开 / 更新 issue。
 
 name: Scheduled
 
@@ -13,22 +13,39 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: scheduled-dependency-security
+  cancel-in-progress: false
+
 jobs:
   vuln:
     name: Full vulnerability scan
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions:
       contents: read
       issues: write   # 失败时开 / 更新 issue
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        if: ${{ !cancelled() }}
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - name: Install govulncheck
+        if: ${{ !cancelled() }}
         run: go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
-      - name: govulncheck 门禁
+      - name: Install pinned Rust and cargo-audit
+        if: ${{ !cancelled() }}
+        working-directory: interop/rust
+        run: |
+          toolchain=$(python3 -c 'import tomllib; print(tomllib.load(open("rust-toolchain.toml", "rb"))["toolchain"]["channel"])')
+          rustup toolchain install "$toolchain" --profile minimal
+          cargo install cargo-audit --locked --version "$CARGO_AUDIT_VERSION"
+      - name: Scan all dependency modules
         id: scan
-        run: make vuln
+        if: ${{ !cancelled() }}
+        run: scripts/dependency-security.sh
       - name: 漏洞 advisory 或扫描失败时开 / 更新 issue
         if: ${{ !cancelled() && (failure() || steps.scan.outputs.advisory == 'true') }}
         env:
@@ -37,12 +54,18 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SCAN_OUTCOME: ${{ steps.scan.outcome }}
           ADVISORY: ${{ steps.scan.outputs.advisory }}
+          FAILED_SCANS: ${{ steps.scan.outputs.failed_scans }}
         run: |
           title="[security] 定时漏洞扫描需要处理"
-          existing=$(gh issue list --state open --search "\"${title}\" in:title" --json number --jq '.[0].number // empty')
-          body="定时扫描结果: ${SCAN_OUTCOME:-未完成}; 无修复版 advisory: ${ADVISORY:-未知}。扫描失败可能是可修复漏洞或工具/安装故障；请检查日志，不应视为安全通过。详情: ${RUN_URL}"
+          # Paginate and match the exact title, excluding PRs. API/network failure
+          # must fail this step rather than being mistaken for "no existing issue".
+          existing=$(gh api --paginate "repos/${GH_REPO}/issues?state=open&per_page=100" \
+            --jq '.[] | select(has("pull_request") | not) | select(.title == "[security] 定时漏洞扫描需要处理") | .number')
+          body="定时扫描结果: ${SCAN_OUTCOME:-未完成}; 无修复版或依赖 advisory: ${ADVISORY:-未知}; 失败模块: ${FAILED_SCANS:-无/扫描未完成}。有修复漏洞或工具/网络/安装故障均不可视为安全通过；安装步骤失败也会保留失败状态。详情: ${RUN_URL}"
           if [ -n "${existing}" ]; then
-            gh issue comment "${existing}" --body "${body}"
+            while IFS= read -r number; do
+              gh issue comment "${number}" --body "${body}"
+            done <<< "${existing}"
           else
             gh issue create --title "${title}" --body "${body}"
           fi

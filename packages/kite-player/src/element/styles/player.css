@@ -197,7 +197,6 @@
   height: auto;
   border-radius: 50%;
   overflow: hidden;
-  background: #D9DCE2;
 }
 .disc-img {
   animation: spin 9s linear infinite;

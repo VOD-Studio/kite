@@ -1,0 +1,15 @@
+{
+  // Biome 统一负责 JS/TS/JSON 的格式化、lint 与导入排序(配置在 packages/kite-player/biome.json)。
+  // configurationPath / lsp.bin 显式指向子包配置与本地二进制,扩展与 npm scripts 版本严格一致。
+  "biome.configurationPath": "./packages/kite-player/biome.json",
+  "biome.lsp.bin": "./packages/kite-player/node_modules/@biomejs/cli-darwin-arm64/biome",
+  "editor.defaultFormatter": "biomejs.biome",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.biome": "explicit",
+    "source.organizeImports.biome": "explicit"
+  },
+  // 关掉 TS 自带的导入排序,避免与 biome 互相重排。
+  "typescript.preferences.organizeImports": false,
+  "javascript.preferences.organizeImports": false
+}

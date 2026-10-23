@@ -159,7 +159,12 @@ export function frame(g: MorphGeo, p: number): Map<HTMLElement, Style> {
   const cTop = lerp(bar.top, box.top, p);
   const cRight = lerp(bar.left + bar.width, box.left + box.width, p);
   const cBottom = lerp(bar.top + bar.height, box.top + box.height, p);
-  const r = p < 0.06 ? lerp(bar.height / 2, g.midRadius, p / 0.06) : p > 0.85 ? lerp(g.midRadius, g.radius, (p - 0.85) / 0.15) : g.midRadius;
+  const r =
+    p < 0.06
+      ? lerp(bar.height / 2, g.midRadius, p / 0.06)
+      : p > 0.85
+        ? lerp(g.midRadius, g.radius, (p - 0.85) / 0.15)
+        : g.midRadius;
   out.set(parts.stage, {
     clipPath: `inset(${cTop - box.top}px ${box.left + box.width - cRight}px ${box.top + box.height - cBottom}px ${cLeft - box.left}px round ${r}px)`,
     // 一离开播放条就换成封面铺色的背景(收起时最后几帧才露出播放条)。
@@ -210,16 +215,30 @@ export function frame(g: MorphGeo, p: number): Map<HTMLElement, Style> {
   const rowDy = y + ch / 2 - (bar.top + bar.height / 2);
   if (g.miniText && g.barText) {
     const dx = x + cs - (g.disc.left + g.disc.width);
-    out.set(g.miniText.el, { translate: place(g.miniText, g.barText.left + dx, g.barText.top + rowDy, 1), opacity: String(clamp01(1 - p / 0.22)) });
+    out.set(g.miniText.el, {
+      translate: place(g.miniText, g.barText.left + dx, g.barText.top + rowDy, 1),
+      opacity: String(clamp01(1 - p / 0.22)),
+    });
   }
   if (g.miniCtl && g.barCtl) {
     const dx = cRight - (bar.left + bar.width);
-    out.set(g.miniCtl.el, { translate: place(g.miniCtl, g.barCtl.left + dx, g.barCtl.top + rowDy, 1), opacity: String(clamp01(1 - p / 0.26)) });
+    out.set(g.miniCtl.el, {
+      translate: place(g.miniCtl, g.barCtl.left + dx, g.barCtl.top + rowDy, 1),
+      opacity: String(clamp01(1 - p / 0.26)),
+    });
   }
 
   // 顶栏随卡片顶边,最后出现。
   const T = g.top;
-  out.set(T.el, { translate: place(T, T.rect.left + (cLeft + cRight - box.left * 2 - box.width) / 2, cTop + (T.rect.top - box.top), 1), opacity: String(clamp01((p - 0.5) / 0.4)) });
+  out.set(T.el, {
+    translate: place(
+      T,
+      T.rect.left + (cLeft + cRight - box.left * 2 - box.width) / 2,
+      cTop + (T.rect.top - box.top),
+      1,
+    ),
+    opacity: String(clamp01((p - 0.5) / 0.4)),
+  });
 
   // 下方内容:从 0.6 倍放大到原大,横向以卡片(或封面)中线为中心,淡入时从下面一点收上来。
   const kl = lerp(0.6, 1, p);
@@ -229,7 +248,12 @@ export function frame(g: MorphGeo, p: number): Map<HTMLElement, Style> {
   const coverBottomEnd = C.rect.top + C.rect.height;
   for (const it of g.below) {
     out.set(it.el, {
-      translate: place(it, ax + (it.rect.left - axEnd) * kl, coverBottom + (it.rect.top - coverBottomEnd) * kl + q * g.drop, kl),
+      translate: place(
+        it,
+        ax + (it.rect.left - axEnd) * kl,
+        coverBottom + (it.rect.top - coverBottomEnd) * kl + q * g.drop,
+        kl,
+      ),
       scale: String(kl),
       opacity: String(fadeIn(p, it.fade)),
     });
@@ -237,7 +261,12 @@ export function frame(g: MorphGeo, p: number): Map<HTMLElement, Style> {
   if (g.beside) {
     const it = g.beside;
     out.set(it.el, {
-      translate: place(it, x + cs + (it.rect.left - C.rect.left - C.rect.width), y + ch / 2 + (it.rect.top - C.rect.top - C.rect.height / 2), 1),
+      translate: place(
+        it,
+        x + cs + (it.rect.left - C.rect.left - C.rect.width),
+        y + ch / 2 + (it.rect.top - C.rect.top - C.rect.height / 2),
+        1,
+      ),
       opacity: String(fadeIn(p, it.fade)),
     });
   }
@@ -259,10 +288,22 @@ export function apply(frames: Map<HTMLElement, Style>): void {
 /** clear 去掉 apply 写上的样式。 */
 export function clear(parts: MorphParts | null): void {
   if (!parts) return;
-  const els = [parts.stage, parts.shadow, parts.cover, parts.badge, parts.miniText, parts.miniCtl, parts.top, parts.beside?.el, ...parts.below.map((f) => f.el), ...parts.rest.map((f) => f.el)];
+  const els = [
+    parts.stage,
+    parts.shadow,
+    parts.cover,
+    parts.badge,
+    parts.miniText,
+    parts.miniCtl,
+    parts.top,
+    parts.beside?.el,
+    ...parts.below.map((f) => f.el),
+    ...parts.rest.map((f) => f.el),
+  ];
   for (const el of els) {
     if (!el) continue;
-    for (const k of ["translate", "scale", "rotate", "opacity", "clip-path", "border-radius"]) el.style.removeProperty(k);
+    for (const k of ["translate", "scale", "rotate", "opacity", "clip-path", "border-radius"])
+      el.style.removeProperty(k);
   }
 }
 
@@ -273,7 +314,13 @@ const composited = new Set(["translate", "scale", "rotate", "opacity"]);
  * play 从进度 from 动到 to:按缓动曲线采样成关键帧,每个元素一组线性关键帧。
  * 返回各元素的动画(第一个是卡片的)。
  */
-export function play(g: MorphGeo, from: number, to: number, duration: number, ease: (t: number) => number): Animation[] {
+export function play(
+  g: MorphGeo,
+  from: number,
+  to: number,
+  duration: number,
+  ease: (t: number) => number,
+): Animation[] {
   const steps = 24;
   const frames = Array.from({ length: steps + 1 }, (_, i) => frame(g, from + (to - from) * ease(i / steps)));
   const els = [...(frames[0]?.keys() ?? [])];
@@ -283,7 +330,12 @@ export function play(g: MorphGeo, from: number, to: number, duration: number, ea
     const keys = Object.keys(frames[0]?.get(el) ?? {}) as (keyof Style)[];
     for (const group of [keys.filter((k) => composited.has(k)), keys.filter((k) => !composited.has(k))]) {
       if (!group.length) continue;
-      anims.push(el.animate(frames.map((f) => Object.fromEntries(group.map((k) => [k, f.get(el)?.[k] ?? ""]))), timing));
+      anims.push(
+        el.animate(
+          frames.map((f) => Object.fromEntries(group.map((k) => [k, f.get(el)?.[k] ?? ""]))),
+          timing,
+        ),
+      );
     }
   }
   return anims;

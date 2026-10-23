@@ -1,11 +1,25 @@
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { classMap } from "lit/directives/class-map.js";
+import { ifDefined } from "lit/directives/if-defined.js";
 import { formatTime } from "../core/lyrics";
 import type { Player } from "../core/player";
 import type { PlayerState, Playlist } from "../core/types";
 import { coverPh, icons } from "./icons";
 import { cardSheet } from "./styles";
-import { artists, canPlay, emit, emitFly, onCoverError, onCoverLoad, openQueueEvent, playerFor, sizeOf, toastEvent, unplayableMessage, watchNarrow } from "./util";
+import {
+  artists,
+  canPlay,
+  emit,
+  emitFly,
+  onCoverError,
+  onCoverLoad,
+  openQueueEvent,
+  playerFor,
+  sizeOf,
+  toastEvent,
+  unplayableMessage,
+  watchNarrow,
+} from "./util";
 
 /** 标准卡片列出的歌曲数。 */
 const previewRows = 4;
@@ -91,8 +105,10 @@ export class KitePlaylistElement extends LitElement {
 
   protected override render(): TemplateResult {
     const pl = this.list;
-    if (this.status === "loading" || (!pl && this.status !== "error")) return html`<div class="skeleton" aria-busy="true"></div>`;
-    if (this.status === "error" || !pl) return html`<div class="card pl"><div class="name">歌单暂时无法显示</div><div class="error">${this.errorText}</div></div>`;
+    if (this.status === "loading" || (!pl && this.status !== "error"))
+      return html`<div class="skeleton" aria-busy="true"></div>`;
+    if (this.status === "error" || !pl)
+      return html`<div class="card pl"><div class="name">歌单暂时无法显示</div><div class="error">${this.errorText}</div></div>`;
     const big = sizeOf(this.size, ["m", "l"] as const, "m") === "l";
     const rows = big ? pl.tracks : pl.tracks.slice(0, previewRows);
     const minutes = Math.round(pl.tracks.reduce((sum, t) => sum + t.durationMs, 0) / 60000);
@@ -102,9 +118,9 @@ export class KitePlaylistElement extends LitElement {
     return html`<div class=${classMap({ card: true, pl: true, big, cur: inThis, playing: inThis && this.s.playing })} part="card">
       <div class="head">
         <div class="stack">
-          <div class="cover c3">${coverPh}<img alt="" src=${covers[2] || nothing} @error=${onCoverError} @load=${onCoverLoad} /></div>
-          <div class="cover c2">${coverPh}<img alt="" src=${covers[1] || nothing} @error=${onCoverError} @load=${onCoverLoad} /></div>
-          <div class="cover c1">${coverPh}<img alt="" src=${covers[0] || nothing} @error=${onCoverError} @load=${onCoverLoad} /></div>
+          <div class="cover c3">${coverPh}<img alt="" draggable="false" src=${ifDefined(covers[2] || undefined)} @error=${onCoverError} @load=${onCoverLoad} /></div>
+          <div class="cover c2">${coverPh}<img alt="" draggable="false" src=${ifDefined(covers[1] || undefined)} @error=${onCoverError} @load=${onCoverLoad} /></div>
+          <div class="cover c1">${coverPh}<img alt="" draggable="false" src=${ifDefined(covers[0] || undefined)} @error=${onCoverError} @load=${onCoverLoad} /></div>
         </div>
         <div class="info">
           <div class="kicker">歌单</div>
@@ -115,19 +131,24 @@ export class KitePlaylistElement extends LitElement {
       </div>
       <div class="rows" role="list">
         ${rows.map(
-          (t, i) => html`<button class=${classMap({ row: true, locked: !canPlay(t), cur: inThis && t.id === cur })} role="listitem" data-i=${i} @click=${() => this.play(i)}>
+          (
+            t,
+            i,
+          ) => html`<button class=${classMap({ row: true, locked: !canPlay(t), cur: inThis && t.id === cur })} role="listitem" data-i=${i} @click=${() => this.play(i)}>
             <span class="idx">${i + 1}</span>
             <span class="t"
               ><b>${t.title}</b>${t.trial ? html`<span class="tg trial">仅试听</span>` : nothing}<span>${artists(t)}</span></span
             >
             <span class="d"
-              >${canPlay(t)
-                ? formatTime(t.durationMs / 1000)
-                : t.access === "vip"
-                  ? html`<span class="tg vip">VIP</span>`
-                  : t.access === "paid"
-                    ? html`<span class="tg out">数字专辑</span>`
-                    : "—"}</span
+              >${
+                canPlay(t)
+                  ? formatTime(t.durationMs / 1000)
+                  : t.access === "vip"
+                    ? html`<span class="tg vip">VIP</span>`
+                    : t.access === "paid"
+                      ? html`<span class="tg out">数字专辑</span>`
+                      : "—"
+              }</span
             >
           </button>`,
         )}

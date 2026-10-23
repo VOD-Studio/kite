@@ -32,8 +32,15 @@ printf '%s\n' '[{"sha":"a","commit":{"message":"feat(cli): 新功能"},"parents"
 expect '非规范原子提交不得靠 PR 标题掩盖' 1
 printf '%s\n' '[{"sha":"a","commit":{"message":"feat(cli): 新功能"},"parents":[{}]}]' >"$CASE_COMMITS"
 expect 'API 截断提交列表不得误报完成验证' 1
-printf '%s\n' '{"base":{"ref":"main"},"head":{"ref":"release-please--branches--main","repo":{"full_name":"attacker/kite"}},"user":{"login":"attacker","type":"User"},"title":"chore(main): release 0.5.0","commits":1}' >"$CASE_PR"
+printf '%s\n' '{"base":{"ref":"main","repo":{"full_name":"VOD-Studio/kite"}},"head":{"ref":"release-please--branches--main--components--kite","repo":{"full_name":"attacker/kite"}},"user":{"login":"attacker","type":"User"},"title":"chore(main): release 0.5.0","commits":1}' >"$CASE_PR"
 printf '%s\n' '[{"sha":"a","commit":{"message":"chore(main): release 0.5.0"},"parents":[{}]}]' >"$CASE_COMMITS"
 expect '同名 fork 分支不能冒充 release PR' 1
-printf '%s\n' '{"base":{"ref":"main"},"head":{"ref":"release-please--branches--main","repo":{"full_name":"VOD-Studio/kite"}},"user":{"login":"github-actions[bot]","type":"Bot"},"title":"chore(main): release 0.5.0","commits":1}' >"$CASE_PR"
+printf '%s\n' '{"base":{"ref":"main","repo":{"full_name":"VOD-Studio/kite"}},"head":{"ref":"release-please--branches--main--components--kite","repo":{"full_name":"VOD-Studio/kite"}},"user":{"login":"github-actions[bot]","type":"Bot"},"title":"chore(main): release 0.5.0","commits":1}' >"$CASE_PR"
 expect '本仓库机器人 release PR 可进入人工 squash 合并' 0
+printf '%s\n' '{"base":{"ref":"main","repo":{"full_name":"VOD-Studio/kite"}},"head":{"ref":"release-please--branches--main--components--player","repo":{"full_name":"VOD-Studio/kite"}},"user":{"login":"github-actions[bot]","type":"Bot"},"title":"chore(main): release player 0.2.0","commits":1}' >"$CASE_PR"
+expect 'player release PR 使用独立组件身份' 0
+jq '.title="chore(main): release 0.2.0"' "$CASE_PR" >"$tmp/changed"; cp "$tmp/changed" "$CASE_PR"
+expect 'player分支不能冒充Go release标题' 1
+normal_pr
+jq '.title="wip" | .commits=1' "$CASE_PR" >"$tmp/changed"; cp "$tmp/changed" "$CASE_PR"
+expect '合法提交不能掩盖无效PR标题' 1

@@ -3,9 +3,9 @@
 set -euo pipefail
 RELEASE_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 export RELEASE_SCRIPT_DIR
+export PYTHONPATH="$RELEASE_SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
 python3 - <<'PY'
 import importlib.util
-import json
 import os
 import tempfile
 import unittest
@@ -14,117 +14,97 @@ from unittest.mock import patch
 spec = importlib.util.spec_from_file_location('release', os.environ['RELEASE_SCRIPT_DIR'] + '/release-lifecycle.py')
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
+SHA = 'a' * 40
 
 class Lifecycle(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.env = patch.dict(os.environ, {'GITHUB_REPOSITORY': m.REPO, 'GITHUB_REF': 'refs/heads/main', 'TAG': 'v0.5.0', 'GITHUB_OUTPUT': self.tmp.name + '/out', 'CI_POLL_TRIES': '1', 'SOURCE_SHA': 'abc', 'VERIFIED_IMAGE': m.IMAGE + '@sha256:123'})
-        self.env.start()
-        self.addCleanup(self.env.stop)
-        self.release = {'id': 1, 'tag_name': 'v0.5.0', 'draft': True, 'prerelease': False}
-        self.commit = {'sha': 'abc', 'parents': [{'sha': 'parent'}]}
-        self.pr = {'merged_at': 'now', 'merge_commit_sha': 'abc', 'user': {'login': 'github-actions[bot]', 'type': 'Bot'}, 'base': {'ref': 'main', 'repo': {'full_name': m.REPO}}, 'head': {'ref': 'release-please--branches--main', 'repo': {'full_name': m.REPO}}, 'title': 'chore(main): release 0.5.0'}
-        self.run = {'id': 9, 'workflow_id': 5, 'event': 'push', 'head_sha': 'abc', 'head_branch': 'main', 'head_repository': {'full_name': m.REPO}, 'run_number': 1, 'run_attempt': 1, 'status': 'completed', 'conclusion': 'success'}
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        p = patch.dict(os.environ, {'GITHUB_REPOSITORY': m.REPO, 'GITHUB_REF': 'refs/heads/main', 'GITHUB_WORKFLOW_REF': m.REPO + '/.github/workflows/release.yml@refs/heads/main', 'TAG': 'v0.7.0', 'GITHUB_OUTPUT': self.tmp.name + '/out', 'SOURCE_SHA': SHA, 'VERIFIED_IMAGE': m.IMAGE + '@sha256:' + '1' * 64})
+        p.start(); self.addCleanup(p.stop)
+        self.release = {'id': 1, 'tag_name': 'v0.7.0', 'draft': True, 'prerelease': False}
+        self.commit = {'sha': SHA, 'parents': [{'sha': 'b' * 40}]}
+        self.versions = []
         self.writes = []
-        self.status = 'ahead'
-        self.jobs = [{'name': 'CI OK', 'conclusion': 'success'}]
-        self.versions = ['v0.5.0']
-        self.extra = []
-        self.ap = patch.object(m, 'api', side_effect=self.api)
-        self.cp = patch.object(m, 'command', side_effect=self.command)
-        self.ap.start(); self.cp.start()
-        self.addCleanup(self.ap.stop); self.addCleanup(self.cp.stop)
-    def api(self, path, *args):
-        if args:
-            self.writes.append((path, args)); return {}
-        if path.startswith('releases/tags/'):
-            # Mirrors GitHub: drafts are invisible to the by-tag endpoint.
-            if self.release['draft']: raise m.subprocess.CalledProcessError(1, ('gh', 'api', path))
-            return self.release
-        if path.startswith('compare/'): return {'status': self.status}
-        if path.endswith('/pulls'): return [self.pr]
-        if path.startswith('commits/'): return self.commit
-        if path == 'actions/workflows/ci.yml': return {'id': 5}
-        if path.startswith('actions/workflows/5/runs?'): return {'workflow_runs': [self.run]}
-        raise AssertionError(path)
-    def command(self, *args):
-        if args[0] == 'docker': self.writes.append(args); return ''
-        if '/jobs?' in args[-1]: return json.dumps([{'jobs': self.jobs}])
-        if '/releases?' in args[-1]: return json.dumps([self.listing()])
-        raise AssertionError(args)
+        self.auth = []
+        self.ci = []
+        mocks = [patch.object(m.common, 'release_for', side_effect=lambda tag: self.release),
+                 patch.object(m.common, 'resolve_source', side_effect=lambda tag: self.commit),
+                 patch.object(m.common, 'require_release_pr', side_effect=lambda *args: self.auth.append(args)),
+                 patch.object(m.common, 'wait_main_ci', side_effect=lambda sha: self.ci.append(sha)),
+                 patch.object(m.common, 'releases', side_effect=self.listing),
+                 patch.object(m.common, 'api', side_effect=self.api),
+                 patch.object(m.common, 'command', side_effect=lambda *args: self.writes.append(args))]
+        for mock in mocks:
+            mock.start(); self.addCleanup(mock.stop)
+
     def listing(self):
-        others = [{'tag_name': v, 'draft': False, 'prerelease': False} for v in self.versions if v != self.release['tag_name']]
-        return [self.release] + others + self.extra
-    def test_authorized_draft_builds(self):
-        m.prepare()
-        with open(os.environ['GITHUB_OUTPUT']) as f: self.assertIn('build=true', f.read())
-        self.assertEqual(self.writes, [])
-    def test_public_never_builds(self):
+        return [self.release] + [{'tag_name': tag, 'draft': False, 'prerelease': False} for tag in self.versions]
+
+    def api(self, path, *args):
+        self.writes.append((path, args))
         self.release['draft'] = False
-        self.run['conclusion'] = 'failure'
+        return self.release
+
+    def test_authorized_draft_builds_exact_source(self):
         m.prepare()
-        with open(os.environ['GITHUB_OUTPUT']) as f: self.assertIn('build=false', f.read())
-        self.assertEqual(self.writes, [])
-    def test_non_main_tooling_refused(self):
-        os.environ['GITHUB_REF'] = 'refs/tags/v0.5.0'
-        with self.assertRaises(ValueError): m.prepare()
-    def test_fork_tooling_refused(self):
-        os.environ['GITHUB_REPOSITORY'] = 'attacker/kite'
-        with self.assertRaises(ValueError): m.prepare()
-    def test_untrusted_source_refused(self):
-        self.status = 'diverged'
-        with self.assertRaises(ValueError): m.prepare()
-    def test_merge_release_commit_refused(self):
-        self.commit['parents'].append({'sha': 'second'})
-        with self.assertRaises(ValueError): m.prepare()
-    def test_same_name_fork_release_pr_refused(self):
-        self.pr['head']['repo']['full_name'] = 'attacker/kite'
-        with self.assertRaises(ValueError): m.prepare()
-    def test_non_bot_release_refused(self):
-        self.pr['user']['type'] = 'User'
-        with self.assertRaises(ValueError): m.prepare()
-    def test_other_producer_refused(self):
-        self.run['workflow_id'] = 6
-        with self.assertRaises(ValueError): m.prepare()
-    def test_wrong_commit_refused(self):
-        self.run['head_sha'] = 'other'
-        with self.assertRaises(ValueError): m.prepare()
-    def test_dispatch_is_not_main_ci(self):
-        self.run['event'] = 'workflow_dispatch'
-        with self.assertRaises(ValueError): m.prepare()
-    def test_failed_gate_refused(self):
-        self.jobs[0]['conclusion'] = 'failure'
-        with self.assertRaises(ValueError): m.prepare()
-    def test_old_public_is_no_write(self):
+        with open(os.environ['GITHUB_OUTPUT']) as stream: out = stream.read()
+        self.assertIn('build=true', out); self.assertIn('sha=' + SHA, out)
+        self.assertEqual(self.auth, [(self.commit, 'kite', '0.7.0')])
+        self.assertEqual(self.ci, [SHA]); self.assertEqual(self.writes, [])
+
+    def test_public_history_never_builds_or_overwrites_assets(self):
+        self.release['draft'] = False; self.versions = ['v0.7.1', 'v0.8.0']
+        m.prepare(); m.publish()
+        self.assertEqual(self.writes, []); self.assertEqual(self.auth, []); self.assertEqual(self.ci, [])
+        with open(os.environ['GITHUB_OUTPUT']) as stream: self.assertNotIn('build=true', stream.read())
+
+    def test_public_replay_repairs_only_applicable_floating_tags(self):
         self.release['draft'] = False
-        self.versions = ['v0.5.0', 'v0.5.1', 'v0.6.0']
+        m.prepare(); m.publish()
+        self.assertEqual(len(self.writes), 2)
+        self.assertTrue(all(call[:4] == ('docker', 'buildx', 'imagetools', 'create') for call in self.writes))
+        self.assertEqual([call[-2] for call in self.writes], [m.IMAGE + ':latest', m.IMAGE + ':v0.7'])
+        self.assertTrue(all(call[-1] == os.environ['VERIFIED_IMAGE'] for call in self.writes))
+        self.assertEqual(self.auth, []); self.assertEqual(self.ci, [])
+
+    def test_player_never_enters_go_lifecycle(self):
+        os.environ['TAG'] = 'player-v0.7.0'
+        for action in (m.prepare, m.publish):
+            with self.assertRaises(ValueError): action()
+        self.assertEqual(self.writes, [])
+
+    def test_draft_publish_promotes_only_forward(self):
+        self.versions = ['v0.6.0', 'player-v99.0.0']
         m.publish()
-        self.assertEqual(self.writes, [])
-    def test_old_draft_is_not_latest(self):
-        self.versions = ['v0.5.0', 'v0.5.1', 'v0.6.0']
+        self.assertEqual(len(self.writes), 3)
+        self.assertIn('make_latest=true', self.writes[0][1])
+        self.assertEqual(self.writes[1][-2], m.IMAGE + ':latest')
+        self.assertEqual(self.writes[2][-2], m.IMAGE + ':v0.7')
+
+    def test_old_draft_does_not_move_floating_tags_backwards(self):
+        self.versions = ['v0.7.1', 'v0.8.0']
         m.publish()
         self.assertEqual(len(self.writes), 1)
         self.assertIn('make_latest=false', self.writes[0][1])
-    def test_public_replay_repairs_only_floating_tags(self):
-        self.release['draft'] = False
+
+    def test_older_minor_advances_only_its_minor(self):
+        self.versions = ['v0.6.0', 'v0.8.0']
         m.publish()
         self.assertEqual(len(self.writes), 2)
-        self.assertTrue(all(w[0] == 'docker' for w in self.writes))
-    def test_tag_changed_before_publish(self):
-        os.environ['SOURCE_SHA'] = 'other'
+        self.assertIn('make_latest=false', self.writes[0][1])
+        self.assertEqual(self.writes[1][-2], m.IMAGE + ':v0.7')
+
+    def test_tag_changed_refused_before_any_write(self):
+        os.environ['SOURCE_SHA'] = 'c' * 40
         with self.assertRaises(ValueError): m.publish()
         self.assertEqual(self.writes, [])
-    def test_missing_release_refused(self):
-        self.release['tag_name'] = 'v0.4.9'
-        self.versions = []
-        with self.assertRaises(ValueError): m.prepare()
-    def test_duplicate_release_refused(self):
-        self.extra = [dict(self.release, id=2)]
-        with self.assertRaises(ValueError): m.prepare()
-    def test_canonical_tags(self):
-        for tag in ['main', 'v01.2.3', 'v1.2.3-rc.1', 'v1.2.3\n', 'v1.2.3;echo bad']:
-            with self.subTest(tag=tag), self.assertRaises(ValueError): m.version(tag)
+
+    def test_failed_auth_or_ci_never_builds_or_publishes(self):
+        for method in ('require_release_pr', 'wait_main_ci'):
+            with patch.object(m.common, method, side_effect=ValueError('refused')):
+                for action in (m.prepare, m.publish):
+                    with self.assertRaises(ValueError): action()
+        self.assertEqual(self.writes, [])
 
 unittest.main()
 PY

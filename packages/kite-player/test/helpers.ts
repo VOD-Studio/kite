@@ -42,7 +42,7 @@ export class FakeAudio implements AudioLike {
 export function track(id: string, over: Partial<Track> = {}): Track {
   return {
     id,
-    title: "歌" + id,
+    title: `歌${id}`,
     artists: [{ id: "a", name: "林间" }],
     album: { id: "al", name: "晴朗的周三", cover: "https://p1.music.126.net/c.jpg" },
     durationMs: 200_000,
@@ -64,7 +64,10 @@ export const lyrics: Lyrics = {
   instrumental: false,
 };
 
-export function fakeSource(playlist: Playlist, extra: Record<string, Track> = {}): DataSource & { trackCalls: string[] } {
+export function fakeSource(
+  playlist: Playlist,
+  extra: Record<string, Track> = {},
+): DataSource & { trackCalls: string[] } {
   const trackCalls: string[] = [];
   return {
     trackCalls,
@@ -73,7 +76,7 @@ export function fakeSource(playlist: Playlist, extra: Record<string, Track> = {}
       trackCalls.push(id);
       const t = playlist.tracks.find((x) => x.id === id) ?? extra[id];
       if (!t) throw new Error("not found");
-      return { ...t, stream: t.stream + "&fresh=1" };
+      return { ...t, stream: `${t.stream}&fresh=1` };
     },
     lyrics: async () => lyrics,
   };

@@ -3,7 +3,12 @@ import { cubicBezier, frame, type MorphGeo } from "../src/element/morph";
 
 const el = () => document.createElement("div");
 const at = (left: number, top: number, width: number, height: number) => ({ left, top, width, height });
-const item = (box: ReturnType<typeof at>, fade: [number, number] = [0, 1]) => ({ el: el(), rect: box, o: { x: box.left, y: box.top }, fade });
+const item = (box: ReturnType<typeof at>, fade: [number, number] = [0, 1]) => ({
+  el: el(),
+  rect: box,
+  o: { x: box.left, y: box.top },
+  fade,
+});
 
 function geo(): MorphGeo {
   const cover = { ...item(at(24, 72, 342, 342)), radius: 16, own: 1 };
@@ -51,7 +56,12 @@ describe("展开 / 收起的形变", () => {
     const g = geo();
     const open = frame(g, 1);
     expect(open.get(g.parts.stage)?.clipPath).toBe("inset(0px 0px 0px 0px round 0px)");
-    expect(open.get(g.cover.el)).toMatchObject({ translate: "0px 0px", scale: "1", rotate: "0deg", borderRadius: "16px" });
+    expect(open.get(g.cover.el)).toMatchObject({
+      translate: "0px 0px",
+      scale: "1",
+      rotate: "0deg",
+      borderRadius: "16px",
+    });
     expect(open.get(g.top.el)?.opacity).toBe("1");
     for (const it of g.below) expect(open.get(it.el)).toMatchObject({ translate: "0px 0px", scale: "1", opacity: "1" });
     expect(open.get(g.miniText!.el)?.opacity).toBe("0");

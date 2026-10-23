@@ -4,7 +4,7 @@
 
 ## Context
 
-kite 是双产物:CLI 跨平台二进制 + gRPC 服务镜像。发布管道由 GoReleaser 驱动,需要决定:
+kite 的 Go 产品交付 CLI 跨平台二进制和 gRPC 服务镜像;独立的 player npm 包不在此镜像策略内。Go 发布管道由 GoReleaser 驱动,需要决定:
 
 1. 镜像构建用 GoReleaser 的哪种 docker 配置?
 2. 镜像 base 用什么?

@@ -8,7 +8,7 @@
 
 ```sh
 npm ci
-npm run check         # 类型检查 + 测试 + 构建,与 CI 的 Player job 相同(仓库根 make player-check)
+npm run check         # 类型检查 + Biome + 测试 + 构建(仓库根 make player-check)
 npm run build         # 输出 dist:ESM + 类型声明 + 单文件 IIFE
 npm test              # vitest + happy-dom
 npm run screenshots   # 构建后从演示页生成 docs/images/*.webp(README 的配图)
@@ -43,7 +43,7 @@ HOST=0.0.0.0 npm run demo     # 同一局域网的手机打开打印出的地址
 | `src/react/` | React 组件(`components.ts`)与 hooks(`hooks.ts`) |
 | `test/` | 核心、元素、React 的测试 |
 | `demo/` | 离线演示页 |
-| `scripts/` | 演示页的静态服务、截图脚本 |
+| `scripts/` | 演示页的静态服务、截图脚本、npm 成品与独立消费者验收 |
 | `docs/images/` | README 配图(不进 npm 包) |
 
 ## 约定
@@ -56,6 +56,6 @@ HOST=0.0.0.0 npm run demo     # 同一局域网的手机打开打印出的地址
 
 ## 发布
 
-只能手动发布:改 `package.json` 的 `version`,在 `CHANGELOG.md` 写好这个版本,合入 `main` 后在 GitHub Actions 运行 `npm` workflow(或 `gh workflow run npm.yml --ref main`)。workflow 只从 `main` 发布、拒绝已经发布过的版本,带 `-` 的预发布版本发到 `next`。需要仓库 secret `NPM_TOKEN`。
+发布与恢复以仓库 [CONTRIBUTING「发布与恢复」](../../CONTRIBUTING.md#发布与恢复) 为准:player 使用独立 release PR 与 `player-v*` tag,版本由 release-please 管理;发布消费 main CI 已验收的同一份 tgz,不重新构建或打包。
 
 README 的图片用 `main` 分支的 raw 链接,发布前确认对应的图已经合入 `main`。
