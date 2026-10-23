@@ -58,7 +58,24 @@ claude mcp add kite -- kite mcp    # Claude Code;Claude Desktop / Cursor 的配�
 
 ### 网页播放器(`packages/kite-player`)
 
-npm 包 `@violetjs/kite-player`:悬浮播放器、单曲与歌单卡片、逐字歌词,用 Lit 写的标准自定义元素,另有 React 组件。数据来自 kite-server 的**公开只读模式**(`/player/v1`,白名单 + 签名播放链接 + 限流),部署见 [网页播放器](docs/player.md),组件用法见 [组件说明](packages/kite-player/README.zh-CN.md)。
+npm 包 [`@violetjs/kite-player`](https://www.npmjs.com/package/@violetjs/kite-player):悬浮播放器、单曲与歌单卡片、逐字歌词,用 Lit 写的标准自定义元素,另有 React 组件。数据来自 kite-server 的**公开只读模式**(`/player/v1`,白名单 + 签名播放链接 + 限流),部署见 [网页播放器](docs/player.md),组件用法见 [组件说明](packages/kite-player/README.zh-CN.md)。
+
+前端项目里安装后导入一次,再写标签:
+
+```sh
+npm install @violetjs/kite-player
+```
+
+```js
+import "@violetjs/kite-player/element"; // 注册 <kite-player>、<kite-track>、<kite-playlist>
+```
+
+```html
+<kite-player api="https://music.example.com" playlists="3778678"></kite-player>
+<kite-track song="1973665667"></kite-track>
+```
+
+静态页面直接从 CDN 引入单文件版本:
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/@violetjs/kite-player@0.1/dist/kite-player.iife.js"></script>
