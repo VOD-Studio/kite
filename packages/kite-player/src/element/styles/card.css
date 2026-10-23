@@ -450,12 +450,20 @@ img[data-err], img:not([src]) {
   height: 42px;
 }
 
-/* 大卡片 */
+/*
+ * 大卡片:左边封面,右边从上到下是歌名、标签与「从副歌听」、三行歌词(歌词底边与封面底边对齐),
+ * 最下面一整行是控制条。窄的时候歌词换到封面下面占满整行。
+ */
 .l {
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: "cover info" "cover lyric" "ctl ctl";
+  column-gap: 28px;
   color: #FFFFFF;
   border-radius: 24px;
   padding: 28px;
-  box-shadow: 0 24px 50px -28px rgba(20,30,70,.7);
+  box-shadow: 0 20px 44px -28px rgba(20,30,70,.5);
   background: #33405F;
 }
 .l .amb {
@@ -476,23 +484,26 @@ img[data-err], img:not([src]) {
   inset: 0;
   background: linear-gradient(180deg, rgba(14,14,26,.12), rgba(14,14,26,.38));
 }
-.l > :not(.amb):not(.scrim) {
+.l > :not(.amb):not(.scrim):not(.open) {
   position: relative;
 }
-.l .top {
-  display: flex;
-  gap: 26px;
-  align-items: flex-start;
-}
 .l .cover {
-  width: 168px;
-  height: 168px;
+  grid-area: cover;
+  width: 216px;
+  height: 216px;
   border-radius: 16px;
-  box-shadow: 0 20px 40px -18px rgba(6,8,26,.65);
+  box-shadow: 0 16px 34px -18px rgba(6,8,26,.5);
 }
 .l .info {
-  flex: 1;
+  grid-area: info;
   min-width: 0;
+  /* 右上角留给「在播放器中打开」。 */
+  padding-right: 40px;
+}
+.l .open {
+  position: absolute;
+  top: 20px;
+  right: 20px;
 }
 .l .kicker {
   font-size: 12px;
@@ -507,15 +518,20 @@ img[data-err], img:not([src]) {
   font-weight: 700;
 }
 .l .who {
-  margin-top: 4px;
+  margin-top: 2px;
   font-size: 15px;
   line-height: 22px;
   color: rgba(255,255,255,.75);
 }
 .l .tags {
   display: flex;
-  gap: 6px;
-  margin-top: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.l .tags:empty {
+  display: none;
 }
 /* 大卡片在封面的深色环境色上:标签换成浅色。 */
 .l .tg.out {
@@ -529,24 +545,25 @@ img[data-err], img:not([src]) {
   --t-line: rgba(242,208,140,.45);
 }
 .l .chip {
-  margin-top: 12px;
   background: rgba(255,255,255,.16);
   color: #FFFFFF;
 }
 .l .lyric {
-  margin-top: 26px;
-  min-height: 94px;
+  grid-area: lyric;
+  align-self: end;
+  min-width: 0;
+  margin-top: 16px;
 }
 .l .lyric-prev, .l .lyric-next {
-  font-size: 15px;
-  line-height: 22px;
+  font-size: 14px;
+  line-height: 21px;
   font-weight: 600;
   color: rgba(255,255,255,.42);
 }
 .l .lyric-line {
-  margin-top: 4px;
-  font-size: 21px;
-  line-height: 30px;
+  margin-top: 2px;
+  font-size: 20px;
+  line-height: 29px;
   font-weight: 700;
 }
 .l .lyric-line .u {
@@ -561,10 +578,11 @@ img[data-err], img:not([src]) {
   color: rgba(255,255,255,.85);
 }
 .l .controls {
+  grid-area: ctl;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 18px;
+  margin-top: 20px;
 }
 @media (hover: hover) {
   .l .controls .ib:hover {
@@ -576,7 +594,7 @@ img[data-err], img:not([src]) {
   height: 52px;
 }
 .l .blob svg {
-  filter: drop-shadow(0 8px 14px rgba(0,0,0,.18));
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,.16));
 }
 .l .blob .blob-shape {
   fill: #FFFFFF;
@@ -598,16 +616,21 @@ img[data-err], img:not([src]) {
 }
 /* 紧凑布局:卡片宽度 ≤ 520px 时宿主带 data-narrow(见 util.ts 的 watchNarrow)。 */
 :host([data-narrow]) .l {
+  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  grid-template-areas: "cover info" "lyric lyric" "ctl ctl";
+  column-gap: 16px;
   padding: 20px;
   border-radius: 22px;
-}
-:host([data-narrow]) .l .top {
-  gap: 16px;
 }
 :host([data-narrow]) .l .cover {
   width: 112px;
   height: 112px;
   border-radius: 14px;
+}
+:host([data-narrow]) .l .open {
+  top: 12px;
+  right: 12px;
 }
 :host([data-narrow]) .l .title {
   font-size: 22px;
@@ -619,12 +642,17 @@ img[data-err], img:not([src]) {
 :host([data-narrow]) .l .chip {
   display: none;
 }
+:host([data-narrow]) .l .lyric {
+  margin-top: 20px;
+}
 :host([data-narrow]) .l .lyric-line {
   font-size: 19px;
   line-height: 27px;
 }
 :host([data-narrow]) .l .controls {
   flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 20px;
 }
 :host([data-narrow]) .l .controls .progress {
   order: -1;

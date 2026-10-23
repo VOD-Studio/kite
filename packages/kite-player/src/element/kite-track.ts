@@ -182,19 +182,18 @@ export class KiteTrackElement extends LitElement {
     return html`<div class=${classes} part="card">
       <div class="amb"><img alt="" src=${t.album.cover || nothing} @error=${onCoverError} /></div>
       <div class="scrim"></div>
-      <div class="top">
-        <div class="cover">${coverPh}<img alt="" src=${t.album.cover || nothing} @error=${onCoverError} @load=${onCoverLoad} /></div>
-        <div class="info">
-          <div class="kicker">${cur ? "单曲 · 正在播放" : "单曲"}</div>
-          <div class="title ell">${t.title}</div>
-          <div class="who ell">${[artists(t), t.album.name].filter(Boolean).join(" · ")}</div>
-          <div class="tags">${this.tags(t)}</div>
-          ${locked
+      <div class="cover">${coverPh}<img alt="" src=${t.album.cover || nothing} @error=${onCoverError} @load=${onCoverLoad} /></div>
+      <div class="info">
+        <div class="kicker">${cur ? "单曲 · 正在播放" : "单曲"}</div>
+        <div class="title ell">${t.title}</div>
+        <div class="who ell">${[artists(t), t.album.name].filter(Boolean).join(" · ")}</div>
+        <div class="tags">
+          ${this.tags(t)}${locked
             ? html`<div class="error" style="color:rgba(255,255,255,.75)">${unplayableMessage(t)}</div>`
             : html`<button class="chip chorus" @click=${this.onChorus}>${icons.wave}从副歌听</button>`}
         </div>
-        ${locked ? nothing : html`<button class="ib open" aria-label="在播放器中打开" style="color:rgba(255,255,255,.85)" @click=${this.onOpen}>${icons.expand}</button>`}
       </div>
+      ${locked ? nothing : html`<button class="ib open" aria-label="在播放器中打开" style="color:rgba(255,255,255,.85)" @click=${this.onOpen}>${icons.expand}</button>`}
       <div class="lyric">
         <div class="lyric-prev ell">${lv.prev}</div>
         ${this.renderLine(lv, false)}
