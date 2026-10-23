@@ -34,6 +34,13 @@ All notable changes to `@violetjs/kite-player` are documented here. Versions fol
 - Publish the verified main-CI tarball through an independent player release PR and tag, without rebuilding during publication.
 - Upgrade Vitest, tsup and esbuild to remove the fixable vulnerabilities reported by the dependency audit.
 
+## [0.3.0](https://github.com/VOD-Studio/kite/compare/player-v0.2.0...player-v0.3.0) (2026-10-23)
+
+
+### 新功能
+
+* **player:** 音质切换与 position 属性,修订展开收起、歌词滚动与光感背景 ([41386c2](https://github.com/VOD-Studio/kite/commit/41386c2a8a7bff8be53ab6b70e6e2ac05c45478e))
+
 ## [0.2.0](https://github.com/VOD-Studio/kite/compare/player-v0.1.0...player-v0.2.0) (2026-10-23)
 
 
