@@ -19,6 +19,14 @@
 - 提供 `make docker-run` / `make docker-check` 隔离工具链入口,不要求宿主机安装 Go 或 Node。
 - 移除 AI Review 工作流及其专用配置。
 
+## [0.7.1](https://github.com/VOD-Studio/kite/compare/v0.7.0...v0.7.1) (2026-10-23)
+
+
+### 构建与依赖
+
+* **dev:** 增加隔离的 Docker 开发工具链与 Make 入口 ([d9e36d5](https://github.com/VOD-Studio/kite/commit/d9e36d554c1cf9dc2b7a4ada987589c945ee5a64))
+* **player:** 验收真实 npm 成品并修复构建链漏洞 ([689c420](https://github.com/VOD-Studio/kite/commit/689c4207fdba869082b2739c409e1cce57ff9115))
+
 ## 0.7.0 (2026-10-22)
 
 ## What's Changed
