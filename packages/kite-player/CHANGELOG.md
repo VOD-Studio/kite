@@ -4,6 +4,10 @@ All notable changes to `@violetjs/kite-player` are documented here. Versions fol
 
 ## Unreleased
 
+### Fixed
+
+- Restore cover, disc and ambient images after a failed image request when the next track's artwork loads successfully.
+
 ### Build and release
 
 - Validate a single packed tarball in an isolated consumer, covering TypeScript declarations, ESM, React SSR, bundling and Chromium interactions.

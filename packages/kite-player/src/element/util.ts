@@ -25,9 +25,15 @@ export function canAnimate(el: Element): boolean {
   return typeof (el as HTMLElement).animate === "function" && !prefersReducedMotion();
 }
 
-/** hideBroken:封面加载失败时隐藏碎图,让容器的占位样式(渐变 + 音符)显示出来。 */
+/** hideBroken:加载失败时显示容器占位,同一图片下次加载成功后恢复显示。 */
 export function hideBroken(e: Event): void {
-  (e.currentTarget as HTMLElement).hidden = true;
+  const image = e.currentTarget as HTMLImageElement;
+  image.hidden = true;
+  image.addEventListener("load", showLoaded, { once: true });
+}
+
+function showLoaded(e: Event): void {
+  (e.currentTarget as HTMLImageElement).hidden = false;
 }
 
 /**

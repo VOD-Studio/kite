@@ -144,6 +144,30 @@ describe("<kite-player>", () => {
     }
   });
 
+  it("封面加载失败后切歌,成功加载的新封面恢复显示", async () => {
+    const broken = track("9", { album: { id: "al", name: "损坏封面", cover: "https://example.com/broken.jpg" } });
+    const next = track("2", { title: "慢车" });
+    player.setSource(fakeSource({ ...playlist, tracks: [broken, next] }));
+    const el = await mount(`<kite-player playlists="100"></kite-player>`);
+    const root = shadow(el);
+    const selectors = [".cover img", ".amb img", ".disc-img img"];
+    for (const sel of selectors) {
+      const img = root.querySelector<HTMLImageElement>(sel);
+      img?.dispatchEvent(new Event("error"));
+      expect(img?.hidden, sel).toBe(true);
+    }
+
+    player.next();
+    await settle(el);
+    expect(player.state.current?.id).toBe("2");
+    for (const sel of selectors) {
+      const img = root.querySelector<HTMLImageElement>(sel);
+      expect(img?.getAttribute("src"), sel).toBe(next.album.cover);
+      img?.dispatchEvent(new Event("load"));
+      expect(img?.hidden, sel).toBe(false);
+    }
+  });
+
   it("播放列表抽屉:列出歌曲,VIP 歌不能播并给出提示", async () => {
     const el = await mount(`<kite-player playlists="100"></kite-player>`);
     const root = shadow(el);
