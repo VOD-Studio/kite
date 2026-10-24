@@ -190,9 +190,6 @@ The exported [types](https://github.com/VOD-Studio/kite/blob/main/packages/kite-
 
 Related states are composed into single images, so they stay together on narrow README pages. Click an image to inspect it at full resolution.
 
-<details>
-<summary>Browse player layouts, cards, and themes</summary>
-
 ### Bar and disc
 
 The floating bar shows the current lyric and collapses to a spinning disc with a progress ring when scrolling down.
@@ -240,8 +237,6 @@ Enter from the panel's top-right button. The collapse button or Escape returns t
 Each playlist in `playlists` gets a tab. Unavailable tracks explain why when selected.
 
 <img src="./docs/images/queue.webp" width="420" alt="The queue sheet above the floating bar">
-
-</details>
 
 ## Compatibility and development
 

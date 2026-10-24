@@ -190,9 +190,6 @@ document.getElementById("play-music").addEventListener("click", () => {
 
 相关状态已拼接为单张图片，在窄页面中也不会拆成多行。点击图片可查看完整分辨率。
 
-<details>
-<summary>展开播放器布局、卡片与主题截图</summary>
-
 ### 播放条与圆形
 
 悬浮播放条显示当前歌词，向下滚动时收成带进度环的旋转圆形。
@@ -240,8 +237,6 @@ document.getElementById("play-music").addEventListener("click", () => {
 `playlists` 中的每个歌单各占一个标签，点击无法播放的歌曲会说明原因。
 
 <img src="./docs/images/queue.webp" width="420" alt="播放条上方的播放列表抽屉">
-
-</details>
 
 ## 兼容性与开发
 
