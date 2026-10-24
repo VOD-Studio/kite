@@ -50,8 +50,26 @@ try {
     outside.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) || isAbsolute(outside),
     "Consumer must be outside the repository",
   );
+  // Keep checkout links relative; only the publish candidate gets immutable repository URLs.
+  const packageRoot = join(temporary, "package");
+  await mkdir(packageRoot);
+  for (const file of ["package.json", ...pkg.files]) {
+    await cp(join(root, file), join(packageRoot, file), { recursive: true });
+  }
+  const imageBase = `https://raw.githubusercontent.com/VOD-Studio/kite/${sourceSha}/packages/kite-player/`;
+  const readmeBase = `https://github.com/VOD-Studio/kite/blob/${sourceSha}/packages/kite-player/`;
+  for (const file of ["README.md", "README.zh-CN.md"]) {
+    const path = join(packageRoot, file);
+    const readme = await readFile(path, "utf8");
+    await writeFile(
+      path,
+      readme
+        .replace(/src="(\.\/[^"]+)"/g, (_, path) => `src="${new URL(path, imageBase).href}"`)
+        .replace(/\]\((\.\/[^)]+)\)/g, (_, path) => `](${new URL(path, readmeBase).href})`),
+    );
+  }
   const packed = JSON.parse(
-    run(npm, ["pack", "--json", "--ignore-scripts", "--pack-destination", temporary], root, true),
+    run(npm, ["pack", "--json", "--ignore-scripts", "--pack-destination", temporary], packageRoot, true),
   );
   assert.equal(packed.length, 1, "Expected exactly one package");
   const [entry] = packed;

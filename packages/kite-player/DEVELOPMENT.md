@@ -31,7 +31,19 @@ HOST=0.0.0.0 npm run demo     # 同一局域网的手机打开打印出的地址
 
 ## 截图
 
-`scripts/screenshots.mjs` 自己起静态服务,用 CDP 驱动本机的 Chrome(路径可用环境变量 `CHROME` 指定)打开演示页,依次截播放条、圆形、面板、沉浸模式、播放列表、手机全屏与各种卡片,写到 `docs/images/`。改了界面后运行 `npm run screenshots` 并检查图片。截图依赖本机字体,不同机器的结果不会逐字节相同,所以不做逐字节比对。
+`scripts/screenshots.mjs` 自己起静态服务,用 CDP 驱动本机的 Chrome(路径可用环境变量 `CHROME` 指定)打开演示页。先截取各个状态,再用同一个浏览器的 canvas 拼图,只将九张 README 成品写到 `docs/images/`,不需要额外图像处理依赖:
+
+| 成品 | 内容 |
+| --- | --- |
+| `hero.webp`、`immersive.webp`、`queue.webp` | 演示全貌、沉浸模式、播放列表,各保留单张 |
+| `bar-states.webp`、`panel-states.webp` | 播放条与圆形、封面与歌词面板,分别横向拼接 |
+| `mobile-states.webp` | 手机封面、歌词、紧凑卡片三列拼接 |
+| `track-cards.webp` | 小、中、大尺寸与不可播放状态,按阅读顺序排成两列 |
+| `playlist-cards.webp`、`dark-cards.webp` | 歌单尺寸对照、深色卡片,分别横向拼接 |
+
+单独的状态截图只在内存中保留,不提交第二套素材。中英文 README 共用这些成品,不要重新放多个 `<img>` 来模拟并排:GitHub 和 npm 的窄内容区会把它们拆成多行。README 保留首图,其余图库放在使用说明之后直接展示,不使用折叠块。
+
+改了界面后运行 `npm run screenshots` 并检查成品,同时查看中英文 README 的桌面和窄屏渲染。截图依赖本机字体,不同机器的结果不会逐字节相同,所以不做逐字节比对。
 
 ## 目录
 
@@ -58,4 +70,10 @@ HOST=0.0.0.0 npm run demo     # 同一局域网的手机打开打印出的地址
 
 发布与恢复以仓库 [CONTRIBUTING「发布与恢复」](../../CONTRIBUTING.md#发布与恢复) 为准:player 使用独立 release PR 与 `player-v*` tag,版本由 release-please 管理;发布消费 main CI 已验收的同一份 tgz,不重新构建或打包。
 
-README 的图片用 `main` 分支的 raw 链接,发布前确认对应的图已经合入 `main`。
+源码 README 的图片与语言切换使用相对路径,让本地预览和 GitHub 当前分支使用同一份素材,不依赖尚未合入 `main` 的远程图片。
+
+`make player-package-check` 在仓库外复制发布文件,仅将这份临时副本中的 README 相对图片和文档链接转换为源码提交 SHA 对应的绝对 URL,再 pack 一次并验收。源码 README 不回写,图片仍不进入 npm 包;发布端继续消费同一份已验收 tgz,不重新打包。这样 npm 不依赖 monorepo 相对路径解析,旧版本也不会被 `main` 后续的图片改动影响。
+
+普通 `npm pack` / `npm publish` 不执行这一步链接转换,不能替代正式发布入口。线上图片由 GitHub 托管,要求源码提交及图片已推送到公开仓库;正式发布消费 main CI 的产物,满足这一前提。本地预览始终直接使用工作区图片。
+
+验证源码预览时不要改写图片 URL 或拦截请求替换成本地素材:直接渲染 README,确认图库无需点击即可展示且全部图片实际加载。发布成品需检查解包后的双语 README,确认图片和语言链接绑定本次源码 SHA。

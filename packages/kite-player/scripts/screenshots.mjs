@@ -1,4 +1,4 @@
-// 从演示页(示例数据、离线)生成 README 用的截图,写到 docs/images/*.webp。
+// 从演示页(示例数据、离线)生成 README 配图,相关状态拼成一张图,写到 docs/images/*.webp。
 // 用法:npm run screenshots(先构建,再运行本脚本)。需要本机装有 Chrome / Chromium,
 // 路径可用环境变量 CHROME 指定。截图依赖本机字体,不同机器的结果不会逐字节相同。
 import { spawn } from "node:child_process";
@@ -87,12 +87,56 @@ async function open({ width = 1280, height = 800, mobile = false, dark = false }
   await sleep(1200);
 }
 
+const shots = new Map();
+
 /** shot 截图:clip 为空时截整个视口。 */
 async function shot(name, clipExpr) {
   const clip = clipExpr ? { ...(await run(clipExpr)), scale: 1 } : undefined;
   const { data } = await send("Page.captureScreenshot", { format: "webp", quality: 92, ...(clip ? { clip } : {}) });
+  shots.set(name, data);
+  console.log("Captured", name);
+}
+
+function save(name, data) {
   writeFileSync(join(out, `${name}.webp`), Buffer.from(data, "base64"));
-  console.log("✓", name);
+  console.log("Saved", name);
+}
+
+/** 同组截图保留原始分辨率,在浏览器 canvas 中排成固定行列,不依赖 README 的换行行为。 */
+async function compose(name, rows) {
+  const data = rows.map((row) => row.map((key) => shots.get(key)));
+  const encoded = await run(`(async () => {
+    const rows = await Promise.all(${JSON.stringify(data)}.map((row) =>
+      Promise.all(row.map(async (data) => {
+        const image = new Image();
+        image.src = "data:image/webp;base64," + data;
+        await image.decode();
+        return image;
+      }))
+    ));
+    const gap = 24;
+    const widths = rows.map((row) => row.reduce((sum, image) => sum + image.width, 0) + gap * (row.length - 1));
+    const heights = rows.map((row) => Math.max(...row.map((image) => image.height)));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(...widths);
+    canvas.height = heights.reduce((sum, height) => sum + height, 0) + gap * (rows.length - 1);
+    const context = canvas.getContext("2d");
+    context.drawImage(rows[0][0], 0, 0);
+    const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+    context.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    let y = 0;
+    rows.forEach((row, index) => {
+      let x = (canvas.width - widths[index]) / 2;
+      row.forEach((image) => {
+        context.drawImage(image, x, y + (heights[index] - image.height) / 2);
+        x += image.width + gap;
+      });
+      y += heights[index] + gap;
+    });
+    return canvas.toDataURL("image/webp", 0.92).split(",")[1];
+  })()`);
+  save(name, encoded);
 }
 
 const play = (sec) => `(() => { const p = KitePlayer.getPlayer(); void p.play(); p.seek(${sec}); })()`;
@@ -170,6 +214,15 @@ try {
       await shot(name + suffix, `($rect(document.querySelector('${sel}'), 16))`);
     }
   }
+
+  // README 只引用这九张成品;单独的状态截图仅在内存中参与拼图。
+  for (const name of ["hero", "immersive", "queue"]) save(name, shots.get(name));
+  await compose("bar-states", [["bar", "orb"]]);
+  await compose("panel-states", [["panel-cover", "panel-lyrics"]]);
+  await compose("mobile-states", [["mobile-cover", "mobile-lyrics", "mobile-cards"]]);
+  await compose("track-cards", [["track-s", "track-m"], ["track-l", "track-locked"]]);
+  await compose("playlist-cards", [["playlist-m", "playlist-l"]]);
+  await compose("dark-cards", [["track-m-dark", "playlist-m-dark"]]);
 } finally {
   ws.close();
   const exited = new Promise((r) => chrome.once("exit", r));
