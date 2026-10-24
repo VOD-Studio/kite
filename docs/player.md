@@ -11,7 +11,7 @@ kite 自带一个网页播放器组件 [`@violetjs/kite-player`](../packages/kit
   kite-server 公开模式(/player/v1)── 白名单、签名播放链接、限流、可选的服务账号 VIP 登录态
 ```
 
-有自己后端的站点(比如 violet)不需要开公开模式:后端照常用令牌调用 kite 的 gRPC / REST,再实现下文的 `/player/v1` 协议,或者给组件传一个[自定义数据源](../packages/kite-player/README.md#自定义数据来源)。
+有自己后端的站点(比如 violet)不需要开公开模式:后端照常用令牌调用 kite 的 gRPC / REST,再实现下文的 `/player/v1` 协议,或者给组件传一个[自定义数据源](../packages/kite-player/README.zh-CN.md#自定义数据源)。
 
 ## 开启公开模式
 
@@ -111,7 +111,7 @@ secrets:
 ## 在页面里使用
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@violetjs/kite-player@0.1/dist/kite-player.iife.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@violetjs/kite-player@0.3.0/dist/kite-player.iife.js"></script>
 
 <!-- 每个页面一个(放在公共布局里);playlists 是播放列表里列出的歌单 -->
 <kite-player api="https://music.example.com" playlists="123456,234567"></kite-player>

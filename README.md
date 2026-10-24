@@ -1,135 +1,113 @@
 # kite
 
-Go 实现的网易云能力服务 + 命令行工具 + MCP 服务,另有网页播放器组件。
+English · [简体中文](README.zh-CN.md)
 
-几种用法共享同一套网易云核心(`internal/netease/`):
+NetEase Cloud Music for your terminal, applications, AI tools, and web pages. Built in Go, with a separately published web player.
 
-- **在你的项目里调用**:gRPC + REST 服务 `kite-server`,见 [接入指南](docs/integration.md)。
-- **在终端里用**:命令行工具 `kite`,见 [使用手册](docs/kite-guide.md)。
-- **在 AI 客户端里用**:`kite mcp` 把只读接口暴露给 Claude / Cursor 等,见 [MCP](docs/mcp.md)。
-- **在网页里放播放器**:npm 包 [`@violetjs/kite-player`](packages/kite-player/),配合 kite-server 的公开模式,见 [网页播放器](docs/player.md)。
+## Choose your entry point
 
-给 AI 工具的项目索引见 [`llms.txt`](llms.txt)。
+| I want to… | Use | Start here |
+| --- | --- | --- |
+| Search and manage music from a terminal | `kite` CLI; no server required | [CLI](#cli) |
+| Call music APIs from an application | `kite-server` with gRPC and REST | [Server](#server) |
+| Give an AI client read-only music tools | `kite mcp`, running locally over stdio | [AI clients](#ai-clients) |
+| Embed a player on a website | `@violetjs/kite-player`, with Web Components and React bindings | [Web player](#web-player) |
 
-## 产物
+The CLI and server share the same NetEase request engine. The web player is an independent npm package; it connects to the server's public, read-only API or your own backend.
 
-### 服务 (`cmd/server`)
+## Quick start
 
-gRPC(强类型 RPC,默认 `127.0.0.1:3722`)+ grpc-gateway(REST 暴露,默认 `127.0.0.1:3721`)双 server,收到 SIGINT/SIGTERM 优雅关闭。
+### CLI
 
-**默认只监听本机回环;对外监听必须配置访问令牌,否则拒绝启动。** 地址、令牌、健康检查、Docker 用法见 [服务部署与访问控制](docs/server-security.md)。
+Download a binary from [GitHub Releases](https://github.com/VOD-Studio/kite/releases), or install with Go (required version: [`go.mod`](go.mod)):
 
-出网代理:server 的 engine 走默认 transport,尊重标准环境变量 `HTTPS_PROXY` / `HTTP_PROXY`(无需额外配置,PRD-0018)。
-
-```bash
-go run ./cmd/server      # 直接运行(仅本机可访问,无需令牌)
-air                      # 热重载开发(.air.toml)
-docker build -t kite .   # 本地构建镜像(仅 Dockerfile,无 compose);运行时必须设置 KITE_SERVER_AUTH_TOKEN
+```sh
+go install github.com/VOD-Studio/kite/cmd/kite@latest
+kite --help
+kite search "周杰伦"
 ```
 
-发布的镜像是公开的:`ghcr.io/vod-studio/kite-server:<版本>`(运行方式见 [服务部署与访问控制](docs/server-security.md))。
-调用方怎么带令牌、网易云 cookie 怎么传与续期、错误怎么分支,见 [接入指南](docs/integration.md)。
+Run `kite login` to sign in with a QR code when you need account-specific features. Playback and download availability depend on your NetEase account and the track's rights.
 
-```bash
-curl localhost:3721/healthz
+The CLI connects directly to NetEase; you do not need to run `kite-server`. See the [getting-started guide](docs/kite-guide.md). For commands and flags, use `kite <command> --help` or the [generated reference](docs/cmd/).
+
+### Server
+
+Run locally from source:
+
+```sh
+git clone https://github.com/VOD-Studio/kite.git
+cd kite
+go run ./cmd/server
+```
+
+In another terminal:
+
+```sh
+curl --fail http://127.0.0.1:3721/healthz
 # {"status":"SERVING"}
 ```
 
-### CLI (`cmd/kite`)
+| Interface | Default address |
+| --- | --- |
+| REST | `127.0.0.1:3721` |
+| gRPC | `127.0.0.1:3722` |
 
-直连 engine + endpoint 声明,**不经 gRPC**。网易云 9 域已全接入:登录(`auth`)、歌曲(`song`)、专辑(`album`)、歌手(`artist`)、歌单(`playlist`)、用户(`user`)、搜索(`search`)、推荐(`recommend`)、私人 FM(`fm`)。
+**Local-only by default. Binding to a non-loopback address requires an access token; otherwise the server refuses to start.** Server access tokens and NetEase login credentials serve different purposes.
 
-```bash
-go install github.com/VOD-Studio/kite/cmd/kite@latest
-kite login               # 扫码登录
-kite search 周杰伦        # 搜索(位置参数 ≡ --keyword)
-kite song download 347230 --level 3   # 下载单曲(1标准 2较高 3无损 4Hi-Res)
+Use the [integration guide](docs/integration.md) for authentication, account handling, and client examples. For containers, use the published image `ghcr.io/vod-studio/kite-server` with the configuration in [server security](docs/server-security.md); production rollout is covered in [deployment](docs/deploy.md).
+
+### AI clients
+
+After installing the CLI, register it with Claude Code:
+
+```sh
+claude mcp add kite -- kite mcp
 ```
 
-上手流程见 [使用手册](docs/kite-guide.md);全命令参数查 `kite <命令> --help` 或 [生成参考](docs/cmd/)。
+MCP exposes read-only tools for search, lyrics, playlists, and more. It uses your local CLI login state and cannot modify your music account. Claude Desktop and Cursor configuration: [MCP guide](docs/mcp.md).
 
-### MCP(`kite mcp`)
-
-以 stdio MCP 服务运行,让 AI 客户端调用搜索、歌词、播放链接、歌单 / 专辑 / 歌手、热搜、每日推荐等**只读**工具。在本机运行,用本机的 `kite login` 登录态,不经过任何第三方服务器。
-
-```bash
-claude mcp add kite -- kite mcp    # Claude Code;Claude Desktop / Cursor 的配置见 docs/mcp.md
-```
-
-### 网页播放器(`packages/kite-player`)
-
-npm 包 [`@violetjs/kite-player`](https://www.npmjs.com/package/@violetjs/kite-player):悬浮播放器、单曲与歌单卡片、逐字歌词,用 Lit 写的标准自定义元素,另有 React 组件。数据来自 kite-server 的**公开只读模式**(`/player/v1`,白名单 + 签名播放链接 + 限流),部署见 [网页播放器](docs/player.md),组件用法见 [组件说明](packages/kite-player/README.zh-CN.md)。
-
-前端项目里安装后导入一次,再写标签:
+### Web player
 
 ```sh
 npm install @violetjs/kite-player
 ```
 
-```js
-import "@violetjs/kite-player/element"; // 注册 <kite-player>、<kite-track>、<kite-playlist>
+A floating player, track and playlist cards, word-by-word lyrics, and mobile layouts. Use custom elements in any framework, React components and hooks, or the playback core with your own UI.
+
+- [Component setup, screenshots, and API](packages/kite-player/README.md)
+- [Public-mode deployment and HTTP contract](docs/player.md)
+
+The browser-facing `/player/v1` API is separate from the authenticated gRPC/REST service. It exposes only allowlisted content, with signed playback links and rate limiting. Never put server access tokens or NetEase cookies in page markup.
+
+## Documentation
+
+Detailed guides and CLI help are currently in Simplified Chinese. Both this overview and the [player README](packages/kite-player/README.md) are available in English and Chinese.
+
+| Topic | Reference |
+| --- | --- |
+| CLI usage | [Getting started](docs/kite-guide.md) · [Command reference](docs/cmd/) |
+| Application integration | [Client guide](docs/integration.md) · [gRPC/REST errors](docs/grpc-errors.md) |
+| Server operations | [Security and configuration](docs/server-security.md) · [Production deployment](docs/deploy.md) |
+| AI tools | [MCP setup](docs/mcp.md) · [Project index for agents](llms.txt) |
+| Web player | [Package documentation](packages/kite-player/README.md) · [Public API](docs/player.md) |
+| Contracts and design | [Protobuf definitions](proto/netease/music/v1/) · [Buf Schema Registry](https://buf.build/vod-studio/kite) · [ADRs](docs/adr/) |
+| Changes and planned work | [Go changelog](CHANGELOG.md) · [Player changelog](packages/kite-player/CHANGELOG.md) · [Issues](https://github.com/VOD-Studio/kite/issues) |
+
+## Development
+
+Use the Go version in [`go.mod`](go.mod) and the Node.js major version in [`Makefile`](Makefile). From a checkout:
+
+```sh
+go build ./cmd/server/ ./cmd/kite/
+go test ./...
+make player-demo  # Build and open a local, offline player demo server
 ```
 
-```html
-<kite-player api="https://music.example.com" playlists="3778678"></kite-player>
-<kite-track song="1973665667"></kite-track>
-```
+The demo uses fictional songs and simulated playback; it needs neither NetEase credentials nor a running kite server. Open the URL printed by the command.
 
-静态页面直接从 CDN 引入单文件版本:
+See [CONTRIBUTING](CONTRIBUTING.md) for the Docker toolchain, code generation, checks, and release process; see [player development](packages/kite-player/DEVELOPMENT.md) for package-specific workflows. Architecture boundaries are documented in [AGENTS.md](AGENTS.md) and enforced by tests.
 
-```html
-<script src="https://cdn.jsdelivr.net/npm/@violetjs/kite-player@0.1/dist/kite-player.iife.js"></script>
-<kite-player api="https://music.example.com" playlists="3778678"></kite-player>
-```
+## License and security
 
-## 架构
-
-共享 `internal/netease/` 核心(engine 请求引擎 + endpoint 接口声明),三个前端平行消费:
-
-- **gRPC / REST 服务**(`cmd/server`):`internal/service` 是 gRPC adapter。
-- **CLI**(`internal/cli/`):直连 engine,输出导向(表格 / JSON),按领域分包,`kit/` 是渲染层。
-- **TUI**(`internal/tui/`,规划中):bubbletea v2 完整客户端,与 CLI 平行不耦合。
-
-前端共享的本地能力(会话 / 配置 / 召回池)在 `internal/localstate`、`internal/recall`。分层规则见 [AGENTS.md](AGENTS.md),由测试守护。
-
-gRPC 契约的唯一真相在 [`proto/netease/music/v1/`](proto/netease/music/v1/)。其它语言的项目不必拷贝 `.proto`,可以直接依赖 Buf Schema Registry 上的模块 [`buf.build/vod-studio/kite`](https://buf.build/vod-studio/kite):标签是版本号(如 `:v0.3.0`),`main` 跟随最新正式版。例如 `buf generate buf.build/vod-studio/kite:v0.3.0`,或在自己的 `buf.yaml` 里 `deps: [buf.build/vod-studio/kite:v0.3.0]`。服务的鉴权、监听地址与健康检查见 [服务部署与访问控制](docs/server-security.md)。错误以标准 gRPC status + `ErrorInfo` 返回,映射与各语言客户端的处理方式见 [错误契约](docs/grpc-errors.md)。TUI 架构决策见 [ADR](docs/adr/tui-client-architecture.md)。
-
-## 开发
-
-所有代码生成走根 `Makefile`:
-
-```bash
-make proto       # 改 proto 后重新生成 Go stub / gateway / OpenAPI 到 gen/
-make proto-lint  # 检查 proto 规范
-make docs        # 改命令树后重新生成 docs/cmd/(freshness 守护测试依赖此)
-make clean       # 清除生成产物
-```
-
-```bash
-go build ./cmd/server/    # 编译服务
-go build ./cmd/kite/      # 编译 CLI
-go test ./...             # 测试
-go vet ./...              # 检查
-```
-
-Go 版本以 `go.mod` 为准。没有宿主机 Go / Node 时,可用 `make docker-check` 在 Docker 内执行 Linux 检查和播放器成品验收;交互环境及缓存边界见 [Docker 开发工具链](CONTRIBUTING.md#docker-开发工具链)。
-
-## 技术栈
-
-- Go + gRPC + grpc-gateway(契约优先,proto 定义 RPC)
-- bubbletea v2 / lipgloss v2(TUI)、cobra(CLI 命令树)
-- `observability/` 包提供 OTel / Prometheus / 日志脱敏(已实现,尚未接入 `cmd/server`)
-- Redis 缓存与会话存储(当前 noop,后续接入)
-- 网易云 weapi/eapi 加密自实现(Go 标准库,不依赖第三方音乐库)
-
-## 文档
-
-- [接入指南](docs/integration.md) —— 在你的项目里调用 kite-server(接口清单、令牌、cookie、续期、Go 示例)
-- [MCP](docs/mcp.md) —— 在 Claude / Cursor 等 AI 客户端里使用 kite
-- [网页播放器](docs/player.md) —— 公开模式的部署、协议,以及 `@violetjs/kite-player` 的嵌入方式
-- [错误契约](docs/grpc-errors.md) · [服务部署与访问控制](docs/server-security.md) · [生产部署](docs/deploy.md)
-- [使用手册](docs/kite-guide.md) —— 上手流程(安装 / 登录 / 常用操作)
-- [CLI 设计](docs/kite-cli-design.md) —— 架构决策与输出层设计
-- [功能路线图](docs/kite-roadmap.md) —— 各 Phase 状态与规划
-- [ADR](docs/adr/) —— 架构决策记录
-- [全命令参考](docs/cmd/) —— 由命令树生成,与 `--help` 同步
+[MIT](LICENSE). For vulnerability reports, follow [SECURITY.md](SECURITY.md) rather than opening a public issue.

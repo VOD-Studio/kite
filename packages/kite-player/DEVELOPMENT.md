@@ -31,7 +31,19 @@ HOST=0.0.0.0 npm run demo     # 同一局域网的手机打开打印出的地址
 
 ## 截图
 
-`scripts/screenshots.mjs` 自己起静态服务,用 CDP 驱动本机的 Chrome(路径可用环境变量 `CHROME` 指定)打开演示页,依次截播放条、圆形、面板、沉浸模式、播放列表、手机全屏与各种卡片,写到 `docs/images/`。改了界面后运行 `npm run screenshots` 并检查图片。截图依赖本机字体,不同机器的结果不会逐字节相同,所以不做逐字节比对。
+`scripts/screenshots.mjs` 自己起静态服务,用 CDP 驱动本机的 Chrome(路径可用环境变量 `CHROME` 指定)打开演示页。先截取各个状态,再用同一个浏览器的 canvas 拼图,只将九张 README 成品写到 `docs/images/`,不需要额外图像处理依赖:
+
+| 成品 | 内容 |
+| --- | --- |
+| `hero.webp`、`immersive.webp`、`queue.webp` | 演示全貌、沉浸模式、播放列表,各保留单张 |
+| `bar-states.webp`、`panel-states.webp` | 播放条与圆形、封面与歌词面板,分别横向拼接 |
+| `mobile-states.webp` | 手机封面、歌词、紧凑卡片三列拼接 |
+| `track-cards.webp` | 小、中、大尺寸与不可播放状态,按阅读顺序排成两列 |
+| `playlist-cards.webp`、`dark-cards.webp` | 歌单尺寸对照、深色卡片,分别横向拼接 |
+
+单独的状态截图只在内存中保留,不提交第二套素材。中英文 README 共用这些成品,不要重新放多个 `<img>` 来模拟并排:GitHub 和 npm 的窄内容区会把它们拆成多行。README 保留首图,其余图库放在折叠区,让安装与 API 说明保持连续。
+
+改了界面后运行 `npm run screenshots` 并检查成品,同时查看中英文 README 的桌面和窄屏渲染。截图依赖本机字体,不同机器的结果不会逐字节相同,所以不做逐字节比对。
 
 ## 目录
 
