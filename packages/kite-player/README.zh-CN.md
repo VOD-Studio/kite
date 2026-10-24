@@ -1,11 +1,11 @@
 # @violetjs/kite-player
 
-[English](https://github.com/VOD-Studio/kite/blob/main/packages/kite-player/README.md) · 简体中文
+[English](./README.md) · 简体中文
 
 网页音乐播放器，提供悬浮播放条、单曲与歌单卡片、逐字歌词。可以使用 Web Components、React 绑定，也可以只用播放核心。
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/hero.webp" width="820" alt="展开的播放器显示逐字歌词，旁边是单曲卡片">
+  <img src="./docs/images/hero.webp" width="820" alt="展开的播放器显示逐字歌词，旁边是单曲卡片">
 </p>
 
 - **一个页面，一个播放核心。** 播放条、面板和卡片共享队列与播放状态。
@@ -197,49 +197,49 @@ document.getElementById("play-music").addEventListener("click", () => {
 
 悬浮播放条显示当前歌词，向下滚动时收成带进度环的旋转圆形。
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/bar-states.webp" width="600" alt="悬浮播放条与收起后的圆形状态，横向并排">
+<img src="./docs/images/bar-states.webp" width="600" alt="悬浮播放条与收起后的圆形状态，横向并排">
 
 ### 桌面面板
 
 点击封面或标题展开，通过滑动或圆点切换封面与歌词页；歌词播放时控制区逐渐隐藏。数据源支持时，可点击音质标签切换音质。
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/panel-states.webp" width="820" alt="桌面播放器的封面页与歌词页，横向并排">
+<img src="./docs/images/panel-states.webp" width="820" alt="桌面播放器的封面页与歌词页，横向并排">
 
 ### 手机布局
 
 全屏播放器支持封面与歌词滑动切换、拖动歌词定位，以及紧凑卡片。上拉播放条展开，下拉封面页收起；点击歌词显示或隐藏控制区。
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/mobile-states.webp" width="820" alt="手机封面页、歌词页与紧凑卡片，横向并排">
+<img src="./docs/images/mobile-states.webp" width="820" alt="手机封面页、歌词页与紧凑卡片，横向并排">
 
 ### 单曲卡片
 
 按阅读顺序展示小、中、大尺寸和无法播放状态。
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/track-cards.webp" width="820" alt="小、中、大尺寸与无法播放的单曲卡片，两列排列">
+<img src="./docs/images/track-cards.webp" width="820" alt="小、中、大尺寸与无法播放的单曲卡片，两列排列">
 
 ### 歌单卡片
 
 中尺寸显示前四首，大尺寸显示可滚动列表。
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/playlist-cards.webp" width="820" alt="中尺寸与大尺寸歌单卡片，横向并排">
+<img src="./docs/images/playlist-cards.webp" width="820" alt="中尺寸与大尺寸歌单卡片，横向并排">
 
 ### 深色主题
 
 设置 `theme="dark"` 的单曲与歌单卡片。默认的 `auto` 跟随系统主题。
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/dark-cards.webp" width="820" alt="深色主题的单曲卡片与歌单卡片，横向并排">
+<img src="./docs/images/dark-cards.webp" width="820" alt="深色主题的单曲卡片与歌单卡片，横向并排">
 
 ### 沉浸模式
 
 从面板右上角进入，通过收起按钮或 Escape 返回播放条。
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/immersive.webp" width="820" alt="沉浸模式中的封面与歌词">
+<img src="./docs/images/immersive.webp" width="820" alt="沉浸模式中的封面与歌词">
 
 ### 播放列表
 
 `playlists` 中的每个歌单各占一个标签，点击无法播放的歌曲会说明原因。
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/queue.webp" width="420" alt="播放条上方的播放列表抽屉">
+<img src="./docs/images/queue.webp" width="420" alt="播放条上方的播放列表抽屉">
 
 </details>
 

@@ -70,4 +70,8 @@ HOST=0.0.0.0 npm run demo     # 同一局域网的手机打开打印出的地址
 
 发布与恢复以仓库 [CONTRIBUTING「发布与恢复」](../../CONTRIBUTING.md#发布与恢复) 为准:player 使用独立 release PR 与 `player-v*` tag,版本由 release-please 管理;发布消费 main CI 已验收的同一份 tgz,不重新构建或打包。
 
-README 的图片用 `main` 分支的 raw 链接,发布前确认对应的图已经合入 `main`。
+源码 README 的图片与语言切换使用相对路径,让本地预览和 GitHub 当前分支使用同一份素材,不依赖尚未合入 `main` 的远程图片。
+
+`make player-package-check` 在仓库外复制发布文件,仅将这份临时副本中的 README 相对图片和文档链接转换为源码提交 SHA 对应的绝对 URL,再 pack 一次并验收。源码 README 不回写,图片仍不进入 npm 包;发布端继续消费同一份已验收 tgz,不重新打包。这样 npm 不依赖 monorepo 相对路径解析,旧版本也不会被 `main` 后续的图片改动影响。
+
+验证源码预览时不要改写图片 URL 或拦截请求替换成本地素材:直接渲染 README,展开图库并确认全部图片实际加载。发布成品需检查解包后的双语 README,确认图片和语言链接绑定本次源码 SHA。

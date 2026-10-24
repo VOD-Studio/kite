@@ -1,11 +1,11 @@
 # @violetjs/kite-player
 
-English · [简体中文](https://github.com/VOD-Studio/kite/blob/main/packages/kite-player/README.zh-CN.md)
+English · [简体中文](./README.zh-CN.md)
 
 A web music player with a floating bar, track and playlist cards, and word-by-word lyrics. Use Web Components, React bindings, or the playback core on its own.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/hero.webp" width="820" alt="The expanded player showing word-by-word lyrics alongside track cards">
+  <img src="./docs/images/hero.webp" width="820" alt="The expanded player showing word-by-word lyrics alongside track cards">
 </p>
 
 - **One playback core per page.** The bar, panel, and cards share the queue and playback state.
@@ -197,49 +197,49 @@ Related states are composed into single images, so they stay together on narrow 
 
 The floating bar shows the current lyric and collapses to a spinning disc with a progress ring when scrolling down.
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/bar-states.webp" width="600" alt="The floating bar and its collapsed disc state, side by side">
+<img src="./docs/images/bar-states.webp" width="600" alt="The floating bar and its collapsed disc state, side by side">
 
 ### Desktop panel
 
 Click the cover or title to expand. Swipe or use the dots to switch between cover and lyrics; playback controls fade while lyrics play. Tap the quality badge to switch quality when the source supports it.
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/panel-states.webp" width="820" alt="Desktop cover and lyrics panels, side by side">
+<img src="./docs/images/panel-states.webp" width="820" alt="Desktop cover and lyrics panels, side by side">
 
 ### Mobile
 
 A full-screen player with cover/lyrics swiping, drag-to-seek lyrics, and compact cards. Pull the bar up to expand or the cover page down to collapse; tap lyrics to toggle controls.
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/mobile-states.webp" width="820" alt="Mobile cover page, lyrics page, and compact cards, side by side">
+<img src="./docs/images/mobile-states.webp" width="820" alt="Mobile cover page, lyrics page, and compact cards, side by side">
 
 ### Track cards
 
 Small, medium, large, and unavailable-track states, in reading order.
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/track-cards.webp" width="820" alt="Track cards in small, medium, large, and unavailable states in a two-column grid">
+<img src="./docs/images/track-cards.webp" width="820" alt="Track cards in small, medium, large, and unavailable states in a two-column grid">
 
 ### Playlist cards
 
 Medium shows the first four tracks; large shows the scrollable list.
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/playlist-cards.webp" width="820" alt="Medium and large playlist cards, side by side">
+<img src="./docs/images/playlist-cards.webp" width="820" alt="Medium and large playlist cards, side by side">
 
 ### Dark theme
 
 Track and playlist cards with `theme="dark"`. The default `auto` theme follows the system.
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/dark-cards.webp" width="820" alt="Dark track and playlist cards, side by side">
+<img src="./docs/images/dark-cards.webp" width="820" alt="Dark track and playlist cards, side by side">
 
 ### Immersive mode
 
 Enter from the panel's top-right button. The collapse button or Escape returns to the bar.
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/immersive.webp" width="820" alt="Immersive player with cover art and lyrics">
+<img src="./docs/images/immersive.webp" width="820" alt="Immersive player with cover art and lyrics">
 
 ### Queue
 
 Each playlist in `playlists` gets a tab. Unavailable tracks explain why when selected.
 
-<img src="https://raw.githubusercontent.com/VOD-Studio/kite/main/packages/kite-player/docs/images/queue.webp" width="420" alt="The queue sheet above the floating bar">
+<img src="./docs/images/queue.webp" width="420" alt="The queue sheet above the floating bar">
 
 </details>
 
