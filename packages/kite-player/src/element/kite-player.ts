@@ -186,10 +186,13 @@ export class KitePlayerElement extends LitElement {
     lastBadge: ["", ""],
   };
   private cleanup: (() => void)[] = [];
-  /** 观察 .tabs 尺寸(旋转屏幕、抽屉重开),变化时重新贴合指示条。 */
   private tabsRO?: ResizeObserver;
-  /** 进行中的标签条滚动动画帧;0 表示空闲,此时 syncTabs 才允许瞬时对齐滚动位置。 */
+  /** 进行中的标签条滚动动画帧;0 表示空闲。 */
   private tabsAnim = 0;
+  /** 点击切换 tab 后、居中动画接手前的窗口里挂起瞬时对齐(pickTab 置位,slideTabs 解除)。 */
+  private tabsHold = false;
+  /** 无 ResizeObserver 的老内核降级监听窗口 resize,只绑一次。 */
+  private tabsWatch = false;
   /** initial 属性只在首次挂载生效一次;重连不重置用户已切换的形态。 */
   private bootstrapped = false;
   private lineEls: HTMLElement[] = [];
@@ -911,11 +914,11 @@ export class KitePlayerElement extends LitElement {
     const tabs = this.renderRoot.querySelector<HTMLElement>(".tabs");
     if (!tabs || tabs.hidden) {
       this.tabsAnim = 0;
+      this.tabsHold = false;
       this.tabsRO?.disconnect();
       return;
     }
-    if (!this.tabsRO) this.tabsRO = new ResizeObserver(() => this.syncTabs());
-    this.tabsRO.observe(tabs);
+    this.watchTabs(tabs);
     const sel = tabs.querySelector<HTMLButtonElement>("button[aria-selected='true']");
     if (!sel) return;
     const x = sel.offsetLeft;
@@ -924,14 +927,29 @@ export class KitePlayerElement extends LitElement {
     if (x !== this.ui.indX || w !== this.ui.indW) this.patch({ indX: x, indW: w });
     const target = Math.max(x - (tabs.clientWidth - w) / 2, 0);
     if (animate) this.slideTabs(tabs, target);
-    else if (this.tabsAnim === 0 && Math.abs(tabs.scrollLeft - target) > 1) tabs.scrollLeft = target;
+    else if (this.tabsAnim === 0 && !this.tabsHold && Math.abs(tabs.scrollLeft - target) > 1) tabs.scrollLeft = target;
+  }
+
+  /** watchTabs 观察标签条尺寸变化(旋转屏幕、抽屉重开)重新贴合;没有 ResizeObserver 的老内核降级监听窗口 resize。 */
+  private watchTabs(tabs: HTMLElement): void {
+    if (typeof ResizeObserver === "undefined") {
+      if (this.tabsWatch) return;
+      this.tabsWatch = true;
+      const onResize = () => this.syncTabs();
+      window.addEventListener("resize", onResize, { passive: true });
+      this.cleanup.push(() => window.removeEventListener("resize", onResize));
+      return;
+    }
+    if (!this.tabsRO) this.tabsRO = new ResizeObserver(() => this.syncTabs());
+    this.tabsRO.observe(tabs);
   }
 
   /**
-   * slideTabs 平滑滚动标签条。容器滚动与指示条的 transform 用同一条 --spring 曲线与时长,
+   * slideTabs 平滑滚动标签条。容器滚动与指示条的 transform 用同一条 --ease 曲线与时长,
    * 两个动画逐帧同步,pill 相对选中按钮才不会因为缓动不同而漂移、甩动。
    */
   private slideTabs(tabs: HTMLElement, to: number): void {
+    this.tabsHold = false; // 滚动交给本次动画管理,解除 pickTab 挂起的瞬时对齐
     cancelAnimationFrame(this.tabsAnim);
     const from = tabs.scrollLeft;
     if (Math.abs(to - from) < 1 || matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -1610,7 +1628,8 @@ export class KitePlayerElement extends LitElement {
   };
 
   private pickTab(id: string): void {
-    this.tabsAnim = -1; // 本次滚交给 updateComplete 后的 slideTabs 动画,期间 updated 的 syncTabs 不得瞬时对齐
+    // 只挂起瞬时对齐,不动 tabsAnim:进行中的动画句柄留给 slideTabs 取消,避免两个回调同时写 scrollLeft
+    this.tabsHold = true;
     this.patch({ tab: id });
     void this.loadSheet();
     void this.updateComplete.then(() => this.syncTabs(true));
