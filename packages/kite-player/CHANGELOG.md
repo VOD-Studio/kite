@@ -34,6 +34,27 @@ All notable changes to `@violetjs/kite-player` are documented here. Versions fol
 - Publish the verified main-CI tarball through an independent player release PR and tag, without rebuilding during publication.
 - Upgrade Vitest, tsup and esbuild to remove the fixable vulnerabilities reported by the dependency audit.
 
+## [0.4.0](https://github.com/VOD-Studio/kite/compare/player-v0.3.0...player-v0.4.0) (2026-10-27)
+
+
+### 新功能
+
+* **player:** 新增 initial 属性支持默认收起为圆盘 ([d26f6cc](https://github.com/VOD-Studio/kite/commit/d26f6cc5c35fd7e598cf2477f2cde430afaec598))
+
+
+### 问题修复
+
+* **player:** 兼容无 ResizeObserver 内核并修复连点 tab 的滚动竞态 ([895f90c](https://github.com/VOD-Studio/kite/commit/895f90ce69ed66682438293bc2ccbb25568471fa))
+* **player:** 抽屉歌单标签改横滑并修复模式行对齐 ([a973ec5](https://github.com/VOD-Studio/kite/commit/a973ec5f70a534a09f032bc213a35c601562f0f9))
+* **player:** 抽屉歌单标签改横滑并修复模式行对齐 ([9a1b57d](https://github.com/VOD-Studio/kite/commit/9a1b57d6dacfe47addb8420e2ce8e6e946181909))
+* **player:** 歌单标签放得下时恢复均分布局 ([d80ec03](https://github.com/VOD-Studio/kite/commit/d80ec03d7056fbcc8ff15c5989ac013a86a0bfb1))
+
+
+### 构建与依赖
+
+* **deps:** bump happy-dom from 20.14.6 to 21.0.4 in /packages/kite-player ([17fc183](https://github.com/VOD-Studio/kite/commit/17fc1830373013764712594fa3c6abadb43ece4e))
+* **deps:** bump happy-dom in /packages/kite-player ([824284d](https://github.com/VOD-Studio/kite/commit/824284d5dad43f1860469c008522f892cb0a1055))
+
 ## [0.3.0](https://github.com/VOD-Studio/kite/compare/player-v0.2.0...player-v0.3.0) (2026-10-23)
 
 
