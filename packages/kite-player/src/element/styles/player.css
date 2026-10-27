@@ -1356,7 +1356,8 @@ img[data-err], img:not([src]) {
 }
 .tabs button {
   position: relative;
-  flex: none;
+  /* 放得下时平分剩余空间(与旧版均分一致),放不下时按内容宽横向滚动 */
+  flex: 1 0 auto;
   padding: 0 14px;
   font-size: 13px;
   color: var(--kite-muted);
