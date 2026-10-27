@@ -33,7 +33,7 @@ export function Consumer() {
       <button type="button" onClick={() => player.pause()}>
         Pause
       </button>
-      <KitePlayer ref={ref} playlists="offline" collapse="none" theme="light" />
+      <KitePlayer ref={ref} playlists="offline" collapse="none" initial="orb" theme="light" />
       <KiteTrack song="paper" size="l" />
       <KitePlaylist playlist="offline" size="m" />
     </main>

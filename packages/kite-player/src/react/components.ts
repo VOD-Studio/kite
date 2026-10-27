@@ -16,9 +16,20 @@ export interface KitePlayerProps extends ElementProps {
   /** 播放列表里列出的歌单 ID,逗号分隔;第一个是初始队列。 */
   playlists?: string;
   theme?: Theme;
-  /** scroll(默认):向下滚动时收成圆形;none:不收起。 */
+  /**
+   * 页面向下滚动时自动收成圆盘;设为 "none" 则保持展开。
+   * @defaultValue "scroll"
+   */
   collapse?: "scroll" | "none";
-  /** 桌面上放在哪一侧:right(默认)/ left / center;手机上始终在底部。 */
+  /**
+   * 首次挂载时的初始形态,仅在挂载时读取一次,之后不随属性变化重置。
+   * @defaultValue "bar"
+   */
+  initial?: "bar" | "orb";
+  /**
+   * 播放器在桌面上的停靠侧;手机上始终固定为底部通栏。
+   * @defaultValue "right"
+   */
   position?: "right" | "left" | "center";
 }
 
