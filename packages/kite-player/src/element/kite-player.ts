@@ -61,6 +61,9 @@ const flingSpeed = 0.35;
 const easeOut = "cubic-bezier(.2,.85,.25,1)";
 const morphOpen = { duration: 460, ease: cubicBezier(0.2, 0.85, 0.25, 1) };
 const morphClose = { duration: 380, ease: cubicBezier(0.4, 0, 0.2, 1) };
+/** tabs 滚动与指示条共用的缓动与时长:与 CSS 变量 --ease、.tabs .ind 的 transition 保持一致,两个动画才能锁定同步。 */
+const tabsEase = cubicBezier(0.2, 0.85, 0.25, 1);
+const tabsDur = 460;
 
 // 封面页 ↔ 歌词页的进度。注册成不继承的属性:只写在用到它的几个元素上,改动时不会让整棵歌词树重新计算样式。
 // 浏览器不支持时退回普通变量,照样能用。同一页面加载两份本包时第二次注册会抛错,忽略即可。
@@ -115,6 +118,9 @@ interface Ui {
   tab: string;
   /** 第一次打开后才渲染抽屉内容。 */
   sheetReady: boolean;
+  /** 选中 tab 指示条的实测位置与宽度(px,相对 .tabs)。 */
+  indX: number;
+  indW: number;
   sheetStatus: "ready" | "loading" | "error";
   sheetMessage: string;
   sheetTracks: Track[];
@@ -168,6 +174,8 @@ export class KitePlayerElement extends LitElement {
     dragPct: 0,
     tab: "",
     sheetReady: false,
+    indX: 0,
+    indW: 0,
     sheetStatus: "ready",
     sheetMessage: "",
     sheetTracks: [],
@@ -175,6 +183,10 @@ export class KitePlayerElement extends LitElement {
     lastBadge: ["", ""],
   };
   private cleanup: (() => void)[] = [];
+  /** 观察 .tabs 尺寸(旋转屏幕、抽屉重开),变化时重新贴合指示条。 */
+  private tabsRO?: ResizeObserver;
+  /** 进行中的标签条滚动动画帧;0 表示空闲,此时 syncTabs 才允许瞬时对齐滚动位置。 */
+  private tabsAnim = 0;
   private lineEls: HTMLElement[] = [];
   private unitEls: HTMLElement[][] = [];
   private unitValues: number[] = [];
@@ -258,6 +270,8 @@ export class KitePlayerElement extends LitElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.tabsRO?.disconnect();
+    cancelAnimationFrame(this.tabsAnim);
     for (const fn of this.cleanup) fn();
     this.cleanup = [];
     for (const t of Object.values(this.timers)) clearTimeout(t);
@@ -691,18 +705,17 @@ export class KitePlayerElement extends LitElement {
   private renderSheet(s: PlayerState): TemplateResult {
     const ui = this.ui;
     const ids = ui.sheetReady ? this.tabIds() : [];
-    const at = Math.max(ids.indexOf(ui.tab), 0);
     return html`<div class="sheet" part="queue" role="dialog" aria-label="播放列表" @keydown=${this.onSheetKey}>
       <div class="sheet-head">
         <div class="sheet-title"><span>播放列表</span><button class="ib close-queue" aria-label="关闭" @click=${this.closeSheet}>${icons.close}</button></div>
         <div class="tabs" role="tablist" ?hidden=${ui.sheetReady && ids.length < 2}>
           <span
             class="ind"
-            style=${styleMap(ui.sheetReady ? { width: `calc((100% - 8px) / ${Math.max(ids.length, 1)})`, transform: `translateX(${at * 100}%)` } : {})}
+            style=${styleMap(ui.sheetReady && ui.indW > 0 ? { width: `${ui.indW}px`, transform: `translateX(${ui.indX}px)` } : {})}
           ></span
           >${ids.map((id) => html`<button role="tab" data-id=${id} aria-selected=${String(id === ui.tab)} @click=${() => this.pickTab(id)}>${this.tabName(id)}</button>`)}
         </div>
-        <button class="moderow mode-row" @click=${this.onModeRowClick}>
+        <button class="moderow mode-row" title=${ui.sheetName || nothing} @click=${this.onModeRowClick}>
           <span class="mode-icon">${icons[s.mode]}</span><span class="mode-label">${modeLabels[s.mode]}</span><span class="src">${ui.sheetName ? `来自「${ui.sheetName}」` : ""}</span>
         </button>
       </div>
@@ -881,6 +894,49 @@ export class KitePlayerElement extends LitElement {
     }
     if (prev && s.playing !== prev.playing && !s.playing) this.resetIdle();
     if (prev && s.error && s.error !== prev.error) this.toast(s.error.message);
+    if (this.ui.sheet && this.ui.sheetReady) this.syncTabs();
+  }
+
+  /** syncTabs 让指示条贴合选中的 tab,并把选中项滚进可视区(tab 多时横向滚动)。 */
+  private syncTabs(animate = false): void {
+    const tabs = this.renderRoot.querySelector<HTMLElement>(".tabs");
+    if (!tabs || tabs.hidden) {
+      this.tabsAnim = 0;
+      this.tabsRO?.disconnect();
+      return;
+    }
+    if (!this.tabsRO) this.tabsRO = new ResizeObserver(() => this.syncTabs());
+    this.tabsRO.observe(tabs);
+    const sel = tabs.querySelector<HTMLButtonElement>("button[aria-selected='true']");
+    if (!sel) return;
+    const x = sel.offsetLeft;
+    const w = sel.offsetWidth;
+    if (!w) return;
+    if (x !== this.ui.indX || w !== this.ui.indW) this.patch({ indX: x, indW: w });
+    const target = Math.max(x - (tabs.clientWidth - w) / 2, 0);
+    if (animate) this.slideTabs(tabs, target);
+    else if (this.tabsAnim === 0 && Math.abs(tabs.scrollLeft - target) > 1) tabs.scrollLeft = target;
+  }
+
+  /**
+   * slideTabs 平滑滚动标签条。容器滚动与指示条的 transform 用同一条 --spring 曲线与时长,
+   * 两个动画逐帧同步,pill 相对选中按钮才不会因为缓动不同而漂移、甩动。
+   */
+  private slideTabs(tabs: HTMLElement, to: number): void {
+    cancelAnimationFrame(this.tabsAnim);
+    const from = tabs.scrollLeft;
+    if (Math.abs(to - from) < 1 || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      tabs.scrollLeft = to;
+      this.tabsAnim = 0;
+      return;
+    }
+    const t0 = performance.now();
+    const step = (now: number): void => {
+      const p = Math.min(1, (now - t0) / tabsDur);
+      tabs.scrollLeft = from + (to - from) * tabsEase(p);
+      this.tabsAnim = p < 1 ? requestAnimationFrame(step) : 0;
+    };
+    this.tabsAnim = requestAnimationFrame(step);
   }
 
   // ---- 事件 ----
@@ -1545,8 +1601,10 @@ export class KitePlayerElement extends LitElement {
   };
 
   private pickTab(id: string): void {
+    this.tabsAnim = -1; // 本次滚交给 updateComplete 后的 slideTabs 动画,期间 updated 的 syncTabs 不得瞬时对齐
     this.patch({ tab: id });
     void this.loadSheet();
+    void this.updateComplete.then(() => this.syncTabs(true));
   }
 
   private tabIds(): string[] {
