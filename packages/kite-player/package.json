@@ -1,6 +1,6 @@
 {
   "name": "@violetjs/kite-player",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "A music player for any web page, backed by your own kite-server: a floating player, track and playlist cards, word-by-word lyrics. Custom elements built with Lit, plus React components.",
   "keywords": [
     "music",
