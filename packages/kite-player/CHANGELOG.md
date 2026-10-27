@@ -34,6 +34,13 @@ All notable changes to `@violetjs/kite-player` are documented here. Versions fol
 - Publish the verified main-CI tarball through an independent player release PR and tag, without rebuilding during publication.
 - Upgrade Vitest, tsup and esbuild to remove the fixable vulnerabilities reported by the dependency audit.
 
+## [0.4.1](https://github.com/VOD-Studio/kite/compare/player-v0.4.0...player-v0.4.1) (2026-10-27)
+
+
+### 问题修复
+
+* **player:** React 组件声明补上 initial 属性 ([#152](https://github.com/VOD-Studio/kite/issues/152)) ([163627d](https://github.com/VOD-Studio/kite/commit/163627dfbded7d6992048ca196cf48b05a757b41))
+
 ## [0.4.0](https://github.com/VOD-Studio/kite/compare/player-v0.3.0...player-v0.4.0) (2026-10-27)
 
 
