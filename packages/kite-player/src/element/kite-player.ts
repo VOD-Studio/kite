@@ -135,6 +135,7 @@ interface Ui {
  *
  * 属性:api(公开模式地址)、playlists(播放列表里列出的歌单 ID,逗号分隔;第一个作为初始队列)、
  * theme(auto / light / dark)、collapse(scroll:滚动时自动收起;none:不收起)、
+ * initial(bar:默认悬浮条;orb:默认收起成圆盘)、
  * position(桌面上放在 left / center / right,默认 right;手机始终底部通栏)。
  */
 export class KitePlayerElement extends LitElement {
@@ -144,6 +145,7 @@ export class KitePlayerElement extends LitElement {
     playlists: { type: String },
     theme: { type: String, reflect: true },
     collapse: { type: String },
+    initial: { type: String },
     position: { type: String, reflect: true },
   };
 
@@ -151,6 +153,7 @@ export class KitePlayerElement extends LitElement {
   declare playlists: string;
   declare theme: string | null;
   declare collapse: string | null;
+  declare initial: string | null;
   declare position: Position | null;
 
   private player!: Player;
@@ -187,6 +190,8 @@ export class KitePlayerElement extends LitElement {
   private tabsRO?: ResizeObserver;
   /** 进行中的标签条滚动动画帧;0 表示空闲,此时 syncTabs 才允许瞬时对齐滚动位置。 */
   private tabsAnim = 0;
+  /** initial 属性只在首次挂载生效一次;重连不重置用户已切换的形态。 */
+  private bootstrapped = false;
   private lineEls: HTMLElement[] = [];
   private unitEls: HTMLElement[][] = [];
   private unitValues: number[] = [];
@@ -257,6 +262,10 @@ export class KitePlayerElement extends LitElement {
     super.connectedCallback();
     this.player = playerFor(this, this.api);
     this.s = this.player.state;
+    if (!this.bootstrapped) {
+      this.bootstrapped = true;
+      if (this.initial === "orb") this.patch({ mode: "orb" });
+    }
     this.bindGlobal();
     this.cleanup.push(
       this.player.subscribe((s) => {

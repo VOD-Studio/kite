@@ -100,6 +100,7 @@ Use one per page. It loads the initial queue but does not start playback automat
 | --- | --- |
 | `playlists` | Comma-separated playlist IDs, shown as queue tabs. The first playlist is the initial queue. |
 | `collapse` | `scroll` (default, shrink to a disc on downward scroll) or `none`. |
+| `initial` | `bar` (default floating bar) or `orb` (start collapsed to the disc). Read once on mount. |
 | `position` | `right` (default), `left`, or `center` on desktop. The bar, panel, and queue stay on that side; phones always use the bottom edge. |
 
 Methods: `open(view?: "cover" | "lyrics"): Promise<void>` expands the player; `close()` collapses it.
