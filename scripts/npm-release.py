@@ -11,6 +11,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+import time
 from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import urlopen
@@ -186,10 +187,22 @@ def publish():
                     "next" if "-" in value else "latest"), check=True)
 
 
+def wait_published(value, data, integrity):
+    # npm acknowledges a publish before the version is readable from the registry.
+    # Only a missing version (404) is retried; every other registry answer is final.
+    tries = int(os.environ.get("NPM_POLL_TRIES", "20"))
+    for attempt in range(tries):
+        if published(value, data, integrity):
+            return True
+        if attempt + 1 < tries:
+            time.sleep(int(os.environ.get("NPM_POLL_SLEEP", "15")))
+    return False
+
+
 def finalize():
     value, release, sha, run = context()
     data, integrity = verified(value, sha, run)
-    if not published(value, data, integrity):
+    if not wait_published(value, data, integrity):
         raise ValueError("npm version is not publicly available; GitHub release remains a draft")
     if release["draft"]:
         common.api(f"releases/{release['id']}", "--method", "PATCH", "-F", "draft=false", "-f", "make_latest=false")

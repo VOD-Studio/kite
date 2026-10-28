@@ -43,7 +43,8 @@ class NpmRelease(unittest.TestCase):
                'GITHUB_WORKFLOW_REF': m.common.REPO + '/.github/workflows/release-please.yml@refs/heads/main',
                'GITHUB_SHA': SHA, 'GITHUB_EVENT_NAME': 'push', 'TAG': 'player-v0.2.0',
                'RUNNER_TEMP': self.tmp.name, 'GITHUB_OUTPUT': self.tmp.name + '/out',
-               'CI_POLL_TRIES': '1', 'CI_POLL_SLEEP': '0', 'NODE_AUTH_TOKEN': 'fake-token'}
+               'CI_POLL_TRIES': '1', 'CI_POLL_SLEEP': '0', 'NPM_POLL_TRIES': '1', 'NPM_POLL_SLEEP': '0',
+               'NODE_AUTH_TOKEN': 'fake-token'}
         self.env = patch.dict(os.environ, env)
         self.env.start()
         self.addCleanup(self.env.stop)
@@ -73,6 +74,7 @@ class NpmRelease(unittest.TestCase):
         self.registry_bytes = None
         self.registry_integrity = None
         self.registry_url = None
+        self.registry_lag = 0
         self.patch_calls = []
         self.publish_calls = []
         self.requests = []
@@ -158,6 +160,9 @@ class NpmRelease(unittest.TestCase):
         self.requests.append(url)
         if url.endswith('.tgz'):
             return Response(self.data if self.registry_bytes is None else self.registry_bytes, url)
+        if self.registry_lag > 0:
+            self.registry_lag -= 1
+            raise HTTPError(url, 404, 'not yet visible', {}, None)
         if self.registry_status != 200:
             raise HTTPError(url, self.registry_status, 'fixture error', {}, None)
         value = self.manifest['version']
@@ -353,6 +358,33 @@ class NpmRelease(unittest.TestCase):
         with self.assertRaises(ValueError):
             m.finalize()
         self.assertEqual(self.patch_calls, [])
+
+    def test_registry_lag_after_publish_is_waited_out_before_going_public(self):
+        os.environ['NPM_POLL_TRIES'] = '3'
+        m.prepare()
+        m.publish()
+        self.registry_lag = 2
+        m.finalize()
+        self.assertEqual(len(self.patch_calls), 1)
+
+    def test_registry_lag_beyond_the_poll_budget_keeps_the_release_draft(self):
+        os.environ['NPM_POLL_TRIES'] = '3'
+        m.prepare()
+        m.publish()
+        self.registry_lag = 3
+        with self.assertRaises(ValueError):
+            m.finalize()
+        self.assertEqual(self.patch_calls, [])
+
+    def test_registry_error_during_wait_is_not_retried(self):
+        os.environ['NPM_POLL_TRIES'] = '3'
+        m.prepare()
+        m.publish()
+        self.registry_status = 503
+        requests = len(self.requests)
+        with self.assertRaises(ValueError):
+            m.finalize()
+        self.assertEqual(len([u for u in self.requests[requests:] if not u.endswith('.tgz')]), 1)
 
     def test_tampering_between_prepare_and_publish_is_refused(self):
         m.prepare()
