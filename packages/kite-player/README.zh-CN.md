@@ -100,6 +100,7 @@ export function NowPlaying() {
 | --- | --- |
 | `playlists` | 逗号分隔的歌单 ID，在播放列表中显示为标签；第一个歌单是初始队列。 |
 | `collapse` | `scroll`（默认，向下滚动时收成圆形）或 `none`。 |
+| `initial` | `bar`（默认悬浮条）或 `orb`（默认收起成圆盘）。仅在挂载时读取一次。 |
 | `position` | 桌面上为 `right`（默认）、`left` 或 `center`。播放条、面板和播放列表保持在同一侧；手机上始终位于底部。 |
 
 方法：`open(view?: "cover" | "lyrics"): Promise<void>` 展开播放器；`close()` 收起。
