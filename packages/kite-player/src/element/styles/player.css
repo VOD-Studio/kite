@@ -135,7 +135,7 @@
 }
 
 /* ---------- 迷你播放条 / 圆形 ---------- */
-/* 播放条的尺寸:展开途中卡片里的播放条内容(.mini)用同一组值。 */
+/* 播放条与圆形共用高度;展开途中卡片里的播放条内容(.mini)用同一组尺寸。 */
 .kp {
   --bar-w: var(--kite-width);
   --bar-h: 72px;
@@ -151,7 +151,7 @@
   bottom: var(--kite-offset-y);
   width: var(--bar-w);
   height: var(--bar-h);
-  border-radius: 36px;
+  border-radius: calc(var(--bar-h) / 2);
   overflow: hidden;
   color: var(--kite-fg);
   background: var(--kite-glass);
@@ -311,13 +311,7 @@ img[data-err], img:not([src]) {
   background: var(--kite-line);
 }
 .kp[data-mode="orb"] .bar {
-  width: 64px;
-  height: 64px;
-  border-radius: 32px;
-}
-.kp[data-mode="orb"] .disc {
-  left: 2px;
-  top: 2px;
+  width: var(--bar-h);
 }
 .kp[data-mode="orb"] .bar-text, .kp[data-mode="orb"] .bar-ctl {
   opacity: 0;
@@ -343,14 +337,13 @@ img[data-err], img:not([src]) {
   margin-left: calc(var(--kite-width) / -2);
 }
 .kp[data-pos="center"][data-mode="orb"] .bar {
-  margin-left: -32px;
+  margin-left: calc(var(--bar-h) / -2);
 }
 .kp[data-device="mobile"] .bar {
   left: auto;
   right: 10px;
   margin-left: 0;
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  border-radius: 29px;
   /* 上拉展开由脚本跟手,浏览器不要把这个手势当成滚动。 */
   touch-action: none;
 }
@@ -389,15 +382,6 @@ img[data-err], img:not([src]) {
 }
 .kp[data-device="mobile"] .desk {
   display: none;
-}
-.kp[data-device="mobile"][data-mode="orb"] .bar {
-  width: 58px;
-  height: 58px;
-  border-radius: 29px;
-}
-.kp[data-device="mobile"][data-mode="orb"] .disc {
-  left: 5px;
-  top: 5px;
 }
 
 /* ---------- 展开:桌面面板 / 手机全屏 / 沉浸 ---------- */

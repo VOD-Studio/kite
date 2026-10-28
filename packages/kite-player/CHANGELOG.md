@@ -25,6 +25,7 @@ All notable changes to `@violetjs/kite-player` are documented here. Versions fol
 
 ### Fixed
 
+- Keep the desktop bar and collapsed orb at the same 72px height, with shared disc padding and correct centering; phones retain their 58px height.
 - Cancel pending position restoration when changing tracks, replacing the audio source or destroying the player, so switching quality cannot seek a different track to the previous track's position.
 - Restore cover, disc and ambient images after a failed image request when the next track's artwork loads successfully.
 
