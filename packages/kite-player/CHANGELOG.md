@@ -36,6 +36,16 @@ All notable changes to `@violetjs/kite-player` are documented here. Versions fol
 - Publish the verified main-CI tarball through an independent player release PR and tag, without rebuilding during publication.
 - Upgrade Vitest, tsup and esbuild to remove the fixable vulnerabilities reported by the dependency audit.
 
+## [0.4.2](https://github.com/VOD-Studio/kite/compare/player-v0.4.1...player-v0.4.2) (2026-10-28)
+
+
+### 问题修复
+
+* **player:** 修复播放条尺寸与收起动画 ([3b9bab5](https://github.com/VOD-Studio/kite/commit/3b9bab59ae0377c647605cf2e827f3a806722678))
+* **player:** 修复播放条收拢重叠并加入横向回弹 ([e49e9e1](https://github.com/VOD-Studio/kite/commit/e49e9e1c4f54e3cf706981f7e54f2e94f676584c))
+* **player:** 修复面板收回播放条的连续形变 ([c4b382d](https://github.com/VOD-Studio/kite/commit/c4b382d8b1d660ababdd8f851a6213c716e1ee9a))
+* **player:** 统一桌面播放条与圆形态高度 ([a85dbc1](https://github.com/VOD-Studio/kite/commit/a85dbc1a7d2d2776fd086ed8ae099d80596f125a))
+
 ## [0.4.1](https://github.com/VOD-Studio/kite/compare/player-v0.4.0...player-v0.4.1) (2026-10-27)
 
 
