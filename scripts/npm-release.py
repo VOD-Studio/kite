@@ -138,7 +138,7 @@ def fetch(url, missing=False):
         raise ValueError(f"registry request failed with HTTP {error.code}") from error
 
 
-def published(value, data, integrity):
+def published(value, data, integrity, lagging=False):
     metadata = fetch(f"{REGISTRY}/{quote(NAME, safe='')}/{quote(value, safe='')}", missing=True)
     if metadata is None:
         return False
@@ -149,7 +149,10 @@ def published(value, data, integrity):
     expected_url = f"{REGISTRY}/{NAME}/-/kite-player-{value}.tgz"
     if dist.get("tarball") != expected_url or dist.get("integrity") != integrity:
         raise ValueError("existing npm version differs from the verified CI tarball")
-    if fetch(expected_url) != data:
+    tarball = fetch(expected_url, missing=lagging)
+    if tarball is None:
+        return False
+    if tarball != data:
         raise ValueError("existing npm version has different bytes; immutable version cannot be overwritten")
     return True
 
@@ -189,10 +192,10 @@ def publish():
 
 def wait_published(value, data, integrity):
     # npm acknowledges a publish before the version is readable from the registry.
-    # Only a missing version (404) is retried; every other registry answer is final.
+    # Only a missing version or tarball (404) is retried; every other registry answer is final.
     tries = int(os.environ.get("NPM_POLL_TRIES", "20"))
     for attempt in range(tries):
-        if published(value, data, integrity):
+        if published(value, data, integrity, lagging=True):
             return True
         if attempt + 1 < tries:
             time.sleep(int(os.environ.get("NPM_POLL_SLEEP", "15")))

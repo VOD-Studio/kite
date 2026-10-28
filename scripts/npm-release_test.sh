@@ -75,6 +75,7 @@ class NpmRelease(unittest.TestCase):
         self.registry_integrity = None
         self.registry_url = None
         self.registry_lag = 0
+        self.tarball_lag = 0
         self.patch_calls = []
         self.publish_calls = []
         self.requests = []
@@ -159,6 +160,9 @@ class NpmRelease(unittest.TestCase):
     def http(self, url, **kwargs):
         self.requests.append(url)
         if url.endswith('.tgz'):
+            if self.tarball_lag > 0:
+                self.tarball_lag -= 1
+                raise HTTPError(url, 404, 'tarball not yet visible', {}, None)
             return Response(self.data if self.registry_bytes is None else self.registry_bytes, url)
         if self.registry_lag > 0:
             self.registry_lag -= 1
@@ -375,6 +379,30 @@ class NpmRelease(unittest.TestCase):
         with self.assertRaises(ValueError):
             m.finalize()
         self.assertEqual(self.patch_calls, [])
+
+    def test_tarball_lag_behind_visible_metadata_is_waited_out(self):
+        os.environ['NPM_POLL_TRIES'] = '3'
+        m.prepare()
+        m.publish()
+        self.tarball_lag = 2
+        m.finalize()
+        self.assertEqual(len(self.patch_calls), 1)
+
+    def test_tarball_lag_beyond_the_poll_budget_keeps_the_release_draft(self):
+        os.environ['NPM_POLL_TRIES'] = '2'
+        m.prepare()
+        m.publish()
+        self.tarball_lag = 2
+        with self.assertRaises(ValueError):
+            m.finalize()
+        self.assertEqual(self.patch_calls, [])
+
+    def test_tarball_404_is_still_refused_outside_the_wait(self):
+        self.registry_status = 200
+        self.tarball_lag = 1
+        with self.assertRaises(ValueError):
+            m.prepare()
+        self.assertEqual(self.publish_calls, [])
 
     def test_registry_error_during_wait_is_not_retried(self):
         os.environ['NPM_POLL_TRIES'] = '3'
