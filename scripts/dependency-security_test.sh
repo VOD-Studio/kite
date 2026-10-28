@@ -61,13 +61,16 @@ sys.exit(case["code"])
         self.scanners = {"go-root": fixture("No vulnerabilities found."), "go-interop": fixture("No vulnerabilities found."),
                          "npm": fixture(npm_report()), "cargo": fixture(rust_report())}
 
-    def invoke(self, scopes=(), expected=0, advisory=False):
+    def invoke(self, scopes=(), expected=0, advisory=False, mode=None):
         env = dict(os.environ, GOVULNCHECK=str(self.path / "govulncheck"), NPM=str(self.path / "npm"),
                    CARGO=str(self.path / "cargo"), CALLS=str(self.calls), SCANNERS=json.dumps(self.scanners),
                    GITHUB_OUTPUT=str(self.output))
+        if mode:
+            env["DEPENDENCY_SECURITY_MODE"] = mode
         result = subprocess.run(["bash", str(SCRIPTS / "dependency-security.sh"), *scopes],
                                 cwd=self.path, env=env, text=True, capture_output=True)
         self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
+        self.stdout = result.stdout
         if expected != 2:
             lines = self.output.read_text().splitlines()
             self.assertEqual([line for line in lines if line.startswith("advisory=")],
@@ -182,6 +185,37 @@ sys.exit(case["code"])
         calls = self.invoke(expected=1)
         self.assertEqual([call["key"] for call in calls], ["go-root", "go-interop", "cargo"])
         self.assertIn("failed_scans=player", self.output.read_text())
+
+    def test_report_mode_downgrades_fixable_vulnerabilities_to_warnings(self):
+        self.scanners["go-root"] = fixture("Vulnerability #1: GO-2099-0001\n    Fixed in: example.org/lib@v2.0.0", 3)
+        self.scanners["go-interop"] = fixture("Vulnerability #1: GO-2099-0002\n    Fixed in: stdlib@go1.99.1", 3)
+        self.scanners["npm"] = fixture(npm_report((True,)), 1)
+        self.scanners["cargo"] = fixture(rust_report(([">=2.0.0"],)), 1)
+        self.assertEqual(len(self.invoke(mode="report")), 4)
+        self.assertIn("failed_scans=\n", self.output.read_text())
+        self.assertEqual(self.stdout.count("report 模式不阻断"), 4)
+        self.assertNotIn("::error::", self.stdout)
+
+    def test_report_mode_keeps_no_fix_advisory_visible(self):
+        self.scanners["npm"] = fixture(npm_report((False,)), 1)
+        self.invoke(("player",), advisory=True, mode="report")
+
+    def test_report_mode_still_fails_on_scanner_faults(self):
+        self.scanners["go-root"] = fixture("network unavailable", 1)
+        self.scanners["go-interop"] = fixture("Vulnerability #1: GO-2099-0002\n    Fixed in: example.org/lib@v2.0.0", 3)
+        self.scanners["npm"] = fixture("{broken", 1)
+        self.scanners["cargo"] = fixture(rust_report(([">=2.0.0"],)), 1)
+        self.assertEqual(len(self.invoke(expected=1, mode="report")), 4)
+        self.assertIn("failed_scans=go-root,player\n", self.output.read_text())
+
+    def test_report_mode_still_fails_when_scanner_is_missing(self):
+        (self.path / "npm").unlink()
+        self.invoke(("player",), expected=1, mode="report")
+        self.assertIn("failed_scans=player\n", self.output.read_text())
+
+    def test_unknown_mode_keeps_blocking_on_fixable_vulnerabilities(self):
+        self.scanners["npm"] = fixture(npm_report((True,)), 1)
+        self.invoke(("player",), expected=1, mode="warn")
 
 
 unittest.main()

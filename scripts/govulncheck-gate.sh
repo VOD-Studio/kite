@@ -2,12 +2,13 @@
 # 可修复漏洞失败；仅明确 Fixed in: N/A 的完整报告允许 advisory。
 # govulncheck 文本模式退出 3 表示发现漏洞，其余非零均为工具错误。
 # 用法: scripts/govulncheck-gate.sh [包模式,默认 ./...]
-# GITHUB_OUTPUT 的 advisory 供定时扫描通知；本地也始终打印 warning。
+# GITHUB_OUTPUT 的 advisory 供定时扫描通知；fixable 标明失败仅由可修复漏洞造成（非工具故障）。
+# 本地也始终打印 warning。
 set -euo pipefail
 
 PKGS="${1:-./...}"
 GOVULNCHECK="${GOVULNCHECK:-$(command -v govulncheck || echo "$(go env GOPATH)/bin/govulncheck")}"
-if [ -n "${GITHUB_OUTPUT:-}" ]; then echo 'advisory=false' >>"$GITHUB_OUTPUT"; fi
+if [ -n "${GITHUB_OUTPUT:-}" ]; then printf 'advisory=false\nfixable=false\n' >>"$GITHUB_OUTPUT"; fi
 if [ ! -x "$GOVULNCHECK" ]; then
   echo "::error::未找到 govulncheck,跑 'make install-tools' 安装"
   exit 1
@@ -41,6 +42,9 @@ if [ "$advisory" -gt 0 ]; then
   if [ -n "${GITHUB_OUTPUT:-}" ]; then echo 'advisory=true' >>"$GITHUB_OUTPUT"; fi
 fi
 if [ "$fixable" -gt 0 ]; then
-  echo "::error::发现 $fixable 个可修复漏洞,请升级依赖或 Go toolchain"
+  level=error
+  [ "${DEPENDENCY_SECURITY_MODE:-}" = report ] && level=warning
+  echo "::$level::发现 $fixable 个可修复漏洞,请升级依赖或 Go toolchain"
+  if [ -n "${GITHUB_OUTPUT:-}" ]; then echo 'fixable=true' >>"$GITHUB_OUTPUT"; fi
   exit 1
 fi
