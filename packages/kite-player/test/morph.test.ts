@@ -20,8 +20,15 @@ function geo(): MorphGeo {
   return {
     parts: {
       stage: el(),
-      shadow: null,
+      glass: el(),
+      ambient: el(),
+      bar: el(),
+      ring: el(),
+      shadow: el(),
+      panelShadow: el(),
+      barShadow: el(),
       cover: cover.el,
+      coverFinish: el(),
       badge: null,
       miniText: miniText.el,
       miniCtl: miniCtl.el,
@@ -56,6 +63,11 @@ describe("展开 / 收起的形变", () => {
     const g = geo();
     const open = frame(g, 1);
     expect(open.get(g.parts.stage)?.clipPath).toBe("inset(0px 0px 0px 0px round 0px)");
+    expect(open.get(g.parts.glass)?.opacity).toBe("0");
+    expect(open.get(g.parts.ambient)?.opacity).toBe("1");
+    expect(open.get(g.parts.ring)?.opacity).toBe("0");
+    expect(open.get(g.parts.panelShadow)?.opacity).toBe("1");
+    expect(open.get(g.parts.barShadow)?.opacity).toBe("0");
     expect(open.get(g.cover.el)).toMatchObject({
       translate: "0px 0px",
       scale: "1",
@@ -70,7 +82,12 @@ describe("展开 / 收起的形变", () => {
   it("进度 0 时卡片是播放条,封面是唱片(圆、转着),播放条内容在原位", () => {
     const g = geo();
     const bar = frame(g, 0);
-    expect(bar.get(g.parts.stage)).toMatchObject({ clipPath: "inset(774px 10px 12px 10px round 29px)", opacity: "0" });
+    expect(bar.get(g.parts.stage)?.clipPath).toBe("inset(774px 10px 12px 10px round 29px)");
+    expect(bar.get(g.parts.glass)?.opacity).toBe("1");
+    expect(bar.get(g.parts.ambient)?.opacity).toBe("0");
+    expect(bar.get(g.parts.ring)?.opacity).toBe("1");
+    expect(bar.get(g.parts.panelShadow)?.opacity).toBe("0");
+    expect(bar.get(g.parts.barShadow)?.opacity).toBe("1");
     const cover = bar.get(g.cover.el);
     expect(cover?.scale).toBe(String(42 / 342));
     expect(cover?.rotate).toBe("90deg");
@@ -91,8 +108,6 @@ describe("展开 / 收起的形变", () => {
     expect(ty! - (782 - 774) - cardTop + 72).toBeCloseTo(0, 6);
     expect(f.get(g.cover.el)?.rotate).toBe("0deg");
     expect(Number(f.get(g.cover.el)?.scale)).toBeCloseTo(k, 6);
-    // 卡片一离开播放条就不透明。
-    expect(f.get(g.parts.stage)?.opacity).toBe("1");
   });
 
   it("缓动与 CSS 的 cubic-bezier 一致", () => {

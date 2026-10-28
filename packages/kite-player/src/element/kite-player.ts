@@ -60,7 +60,7 @@ const flingSpeed = 0.35;
 /** 展开 / 收起的时长与缓动(见 morph.ts)。 */
 const easeOut = "cubic-bezier(.2,.85,.25,1)";
 const morphOpen = { duration: 460, ease: cubicBezier(0.2, 0.85, 0.25, 1) };
-const morphClose = { duration: 380, ease: cubicBezier(0.4, 0, 0.2, 1) };
+const morphClose = { duration: 420, ease: cubicBezier(0.2, 0.85, 0.25, 1) };
 /** tabs 滚动与指示条共用的缓动与时长:与 CSS 变量 --ease、.tabs .ind 的 transition 保持一致,两个动画才能锁定同步。 */
 const tabsEase = cubicBezier(0.2, 0.85, 0.25, 1);
 const tabsDur = 460;
@@ -331,7 +331,7 @@ export class KitePlayerElement extends LitElement {
     this.unlockScroll();
   }
 
-  /** collapseFrom 从进度 p 收起到播放条:播放条先在面板下面出现,面板的各部分飞回播放条后淡出。 */
+  /** collapseFrom 从进度 p 缩成播放条:面板各部分落位后,才换回真实播放条。 */
   private collapseFrom(geo: MorphGeo | null, p: number, duration: number, ease: (t: number) => number): void {
     const token = ++this.stageToken;
     this.patch({ mode: "bar", idle: false });
@@ -355,12 +355,18 @@ export class KitePlayerElement extends LitElement {
     const immersive = this.ui.immersive;
     const lyricsView = this.ui.view === "lyrics" && !immersive;
     const badge = this.q(".badge");
-    const shadow = this.q(".stage-shadow");
     const late: [number, number] = [0.62, 0.33];
     const parts: MorphParts = {
       stage: this.q(".stage"),
-      shadow: getComputedStyle(shadow).display === "none" ? null : shadow,
+      glass: this.q(".stage-glass"),
+      ambient: this.q(".stage-amb"),
+      bar: this.q(".bar"),
+      ring: this.q(".mini .disc"),
+      shadow: this.q(".stage-shadow"),
+      panelShadow: this.q(".panel-shadow"),
+      barShadow: this.q(".bar-shadow"),
       cover: this.q(".cover"),
+      coverFinish: this.q(".cover-finish"),
       badge: badge.hasAttribute("data-show") && !lyricsView ? badge : null,
       miniText: this.q<HTMLElement>(".mini .bar-text"),
       miniCtl: this.q<HTMLElement>(".mini .bar-ctl"),
@@ -387,7 +393,6 @@ export class KitePlayerElement extends LitElement {
     const spin = this.q(".bar .disc-img").getAnimations?.()[0];
     const turned = ((Number(spin?.currentTime ?? 0) % 9000) / 9000) * 360;
     return measure(parts, {
-      bar: this.q(".bar"),
       disc: this.q(".bar .disc"),
       barText: this.q(".bar .bar-text"),
       barCtl: this.q(".bar .bar-ctl"),
@@ -559,7 +564,7 @@ export class KitePlayerElement extends LitElement {
       this.collapseFrom(
         pl.geo,
         pl.p,
-        Math.max(160, (pl.opening ? 300 : 380) * pl.p),
+        Math.max(160, (pl.opening ? 300 : morphClose.duration) * pl.p),
         pl.opening ? morphOpen.ease : morphClose.ease,
       );
     }
@@ -581,12 +586,13 @@ export class KitePlayerElement extends LitElement {
       data-pos=${this.position === "left" || this.position === "center" ? this.position : "right"}
       ?data-trans=${ui.trans}
       ?data-immersive=${ui.immersive}
+      ?data-stage=${ui.stageShown}
       ?data-idle=${ui.idle}
       ?data-sheet=${ui.sheet}
       ?data-has-track=${!!t}
     >
       ${this.renderBar(s, t)}
-      <div class="stage-shadow" aria-hidden="true"></div>
+      <div class="stage-shadow" aria-hidden="true"><div class="panel-shadow"></div><div class="bar-shadow"></div></div>
       ${this.renderStage(s, t)}
       <div class="backdrop" @click=${this.closeSheet}></div>
       ${this.renderSheet(s)}
@@ -624,6 +630,7 @@ export class KitePlayerElement extends LitElement {
     const ui = this.ui;
     const cover = t?.album.cover || undefined;
     const who = artists(t);
+    const pct = s.duration > 0 ? Math.min(1, s.time / s.duration) : 0;
     const tag = [t?.trial ? "仅试听" : "", t?.access === "vip" ? "VIP" : t?.access === "paid" ? "数字专辑" : ""]
       .filter(Boolean)
       .join(" · ");
@@ -652,8 +659,11 @@ export class KitePlayerElement extends LitElement {
       @click=${{ handleEvent: (e: Event) => this.onStageClickCapture(e), capture: true }}
       @wheel=${{ handleEvent: () => this.resetIdle(), passive: true }}
     >
-      <div class="amb"><canvas width="32" height="48"></canvas><span class="veil"></span><span class="spot spot-a"></span><span class="spot spot-b"></span><span class="dim"></span><span class="grain"></span></div>
-      <div class="scrim"></div>
+      <div class="stage-glass"></div>
+      <div class="stage-amb">
+        <div class="amb"><canvas width="32" height="48"></canvas><span class="veil"></span><span class="spot spot-a"></span><span class="spot spot-b"></span><span class="dim"></span><span class="grain"></span></div>
+        <div class="scrim"></div>
+      </div>
       <div class="fg">
         <div class="pages">
           <section class="page page-cover">
@@ -674,10 +684,11 @@ export class KitePlayerElement extends LitElement {
           </section>
         </div>
         <button class="cover" aria-label=${ui.view === "cover" ? "查看歌词" : "返回封面"} ?data-badge=${!!badge} @click=${this.onCoverClick}>
-          ${coverPh}<img alt="" draggable="false" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} /><span class="cover-shade"></span><span class="cover-rim"></span>
+          ${coverPh}<img alt="" draggable="false" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} /><span class="cover-finish"><span class="cover-shade"></span><span class="cover-rim"></span></span>
         </button>
         ${this.renderBadge(s, badge)}
         <div class="mini" aria-hidden="true">
+          <span class="disc"><span class="ring" style=${styleMap({ "--pct": String(pct) })}></span></span>
           <span class="bar-text"
             ><span class="bar-line"><span class="bar-title ell">${t?.title ?? ""}</span>${t?.trial ? html`<span class="rtag trial">仅试听</span>` : nothing}</span
             ><span class="bar-sub"><span class="ell">${this.tickerText(s)}</span></span></span

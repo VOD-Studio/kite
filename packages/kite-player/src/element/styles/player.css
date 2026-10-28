@@ -145,6 +145,10 @@
   --bar-w: calc(100vw - 20px);
   --bar-h: 58px;
 }
+.bar, .stage-glass {
+  background: var(--kite-glass);
+  box-shadow: inset 0 1px 0 var(--kite-glass-edge), 0 0 0 .5px var(--kite-glass-rim), var(--kite-glass-shadow);
+}
 .bar {
   position: fixed;
   z-index: 2147482000;
@@ -156,11 +160,9 @@
   overflow: hidden;
   color: var(--kite-fg);
   transform-origin: right bottom;
-  background: var(--kite-glass);
   -webkit-backdrop-filter: var(--kite-glass-filter);
   backdrop-filter: var(--kite-glass-filter);
-  box-shadow: inset 0 1px 0 var(--kite-glass-edge), 0 0 0 .5px var(--kite-glass-rim), var(--kite-glass-shadow);
-  transition: width .28s var(--bar-ease), margin-left .28s var(--bar-ease), height .42s var(--ease), border-radius .42s var(--ease), opacity .2s, transform .2s, visibility 0s;
+  transition: width .28s var(--bar-ease), margin-left .28s var(--bar-ease), height .42s var(--ease), border-radius .42s var(--ease), transform .2s;
 }
 /* 内容保持展开宽度,外壳只负责裁切;收拢时按钮不会被 right 定位挤到唱片上。
    容器本身让指针穿透,点击落在唱片上;可交互的子元素再恢复接收。 */
@@ -175,7 +177,7 @@
 .bar-content :is(.bar-text, .bar-ctl) {
   pointer-events: auto;
 }
-.bar::before {
+.bar::before, .stage-glass::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -184,7 +186,7 @@
   pointer-events: none;
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .bar, .sheet {
+  .bar, .stage-glass, .sheet {
     background: var(--kite-sheet);
   }
 }
@@ -340,24 +342,24 @@ img[data-err], img:not([src]) {
   opacity: 0;
   pointer-events: none;
 }
-.kp[data-mode="open"] .bar {
+.kp[data-stage] .bar {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: opacity .1s, visibility 0s .1s;
+  transition: none;
 }
 .kp:not([data-has-track]) .bar {
   display: none;
 }
 /* position:播放条、面板、抽屉贴同一侧;center 时水平居中,收成圆形也在正中。只影响桌面。 */
-.kp[data-pos="left"] .bar, .kp[data-pos="left"] .stage, .kp[data-pos="left"] .stage-shadow, .kp[data-pos="left"] .sheet {
+.kp[data-pos="left"] .bar, .kp[data-pos="left"] .stage, .kp[data-pos="left"] .sheet {
   left: var(--kite-offset-x);
   right: auto;
 }
 .kp[data-pos="left"] .bar {
   transform-origin: left bottom;
 }
-.kp[data-pos="center"] .bar, .kp[data-pos="center"] .stage, .kp[data-pos="center"] .stage-shadow, .kp[data-pos="center"] .sheet {
+.kp[data-pos="center"] .bar, .kp[data-pos="center"] .stage, .kp[data-pos="center"] .sheet {
   left: 50%;
   right: auto;
   margin-left: calc(var(--kite-width) / -2);
@@ -425,7 +427,6 @@ img[data-err], img:not([src]) {
   border-radius: 28px;
   overflow: hidden;
   color: #FFFFFF;
-  background: #2B3350;
   box-shadow: var(--kite-panel-shadow);
   --pad: 32px;
   --h: min(712px, calc(100vh - 2 * var(--kite-offset-y)));
@@ -443,25 +444,38 @@ img[data-err], img:not([src]) {
   --safe-t: 0px;
   touch-action: none;
 }
-/*
- * 面板的阴影另放一层:展开 / 收起时卡片被裁成播放条的形状,面板自己的阴影也会被裁掉,
- * 由这一层跟着卡片缩放、随进度变深(morph.ts),到位后与面板的阴影重合。平时看不见。
- */
+.stage-glass, .stage-amb {
+  position: absolute;
+  inset: 0;
+}
+.stage-glass {
+  opacity: 0;
+}
+.stage-amb {
+  background: #2B3350;
+}
+/* 阴影独立于裁切的面板,按实际边界排布;从面板阴影连续过渡到播放条阴影,不随缩放压扁模糊半径。 */
 .stage-shadow {
   position: fixed;
   z-index: 2147482400;
-  right: var(--kite-offset-x);
-  bottom: var(--kite-offset-y);
-  width: var(--kite-width);
-  height: min(712px, calc(100vh - 2 * var(--kite-offset-y)));
-  border-radius: 28px;
-  box-shadow: var(--kite-panel-shadow);
-  transform-origin: 0 0;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
   opacity: 0;
   pointer-events: none;
 }
-.kp[data-device="mobile"] .stage-shadow, .kp[data-immersive] .stage-shadow {
-  display: none;
+.panel-shadow, .bar-shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.panel-shadow {
+  box-shadow: var(--kite-panel-shadow);
+}
+.bar-shadow {
+  box-shadow: 0 0 0 .5px var(--kite-glass-rim), var(--kite-glass-shadow);
+  opacity: 0;
 }
 /* 展开 / 收起时移动的元素都以左上角为原点;跟手时去掉它们的过渡,样式逐帧写上(morph.ts)。 */
 .stage :is(.cover, .badge, .top, .meta, .head, .ctl, .lyrics, .lyr-trans) {
@@ -603,7 +617,13 @@ img[data-err], img:not([src]) {
   top: 0;
   width: var(--bar-w);
   height: var(--bar-h);
+  color: var(--kite-fg);
   pointer-events: none;
+}
+.mini .disc {
+  opacity: 0;
+  transition: none;
+  transform-origin: 0 0;
 }
 .mini .bar-text, .mini .bar-ctl {
   opacity: 0;
@@ -614,9 +634,6 @@ img[data-err], img:not([src]) {
   display: flex;
   flex-direction: column;
   justify-content: center;
-}
-.mini .bar-sub {
-  color: rgba(255,255,255,.72);
 }
 .top {
   position: absolute;
@@ -676,6 +693,13 @@ img[data-err], img:not([src]) {
   background: rgba(255,255,255,.08);
   box-shadow: 0 18px 40px -20px rgba(8,10,30,.42);
   transition: transform .38s var(--ease), border-radius .38s var(--ease);
+}
+.cover-finish {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  --kite-pg: inherit;
+  pointer-events: none;
 }
 /*
  * 有音质标签时封面底部压暗一点,浅色封面上标签也看得清;翻到歌词页时跟标签一起淡出。
@@ -1195,10 +1219,10 @@ img[data-err], img:not([src]) {
 .buttons .blob svg {
   filter: drop-shadow(0 10px 18px rgba(0,0,0,.18));
 }
-.stage .blob .blob-shape {
+.buttons .blob .blob-shape {
   fill: #FFFFFF;
 }
-.stage .blob .i-play, .stage .blob .i-pause {
+.buttons .blob .i-play, .buttons .blob .i-pause {
   fill: #1C1B22;
 }
 .kp[data-device="mobile"] .buttons .blob {
