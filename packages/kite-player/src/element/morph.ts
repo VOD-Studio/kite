@@ -1,16 +1,16 @@
 // 播放条 ↔ 面板 / 全屏 / 沉浸模式的展开与收起:每个元素各走各的路线(参考网易云)。
 //
 // 进度 p:0 是播放条,1 是面板到位。卡片的可见区域在两者之间插值,顶边跟着进度(或手指)走,
-// 一离开播放条就换成封面铺色的背景、圆角收到卡片的圆角。
+// 面板自身缩成播放条:背景渐变为玻璃,内容始终留在移动的面板上;完全落位后才换回真实播放条。
 // - 封面从播放条的唱片长出来:前 12% 由圆变方、转正;大小随进度线性变大,
 //   先贴着卡片左上角,卡片够高之后(p 0.2 → 0.7)才下移到自己的位置。
 // - 播放条的歌名和按钮留在卡片里:与封面垂直居中,歌名被封面推着往右,很快淡出。
 // - 封面下方的歌名区、控制区跟着封面底边走,从 0.6 倍放大到原大并淡入;顶栏随卡片顶边最后出现。
-// - 桌面面板的阴影是单独一层,跟着卡片缩放、随进度变深,到位后与面板自己的阴影一致。
+// - 阴影跟着卡片的实际边界,全程由面板阴影过渡成播放条阴影,不缩放模糊半径。
 //
-// 元素只用 translate / scale / rotate / opacity 这几个独立属性(与元素自己的 transform 叠加),
-// 可以交给合成线程;卡片形状用 clip-path,封面圆角用 border-radius,另起动画在主线程跑。
-// 动画按缓动曲线采样成关键帧,线性播放。所有参与的元素 transform-origin 都是左上角。
+// 内容的 translate / scale / rotate / opacity 交给合成线程;背景与阴影的边界、裁切、圆角另起动画,
+// 避免这些布局与绘制工作拖慢内容元素。按缓动曲线等距采样时间后播放关键帧,
+// 内容元素的 transform-origin 都是左上角。
 
 export interface Box {
   left: number;
@@ -22,9 +22,16 @@ export interface Box {
 /** 参与形变的元素。 */
 export interface MorphParts {
   stage: HTMLElement;
-  /** 桌面面板的阴影层;手机、沉浸模式没有。 */
-  shadow: HTMLElement | null;
+  glass: HTMLElement;
+  ambient: HTMLElement;
+  bar: HTMLElement;
+  ring: HTMLElement;
+  /** 独立于裁切面板的阴影,桌面、手机和沉浸模式共用。 */
+  shadow: HTMLElement;
+  panelShadow: HTMLElement;
+  barShadow: HTMLElement;
   cover: HTMLElement;
+  coverFinish: HTMLElement;
   badge: HTMLElement | null;
   /** 卡片里的播放条内容(歌名与按钮),展开初期留在封面旁边。 */
   miniText: HTMLElement | null;
@@ -78,7 +85,23 @@ export interface MorphGeo {
   drop: number;
 }
 
-export type Style = Partial<Record<"translate" | "scale" | "rotate" | "opacity" | "clipPath" | "borderRadius", string>>;
+export type Style = Partial<
+  Record<
+    | "translate"
+    | "scale"
+    | "rotate"
+    | "opacity"
+    | "clipPath"
+    | "borderRadius"
+    | "width"
+    | "height"
+    | "left"
+    | "top"
+    | "backdropFilter"
+    | "webkitBackdropFilter",
+    string
+  >
+>;
 
 const rect = (el: Element): Box => {
   const r = el.getBoundingClientRect();
@@ -100,7 +123,6 @@ function item(el: HTMLElement, fade: [number, number] = [0, 1]): Item {
 }
 
 export interface MeasureOptions {
-  bar: Element;
   disc: Element;
   barText: Element | null;
   barCtl: Element | null;
@@ -112,7 +134,7 @@ export interface MeasureOptions {
 /** measure 在面板到位(没有形变)时量出所有位置。面板没显示出来时返回 null。 */
 export function measure(parts: MorphParts, opts: MeasureOptions): MorphGeo | null {
   const box = rect(parts.stage);
-  const bar = rect(opts.bar);
+  const bar = rect(parts.bar);
   if (!box.height || !bar.height) return null;
   const d = rect(opts.disc);
   // 唱片外圈 3px 是进度环,封面落在里面的圆上。
@@ -153,6 +175,7 @@ export function frame(g: MorphGeo, p: number): Map<HTMLElement, Style> {
   const q = 1 - p;
   const { box, bar, parts } = g;
   const out = new Map<HTMLElement, Style>();
+  const material = smooth(clamp01(p));
 
   // 卡片:四边各自线性插值;圆角先由胶囊收到卡片圆角,最后 15% 再变成面板的圆角。
   const cLeft = lerp(bar.left, box.left, p);
@@ -167,16 +190,28 @@ export function frame(g: MorphGeo, p: number): Map<HTMLElement, Style> {
         : g.midRadius;
   out.set(parts.stage, {
     clipPath: `inset(${cTop - box.top}px ${box.left + box.width - cRight}px ${box.top + box.height - cBottom}px ${cLeft - box.left}px round ${r}px)`,
-    // 一离开播放条就换成封面铺色的背景(收起时最后几帧才露出播放条)。
-    opacity: String(clamp01(p / 0.03)),
+    backdropFilter: "var(--kite-glass-filter)",
+    webkitBackdropFilter: "var(--kite-glass-filter)",
   });
-  if (parts.shadow) {
-    out.set(parts.shadow, {
-      translate: `${cLeft - box.left}px ${cTop - box.top}px`,
-      scale: `${(cRight - cLeft) / box.width} ${(cBottom - cTop) / box.height}`,
-      opacity: String(p * p),
-    });
-  }
+  out.set(parts.glass, {
+    translate: `${cLeft - box.left}px ${cTop - box.top}px`,
+    width: `${cRight - cLeft}px`,
+    height: `${cBottom - cTop}px`,
+    borderRadius: `${r}px`,
+    opacity: String(1 - material),
+  });
+  out.set(parts.ambient, { opacity: String(material) });
+  out.set(parts.coverFinish, { opacity: String(material) });
+  out.set(parts.shadow, {
+    left: `${cLeft}px`,
+    top: `${cTop}px`,
+    width: `${cRight - cLeft}px`,
+    height: `${cBottom - cTop}px`,
+    borderRadius: `${r}px`,
+    opacity: "1",
+  });
+  out.set(parts.panelShadow, { opacity: String(material) });
+  out.set(parts.barShadow, { opacity: String(1 - material) });
 
   // 封面:大小线性变化;横向贴着卡片左边,纵向先贴顶边、卡片够高后再下移到原位;前 12% 转正。
   const C = g.cover;
@@ -199,6 +234,11 @@ export function frame(g: MorphGeo, p: number): Map<HTMLElement, Style> {
     scale: String(k),
     rotate: `${deg}deg`,
     borderRadius: `${rv / (k * C.own)}px`,
+  });
+  out.set(parts.ring, {
+    translate: `${x - g.disc.left + bar.left - box.left}px ${y - g.disc.top + bar.top - box.top}px`,
+    scale: String((cs + 6) / (g.disc.width + 6)),
+    opacity: String(1 - smooth(clamp01(p / 0.08))),
   });
 
   // 音质标签跟着封面,后半程淡入。
@@ -290,7 +330,13 @@ export function clear(parts: MorphParts | null): void {
   if (!parts) return;
   const els = [
     parts.stage,
+    parts.glass,
+    parts.ambient,
+    parts.ring,
+    parts.coverFinish,
     parts.shadow,
+    parts.panelShadow,
+    parts.barShadow,
     parts.cover,
     parts.badge,
     parts.miniText,
@@ -302,12 +348,25 @@ export function clear(parts: MorphParts | null): void {
   ];
   for (const el of els) {
     if (!el) continue;
-    for (const k of ["translate", "scale", "rotate", "opacity", "clip-path", "border-radius"])
+    for (const k of [
+      "translate",
+      "scale",
+      "rotate",
+      "opacity",
+      "clip-path",
+      "border-radius",
+      "width",
+      "height",
+      "left",
+      "top",
+      "backdrop-filter",
+      "-webkit-backdrop-filter",
+    ])
       el.style.removeProperty(k);
   }
 }
 
-/** 合成线程能播放的属性;其余(clip-path、border-radius)另起一个动画,不拖累前者。 */
+/** 合成线程能播放的属性;影响布局或绘制的属性另起动画,不拖累前者。 */
 const composited = new Set(["translate", "scale", "rotate", "opacity"]);
 
 /**
