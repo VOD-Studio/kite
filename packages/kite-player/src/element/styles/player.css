@@ -139,6 +139,7 @@
 .kp {
   --bar-w: var(--kite-width);
   --bar-h: 72px;
+  --bar-ease: cubic-bezier(.22,1,.36,1);
 }
 .kp[data-device="mobile"] {
   --bar-w: calc(100vw - 20px);
@@ -154,11 +155,25 @@
   border-radius: calc(var(--bar-h) / 2);
   overflow: hidden;
   color: var(--kite-fg);
+  transform-origin: right bottom;
   background: var(--kite-glass);
   -webkit-backdrop-filter: var(--kite-glass-filter);
   backdrop-filter: var(--kite-glass-filter);
   box-shadow: inset 0 1px 0 var(--kite-glass-edge), 0 0 0 .5px var(--kite-glass-rim), var(--kite-glass-shadow);
-  transition: width .48s var(--spring), margin-left .48s var(--spring), height .42s var(--ease), border-radius .42s var(--ease), opacity .2s, transform .2s, visibility 0s;
+  transition: width .28s var(--bar-ease), margin-left .28s var(--bar-ease), height .42s var(--ease), border-radius .42s var(--ease), opacity .2s, transform .2s, visibility 0s;
+}
+/* 内容保持展开宽度,外壳只负责裁切;收拢时按钮不会被 right 定位挤到唱片上。
+   容器本身让指针穿透,点击落在唱片上;可交互的子元素再恢复接收。 */
+.bar-content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--bar-w);
+  height: var(--bar-h);
+  pointer-events: none;
+}
+.bar-content :is(.bar-text, .bar-ctl) {
+  pointer-events: auto;
 }
 .bar::before {
   content: "";
@@ -247,7 +262,7 @@ img[data-err], img:not([src]) {
   text-align: left;
   border-radius: 10px;
   padding: 0 4px;
-  transition: opacity .2s;
+  transition: opacity .12s;
 }
 .bar-line {
   display: flex;
@@ -290,7 +305,7 @@ img[data-err], img:not([src]) {
   display: flex;
   align-items: center;
   gap: 4px;
-  transition: opacity .2s;
+  transition: opacity .12s;
 }
 .bar-ctl .ib {
   width: 36px;
@@ -312,6 +327,14 @@ img[data-err], img:not([src]) {
 }
 .kp[data-mode="orb"] .bar {
   width: var(--bar-h);
+  animation: bar-fold .36s ease-in-out;
+}
+/* 缩宽不越过唱片尺寸;落位只做横向压缩、回弹,高度与底边始终不变。 */
+@keyframes bar-fold {
+  0%, 45% { transform: scaleX(1); }
+  65% { transform: scaleX(.92); }
+  82% { transform: scaleX(1.05); }
+  100% { transform: scaleX(1); }
 }
 .kp[data-mode="orb"] .bar-text, .kp[data-mode="orb"] .bar-ctl {
   opacity: 0;
@@ -331,10 +354,16 @@ img[data-err], img:not([src]) {
   left: var(--kite-offset-x);
   right: auto;
 }
+.kp[data-pos="left"] .bar {
+  transform-origin: left bottom;
+}
 .kp[data-pos="center"] .bar, .kp[data-pos="center"] .stage, .kp[data-pos="center"] .stage-shadow, .kp[data-pos="center"] .sheet {
   left: 50%;
   right: auto;
   margin-left: calc(var(--kite-width) / -2);
+}
+.kp[data-pos="center"] .bar {
+  transform-origin: center bottom;
 }
 .kp[data-pos="center"][data-mode="orb"] .bar {
   margin-left: calc(var(--bar-h) / -2);
@@ -344,6 +373,7 @@ img[data-err], img:not([src]) {
   right: 10px;
   margin-left: 0;
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  transform-origin: right bottom;
   /* 上拉展开由脚本跟手,浏览器不要把这个手势当成滚动。 */
   touch-action: none;
 }

@@ -603,6 +603,7 @@ export class KitePlayerElement extends LitElement {
         <span class="ring" style=${styleMap({ "--pct": String(pct) })}></span
         ><span class="disc-img">${coverPh}<img alt="" draggable="false" src=${ifDefined(cover)} @error=${onCoverError} @load=${onCoverLoad} /></span>
       </button>
+      <div class="bar-content">
       <button class="bar-text expand" aria-label="展开播放器" @click=${this.onExpand}>
         <span class="bar-line"
           ><span class="bar-title ell">${t?.title ?? ""}</span>${t?.trial ? html`<span class="rtag trial">仅试听</span>` : nothing}</span
@@ -614,6 +615,7 @@ export class KitePlayerElement extends LitElement {
         <button class="ib next" aria-label="下一首" @click=${this.next}>${icons.next}</button>
         <span class="bar-sep desk"></span>
         <button class="ib open-queue" aria-label="播放列表" @click=${this.onOpenQueue}>${icons.queue}</button>
+      </div>
       </div>
     </div>`;
   }
