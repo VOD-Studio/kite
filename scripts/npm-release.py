@@ -11,6 +11,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+import time
 from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import urlopen
@@ -137,7 +138,7 @@ def fetch(url, missing=False):
         raise ValueError(f"registry request failed with HTTP {error.code}") from error
 
 
-def published(value, data, integrity):
+def published(value, data, integrity, lagging=False):
     metadata = fetch(f"{REGISTRY}/{quote(NAME, safe='')}/{quote(value, safe='')}", missing=True)
     if metadata is None:
         return False
@@ -148,7 +149,10 @@ def published(value, data, integrity):
     expected_url = f"{REGISTRY}/{NAME}/-/kite-player-{value}.tgz"
     if dist.get("tarball") != expected_url or dist.get("integrity") != integrity:
         raise ValueError("existing npm version differs from the verified CI tarball")
-    if fetch(expected_url) != data:
+    tarball = fetch(expected_url, missing=lagging)
+    if tarball is None:
+        return False
+    if tarball != data:
         raise ValueError("existing npm version has different bytes; immutable version cannot be overwritten")
     return True
 
@@ -186,10 +190,22 @@ def publish():
                     "next" if "-" in value else "latest"), check=True)
 
 
+def wait_published(value, data, integrity):
+    # npm acknowledges a publish before the version is readable from the registry.
+    # Only a missing version or tarball (404) is retried; every other registry answer is final.
+    tries = int(os.environ.get("NPM_POLL_TRIES", "20"))
+    for attempt in range(tries):
+        if published(value, data, integrity, lagging=True):
+            return True
+        if attempt + 1 < tries:
+            time.sleep(int(os.environ.get("NPM_POLL_SLEEP", "15")))
+    return False
+
+
 def finalize():
     value, release, sha, run = context()
     data, integrity = verified(value, sha, run)
-    if not published(value, data, integrity):
+    if not wait_published(value, data, integrity):
         raise ValueError("npm version is not publicly available; GitHub release remains a draft")
     if release["draft"]:
         common.api(f"releases/{release['id']}", "--method", "PATCH", "-F", "draft=false", "-f", "make_latest=false")
