@@ -263,6 +263,8 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           MODULES: ${{ needs.plan.outputs.security_modules }}
+          # 新公布的漏洞不阻断无关 PR;每日 scheduled.yml 仍对可修复漏洞失败并开 issue。
+          DEPENDENCY_SECURITY_MODE: report
         run: |
           read -r -a modules <<< "$MODULES"
           scripts/dependency-security.sh "${modules[@]}"

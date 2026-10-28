@@ -132,7 +132,9 @@ def go_scan(directory):
         environment = dict(os.environ, GITHUB_OUTPUT=str(output))
         result = run(["bash", str(ROOT / "scripts/govulncheck-gate.sh"), "./..."], directory, environment)
         values = output.read_text().splitlines() if output.exists() else []
-        return result.returncode != 0, "advisory=true" in values
+        fixable = "fixable=true" in values
+        require(result.returncode == 0 or fixable, f"govulncheck 门禁失败(exit {result.returncode})")
+        return fixable, "advisory=true" in values
 
 
 def main(args):
@@ -148,16 +150,20 @@ def main(args):
                           ("go-interop", lambda: go_scan(ROOT / "interop/go"))))
         else:
             scans.append((scope, npm_scan if scope == "player" else rust_scan))
+    # report 模式只降级「存在可修复漏洞」；安装、执行和解析故障仍然失败。
+    report_only = os.environ.get("DEPENDENCY_SECURITY_MODE") == "report"
     advisory = False
     failures = []
     for label, scan in scans:
         print(f"::group::Dependency security: {label}", flush=True)
         try:
-            failed, has_advisory = scan()
+            fixable, has_advisory = scan()
             advisory |= has_advisory
             if has_advisory:
                 print(f"::warning::{label}: 无修复版本漏洞或依赖 advisory，需跟踪")
-            if failed:
+            if fixable and report_only:
+                print(f"::warning::{label}: 存在可修复漏洞，report 模式不阻断，由每日定时扫描跟踪")
+            elif fixable:
                 failures.append(label)
                 print(f"::error::{label}: 存在可修复漏洞或扫描失败，请检查报告")
         except (ScanError, OSError, UnicodeError) as exc:
